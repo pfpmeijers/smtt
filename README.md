@@ -1,4 +1,4 @@
-# SMTT: State Machine to Testing Tool
+# SMTT: State Machine To Tests
 
 ## Overview
 SMTT is a specialized architectural tool that bridges the gap between 
