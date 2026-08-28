@@ -28,6 +28,13 @@ Example values:
 | `B-21`        | 9          | `silver` |
 | `C-11`        | 1          | `bronze` |
 
+Other values:
+
+| `Customer ID` | `Quantity` | `Tier`   |
+|---------------|------------|----------|
+| `D-99`        | 0          | `gold`   |
+| `D-99`        | 10         | `gold`   |
+
 ## Transitions
 
 ### Default preconditions

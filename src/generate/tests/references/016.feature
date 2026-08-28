@@ -5,6 +5,7 @@
 #      - name: s
 #    dataExampleValues:
 #      - a: "1"
+#      - a: "2"
 #    transitions:
 #      - states:
 #          - name: s

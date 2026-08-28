@@ -5,7 +5,7 @@ test("[TST-016] → [REQ-066/088/101]: Result condition adds resulting column", 
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}],
+        dataExampleValues: [{a: "1"}, {a: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "=", value: "1"}}]}],
             trigger: {type: "event", name: "e"},
@@ -44,7 +44,7 @@ test("[TST-086] → [REQ-089]: Result conditions shall be restricted to equality
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}],
+        dataExampleValues: [{a: "1"}, {a: "2"}],
         transitions: [{
             trigger: {type: "event", name: "e"},
             result: {name: "s", arguments: [{name: "a", condition: {operator: "not as", value: "2"}}]}
@@ -52,5 +52,5 @@ test("[TST-086] → [REQ-089]: Result conditions shall be restricted to equality
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
         "Invalid result condition for attribute \"a\": operator \"not as\" is not supported. " +
-        "Result conditions only allow \"=\" or \"as\" (REQ-089).")
+        "Result conditions only allow \"=\", \"as\", or \"undefined\" (REQ-089).")
 })

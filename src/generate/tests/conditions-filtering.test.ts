@@ -244,7 +244,7 @@ test("[TST-014] → [REQ-099/100]: All rows filtered out raises error", () => {
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        'Empty examples table for transition undefined in state machine m')
+        'Empty examples table for transition undefined in state machine `m`')
 })
 
 test("[TST-015] → [REQ-075] Empty value on a non-undefined operator is rejected", () => {

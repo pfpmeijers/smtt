@@ -2,7 +2,7 @@ import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv"
-import type { Argument, DefaultPrecondition, StateMachine, Transition } from "./sm.ast.d"
+import type { Argument, Condition, DefaultPrecondition, StateMachine, Transition } from "./sm.ast.d"
 
 /**
  * JSON Schema validation for the parsed state-machine AST, checked against
@@ -166,6 +166,7 @@ export function validateStateMachines(data: unknown): void {
     validateModifierBaseReferences(stateMachines)
     validateModifierValuePoolSize(stateMachines)
     validateResultConditionOperators(stateMachines)
+    validateConditionValues(stateMachines)
 
     // [REQ-163] Business-rule check performed after schema validation
     // succeeds, since it relies on `data` actually conforming to the
@@ -589,7 +590,7 @@ export function validateModifierValuePoolSize(stateMachines: StateMachine[]): vo
  * @throws Error When a result argument uses an unsupported condition operator.
  */
 export function validateResultConditionOperators(stateMachines: StateMachine[]): void {
-    const allowedOperators = new Set(["=", "as"])
+    const allowedOperators = new Set(["=", "as", "undefined"])
 
     for (const stateMachine of stateMachines) {
         for (const transition of stateMachine.transitions ?? []) {
@@ -600,8 +601,160 @@ export function validateResultConditionOperators(stateMachines: StateMachine[]):
 
                 throw new Error(
                     `${transitionContext}: Result argument \`${argument.name}\` has a non-equality condition operator ` +
-                    `\`${operator}\`. Only \`=\` and \`as\` are allowed on result arguments.`,
+                    `\`${operator}\`. Only \`=\`, \`as\`, and \`undefined\` are allowed on result arguments.`,
                 )
+            }
+        }
+    }
+}
+
+/**
+ * Extracts literal values from a condition for value pool validation.
+ *
+ * @param condition Condition to extract values from.
+ * @returns Array of literal values referenced by the condition.
+ */
+function extractConditionValues(condition: Condition): string[] {
+    if (condition.operator === "undefined" || condition.value === undefined) {
+        return []
+    }
+    if (Array.isArray(condition.value)) {
+        return condition.value.map(String)
+    }
+    if (typeof condition.value === "string") {
+        if (condition.operator === "in range" || condition.operator === "not in range") {
+            const match = condition.value.match(/^\s*[\[(]\s*([^,\s]+)\s*,\s*([^,\s]+)\s*[\])]\s*$/)
+            if (match) {
+                return [match[1], match[2]]
+            }
+        }
+        return [condition.value]
+    }
+    return [String(condition.value)]
+}
+
+/**
+ * [REQ-418] Validates that every attribute value referenced in a condition
+ * (argument condition or implied state condition) is defined in the
+ * example or other data values table for that attribute.
+ *
+ * @param stateMachines Parsed state-machine AST nodes.
+ * @returns Nothing. Validation succeeds by not throwing.
+ * @throws Error When a condition references a value not present in the values table.
+ */
+export function validateConditionValues(stateMachines: StateMachine[]): void {
+    const ownership = buildOwnership(stateMachines)
+    const machineByName = new Map(stateMachines.map((stateMachine) => [stateMachine.name, stateMachine]))
+
+    for (const stateMachine of stateMachines) {
+        const ownValuePool = new Map<string, Set<string>>()
+        const ownRows = [
+            ...(stateMachine.dataExampleValues ?? []),
+            ...(stateMachine.dataOtherValues ?? []),
+        ]
+        for (const row of ownRows) {
+            for (const [attributeName, attributeValue] of Object.entries(row as Record<string, string | undefined>)) {
+                if (typeof attributeValue !== "string" || attributeValue === "") continue
+                const key = attributeName.toLowerCase()
+                if (!ownValuePool.has(key)) ownValuePool.set(key, new Set<string>())
+                ownValuePool.get(key)?.add(attributeValue)
+            }
+        }
+
+        // Validate implied conditions on states
+        for (const state of stateMachine.states) {
+            for (const implied of state.impliedConditions ?? []) {
+                const attrKey = implied.attribute.toLowerCase()
+                const allowedValues = ownValuePool.get(attrKey) ?? new Set<string>()
+                for (const value of extractConditionValues(implied.condition)) {
+                    if (!allowedValues.has(value)) {
+                        throw new Error(
+                            `State \`${state.name}\` in state machine \`${stateMachine.name}\`: Condition value \`${value}\` ` +
+                            `for attribute \`${implied.attribute}\` is not defined in the example or other values table.`,
+                        )
+                    }
+                }
+            }
+        }
+
+        const defaultPreconditions = stateMachine.defaultPreconditions ?? []
+
+        // Validate standalone default preconditions
+        for (const precondition of defaultPreconditions) {
+            const ownerName = ownership[precondition.state.toLowerCase()] ?? stateMachine.name
+            const ownerMachine = machineByName.get(ownerName) ?? stateMachine
+            const ownerPool = new Map<string, Set<string>>()
+            const ownerRows = [
+                ...(ownerMachine.dataExampleValues ?? []),
+                ...(ownerMachine.dataOtherValues ?? []),
+            ]
+            for (const row of ownerRows) {
+                for (const [attributeName, attributeValue] of Object.entries(row as Record<string, string | undefined>)) {
+                    if (typeof attributeValue !== "string" || attributeValue === "") continue
+                    const key = attributeName.toLowerCase()
+                    if (!ownerPool.has(key)) ownerPool.set(key, new Set<string>())
+                    ownerPool.get(key)?.add(attributeValue)
+                }
+            }
+
+            for (const argument of precondition.arguments ?? []) {
+                if (!argument.condition) continue
+                const attrKey = argument.name.toLowerCase()
+                const allowedValues = ownerPool.get(attrKey) ?? new Set<string>()
+                for (const value of extractConditionValues(argument.condition)) {
+                    if (!allowedValues.has(value)) {
+                        throw new Error(
+                            `State machine \`${stateMachine.name}\`: Default precondition state \`${precondition.state}\` ` +
+                            `- condition value \`${value}\` for attribute \`${argument.name}\` is not defined in the example or other values table.`,
+                        )
+                    }
+                }
+            }
+        }
+
+        // Validate transition arguments (including effective defaults, explicit preconditions, triggers, results)
+        for (const transition of stateMachine.transitions ?? []) {
+            const effectiveDefaults = getEffectiveDefaultPreconditions(transition, defaultPreconditions, ownership)
+            const contributingNames = collectContributingMachineNames(
+                stateMachine,
+                transition,
+                effectiveDefaults,
+                ownership,
+                stateMachines,
+            )
+
+            const valuePoolByAttribute = new Map<string, Set<string>>()
+            for (const contributingName of contributingNames) {
+                const contributingMachine = machineByName.get(contributingName)
+                if (!contributingMachine) continue
+
+                const rows = [
+                    ...(contributingMachine.dataExampleValues ?? []),
+                    ...(contributingMachine.dataOtherValues ?? []),
+                ]
+                for (const row of rows) {
+                    for (const [attributeName, attributeValue] of Object.entries(row as Record<string, string | undefined>)) {
+                        if (typeof attributeValue !== "string" || attributeValue === "") continue
+                        const key = attributeName.toLowerCase()
+                        if (!valuePoolByAttribute.has(key)) valuePoolByAttribute.set(key, new Set<string>())
+                        valuePoolByAttribute.get(key)?.add(attributeValue)
+                    }
+                }
+            }
+
+            const transitionArguments = collectTransitionArguments(transition, effectiveDefaults)
+            for (const argument of transitionArguments) {
+                if (!argument.condition) continue
+                const attrKey = argument.name.toLowerCase()
+                const allowedValues = valuePoolByAttribute.get(attrKey) ?? new Set<string>()
+                for (const value of extractConditionValues(argument.condition)) {
+                    if (!allowedValues.has(value)) {
+                        throw new Error(
+                            `${formatTransitionContext(stateMachine.name, transition)}: Condition value \`${value}\` ` +
+                            `for attribute \`${argument.name}\` is not defined in the example or other values table.`,
+                        )
+                    }
+                }
             }
         }
     }
