@@ -1,0 +1,1401 @@
+- name: cart
+  states:
+    - name: cart empty
+    - name: cart non-empty
+  initialState: cart empty
+  data:
+    painting count: ""
+  dataExampleValues:
+    - painting count: "0"
+    - painting count: "1"
+    - painting count: "2"
+  dataOtherValues: []
+  defaultPreconditions:
+    - state: user session present
+  transitions:
+    - id: "014"
+      states:
+        - name: cart empty
+          arguments:
+            - qualifier: with
+              name: painting count
+              condition:
+                operator: =
+                value: "0"
+      trigger:
+        name: painting added to cart
+      result:
+        name: cart non-empty
+        arguments:
+          - qualifier: with
+            name: painting count
+            condition:
+              operator: =
+              value: "1"
+    - id: "015"
+      states:
+        - name: cart non-empty
+      trigger:
+        name: painting added to cart
+      result:
+        name: cart non-empty
+        arguments:
+          - preQualifier: with
+            modifier: incremented
+            name: painting count
+    - id: "016"
+      states:
+        - name: cart non-empty
+          arguments:
+            - qualifier: with
+              name: painting count
+              condition:
+                operator: ">"
+                value: "1"
+      trigger:
+        name: painting removed from cart
+      result:
+        name: cart non-empty
+        arguments:
+          - preQualifier: with
+            modifier: decremented
+            name: painting count
+    - id: "017"
+      states:
+        - name: cart non-empty
+          arguments:
+            - qualifier: with
+              name: painting count
+              condition:
+                operator: =
+                value: "1"
+      trigger:
+        name: painting removed from cart
+      result:
+        name: cart empty
+    - id: "018"
+      states:
+        - name: cart non-empty
+      trigger:
+        name: painting reservation confirmed
+      result:
+        name: cart empty
+      notes: Backend clears all cart items on confirmed reservation
+    - id: "019"
+      states:
+        - name: cart non-empty
+      trigger:
+        name: painting cart hold expired
+      result:
+        name: cart empty
+      notes: Server-side expiry
+    - id: "020"
+      states:
+        - name: cart non-empty
+      trigger:
+        name: user signed out
+      result:
+        name: cart empty
+      notes: Signing out flushes all in-cart paintings
+  impossible:
+    defined:
+      - states:
+          - user session absent
+        trigger:
+          name: painting added to cart
+      - states:
+          - user session absent
+        trigger:
+          name: painting removed from cart
+      - states:
+          - user session absent
+        trigger:
+          name: painting reservation confirmed
+      - states:
+          - user session absent
+        trigger:
+          name: painting cart hold expired
+      - states:
+          - cart empty
+        trigger:
+          name: painting removed from cart
+      - states:
+          - cart empty
+        trigger:
+          name: painting reservation confirmed
+      - states:
+          - cart empty
+        trigger:
+          name: painting cart hold expired
+  irrelevant: []
+  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\state-machines\cart.state-machine.md
+- name: default user identity
+  overview: Default user identity is the email address persisted for the user
+    device's browser in its local storage, if any.
+  states:
+    - name: default user identity unavailable
+      description: No email address persisted for device's browser.
+    - name: default user identity available
+      description: Email address persisted for device's browser.
+  initialState: default user identity unavailable
+  data:
+    email address: ""
+  dataExampleValues:
+    - email address: info@domain.com
+  dataOtherValues: []
+  defaultPreconditions: []
+  transitions:
+    - id: "001"
+      states:
+        - name: user session present
+        - name: default user identity unavailable
+        - name: painting in cart
+      trigger:
+        name: user authenticated
+        arguments:
+          - qualifier: as
+            name: email address
+      result:
+        name: default user identity available
+        arguments:
+          - qualifier: as
+            name: email address
+      notes: Stored in browser local storage
+    - id: "002"
+      states:
+        - name: default user identity available
+      trigger:
+        name: browser local storage cleared
+      result:
+        name: default user identity unavailable
+      notes: Action outside application scope
+  impossible:
+    defined: []
+  irrelevant: []
+  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\state-machines\default-user-identity.state-machine.md
+- name: page navigation
+  states:
+    - name: landing page open
+    - name: gallery page open
+    - name: paintings overview page open
+    - name: painting details page open
+    - name: cart page open
+    - name: reservation page open
+    - name: reservation confirmation page open
+    - name: therapy page open
+    - name: studio page open
+    - name: privacy policy page open
+  initialState: landing page open
+  data:
+    therapy subject: ""
+  dataExampleValues:
+    - therapy subject: practice
+    - therapy subject: what-is-therapy
+    - therapy subject: for-who
+    - therapy subject: rates
+    - therapy subject: about-patricia
+    - therapy subject: conditions
+    - therapy subject: contact
+  dataOtherValues: []
+  defaultPreconditions:
+    - state: user session present
+  transitions:
+    - id: "021"
+      states:
+        - name: landing page open
+      trigger:
+        name: therapy subsite selected
+      result:
+        name: therapy page open
+        arguments:
+          - qualifier: with
+            name: therapy subject
+            condition:
+              operator: is
+              value: practice
+    - id: "022"
+      states:
+        - name: landing page open
+      trigger:
+        name: studio subsite selected
+      result:
+        name: studio page open
+    - id: "023"
+      states:
+        - name: landing page open
+      trigger:
+        name: gallery subsite selected
+      result:
+        name: gallery page open
+    - id: "024"
+      states:
+        - name: gallery page open
+      trigger:
+        name: browse paintings selected
+      result:
+        name: paintings overview page open
+    - id: "025"
+      states:
+        - name: gallery page open
+      trigger:
+        name: home selected
+      result:
+        name: landing page open
+      notes: Via Logo in Header
+    - id: "026"
+      states:
+        - name: paintings overview page open
+      trigger:
+        name: painting selected
+      result:
+        name: painting details page open
+    - id: "027"
+      states:
+        - name: paintings overview page open
+      trigger:
+        name: home selected
+      result:
+        name: landing page open
+      notes: Via Logo in Header
+    - id: "028"
+      states:
+        - name: painting details page open
+      trigger:
+        name: back to overview selected
+      result:
+        name: paintings overview page open
+    - id: "029"
+      states:
+        - name: painting details page open
+      trigger:
+        name: view cart selected
+      result:
+        name: cart page open
+    - id: "030"
+      states:
+        - name: painting details page open
+      trigger:
+        name: home selected
+      result:
+        name: landing page open
+      notes: Via Logo in Header
+    - id: "031"
+      states:
+        - name: cart page open
+      trigger:
+        name: back to overview selected
+      result:
+        name: paintings overview page open
+    - id: "032"
+      states:
+        - name: cart non-empty
+        - name: cart page open
+      trigger:
+        name: checkout started
+      result:
+        name: reservation page open
+    - id: "033"
+      states:
+        - name: cart page open
+      trigger:
+        name: home selected
+      result:
+        name: landing page open
+      notes: Via Logo in Header
+    - id: "034"
+      states:
+        - name: reservation page open
+      trigger:
+        name: back to cart selected
+      result:
+        name: cart page open
+    - id: "035"
+      states:
+        - name: cart non-empty
+        - name: reservation page open
+      trigger:
+        name: reservation confirmation selected
+      result:
+        name: reservation confirmation page open
+    - id: "036"
+      states:
+        - name: reservation page open
+      trigger:
+        name: home selected
+      result:
+        name: landing page open
+      notes: Via Logo in Header
+    - id: "037"
+      states:
+        - name: reservation confirmation page open
+      trigger:
+        name: browse paintings selected
+      result:
+        name: paintings overview page open
+    - id: "038"
+      states:
+        - name: reservation confirmation page open
+      trigger:
+        name: home selected
+      result:
+        name: landing page open
+      notes: Via Logo in Header
+    - id: "039"
+      states:
+        - name: therapy page open about therapy subject
+      trigger:
+        name: therapy page selected about next therapy subject
+      result:
+        name: therapy page open
+        arguments:
+          - preQualifier: with
+            modifier: next
+            name: therapy subject
+      notes: Navigation via PracticeNavigationBar
+    - id: "040"
+      states:
+        - name: therapy page open
+      trigger:
+        name: home selected
+      result:
+        name: landing page open
+      notes: Via Logo in Header
+    - id: "041"
+      states:
+        - name: studio page open
+      trigger:
+        name: home selected
+      result:
+        name: landing page open
+      notes: Via Logo in Header
+    - id: "042"
+      states:
+        - name: gallery page open
+      trigger:
+        name: privacy policy selected
+      result:
+        name: privacy policy page open
+      notes: Via Footer link
+    - id: "043"
+      states:
+        - name: paintings overview page open
+      trigger:
+        name: privacy policy selected
+      result:
+        name: privacy policy page open
+      notes: Via Footer link
+    - id: "044"
+      states:
+        - name: painting details page open
+      trigger:
+        name: privacy policy selected
+      result:
+        name: privacy policy page open
+      notes: Via Footer link
+    - id: "045"
+      states:
+        - name: cart page open
+      trigger:
+        name: privacy policy selected
+      result:
+        name: privacy policy page open
+      notes: Via Footer link
+    - id: "046"
+      states:
+        - name: reservation page open
+      trigger:
+        name: privacy policy selected
+      result:
+        name: privacy policy page open
+      notes: Via Footer link
+    - id: "047"
+      states:
+        - name: reservation confirmation page open
+      trigger:
+        name: privacy policy selected
+      result:
+        name: privacy policy page open
+      notes: Via Footer link
+    - id: "048"
+      states:
+        - name: privacy policy page open
+      trigger:
+        name: home selected
+      result:
+        name: landing page open
+      notes: Via Logo in Header
+  impossible:
+    defined: []
+  irrelevant: []
+  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\state-machines\page-navigation.state-machine.md
+- name: painting status
+  states:
+    - name: painting available
+      description: Painting is on sale and can be added to a cart.
+    - name: painting in cart
+      description: Painting is held in a user's shopping cart, pending reservation.
+    - name: painting reserved
+      description: Painting is reserved for a specific user.
+    - name: painting sold
+      description: Painting has been sold and is no longer available.
+    - name: painting loaned
+      description: Painting is temporarily on loan (e.g. to an exhibition).
+    - name: painting archived
+      description: Painting is hidden from the public gallery.
+  initialState: painting available
+  data:
+    email address: ""
+    user name: ""
+  dataExampleValues:
+    - email address: info@domain.com
+      user name: john doe
+  dataOtherValues: []
+  defaultPreconditions: []
+  transitions:
+    - id: "003"
+      states:
+        - name: user session present
+        - name: painting available
+      trigger:
+        name: painting added to cart
+      result:
+        name: painting in cart
+      notes: Cart hold is time-limited and will expire automatically
+    - id: "004"
+      states:
+        - name: user session present
+        - name: painting in cart
+      trigger:
+        name: painting reservation confirmed
+      result:
+        name: painting reserved
+      notes: To have a painting in cart under an email address, the user must be
+        authenticated
+    - id: "005"
+      states:
+        - name: user authenticated
+        - name: painting in cart
+          arguments:
+            - qualifier: of
+              name: email address
+      trigger:
+        name: painting reservation confirmed
+        arguments:
+          - qualifier: using
+            name: email address
+      result:
+        name: painting reserved
+        arguments:
+          - qualifier: for
+            name: email address
+      notes: To have a painting in cart under an email address, the user must be
+        authenticated
+    - id: "006"
+      states:
+        - name: user authenticated
+        - name: painting in cart
+          arguments:
+            - qualifier: of
+              name: email address
+      trigger:
+        name: painting cart hold expired
+      result:
+        name: painting available
+      notes: Expiry elapsed without reservation
+    - id: "007"
+      states:
+        - name: user authenticated
+        - name: painting in cart
+          arguments:
+            - qualifier: of
+              name: email address
+      trigger:
+        name: painting removed from cart
+      result:
+        name: painting available
+    - id: "008"
+      states:
+        - name: user session absent
+        - name: painting reserved
+      trigger:
+        name: painting reservation cancelled
+      result:
+        name: painting available
+      notes: Administrative action
+    - id: "009"
+      states:
+        - name: user session absent
+        - name: painting reserved
+      trigger:
+        name: painting marked as sold
+      result:
+        name: painting sold
+      notes: Administrative action
+    - id: "010"
+      states:
+        - name: user session absent
+        - name: painting available
+      trigger:
+        name: painting marked as loaned
+      result:
+        name: painting loaned
+      notes: Administrative action
+    - id: "011"
+      states:
+        - name: user session absent
+        - name: painting loaned
+      trigger:
+        name: painting loan ended
+      result:
+        name: painting available
+      notes: Administrative action
+    - id: "012"
+      states:
+        - name: user session absent
+        - name: painting available
+      trigger:
+        name: painting marked as archived
+      result:
+        name: painting archived
+      notes: Administrative action
+    - id: "013"
+      states:
+        - name: user session absent
+        - name: painting archived
+      trigger:
+        name: painting unarchived
+      result:
+        name: painting available
+      notes: Administrative action
+  impossible:
+    defined:
+      - states:
+          - user session absent
+        trigger:
+          name: painting added to cart
+      - states:
+          - user session absent
+        trigger:
+          name: painting cart hold expired
+      - states:
+          - user session absent
+        trigger:
+          name: painting removed from cart
+      - states:
+          - user session absent
+        trigger:
+          name: painting reservation confirmed
+      - states:
+          - user session present
+        trigger:
+          name: painting reservation cancelled
+      - states:
+          - user session present
+        trigger:
+          name: painting marked as sold
+      - states:
+          - user session present
+        trigger:
+          name: painting marked as loaned
+      - states:
+          - user session present
+        trigger:
+          name: painting loan ended
+      - states:
+          - user session present
+        trigger:
+          name: painting marked as archived
+      - states:
+          - user session present
+        trigger:
+          name: painting unarchived
+  irrelevant: []
+  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\state-machines\painting-status.state-machine.md
+- name: reservation form
+  states:
+    - name: reservation form unfilled
+      description: No fields have been completed.
+      impliedConditions:
+        - attribute: name
+          condition:
+            operator: undefined
+        - attribute: email address
+          condition:
+            operator: undefined
+        - attribute: policies
+          condition:
+            operator: is
+            value: not approved
+    - name: reservation form partially filled
+      description: At least one but not all required fields are complete.
+    - name: reservation form filled
+      description: All required fields are complete.
+      impliedConditions:
+        - attribute: name
+          condition:
+            operator: is
+            value: john doe
+        - attribute: email address
+          condition:
+            operator: is
+            value: info@domain.com
+        - attribute: policies
+          condition:
+            operator: is
+            value: approved
+  initialState: reservation form unfilled
+  data:
+    email address: ""
+    name: ""
+    policies: ""
+  dataExampleValues:
+    - name: ""
+      email address: ""
+      policies: not approved
+    - name: john doe
+      email address: ""
+      policies: not approved
+    - name: john doe
+      email address: info@domain.com
+      policies: not approved
+    - name: john doe
+      email address: info@domain.com
+      policies: approved
+  dataOtherValues: []
+  defaultPreconditions:
+    - state: reservation page open
+  transitions:
+    - states:
+        - name: reservation form unfilled
+      trigger:
+        name: name entered
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: name
+            condition:
+              operator: is
+              value: approved
+    - states:
+        - name: reservation form unfilled
+      trigger:
+        name: email address entered
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: email address
+            condition:
+              operator: is
+              value: approved
+    - states:
+        - name: reservation form unfilled
+      trigger:
+        name: policies approved
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: policies
+            condition:
+              operator: is
+              value: approved
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: email address
+              condition:
+                operator: is
+                value: not approved
+      trigger:
+        name: email address entered
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: email address
+            condition:
+              operator: is
+              value: approved
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: name
+              condition:
+                operator: is
+                value: not approved
+      trigger:
+        name: name entered
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: name
+            condition:
+              operator: is
+              value: approved
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: policies
+              condition:
+                operator: is
+                value: not approved
+      trigger:
+        name: policies approved
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: policies
+            condition:
+              operator: is
+              value: approved
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: email address
+              condition:
+                operator: is
+                value: approved
+            - name: name
+              condition:
+                operator: is
+                value: approved
+      trigger:
+        name: policies approved
+      result:
+        name: reservation form filled
+        arguments:
+          - qualifier: with
+            name: policies
+            condition:
+              operator: is
+              value: approved
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: email address
+              condition:
+                operator: is
+                value: approved
+            - name: policies
+              condition:
+                operator: is
+                value: approved
+      trigger:
+        name: name entered
+      result:
+        name: reservation form filled
+        arguments:
+          - qualifier: with
+            name: name
+            condition:
+              operator: is
+              value: approved
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: name
+              condition:
+                operator: is
+                value: approved
+            - name: policies
+              condition:
+                operator: is
+                value: approved
+      trigger:
+        name: email address entered
+      result:
+        name: reservation form filled
+        arguments:
+          - qualifier: with
+            name: email address
+            condition:
+              operator: is
+              value: approved
+    - states:
+        - name: reservation form filled
+      trigger:
+        name: email address cleared
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: email address
+            condition:
+              operator: is
+              value: not approved
+    - states:
+        - name: reservation form filled
+      trigger:
+        name: name cleared
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: name
+            condition:
+              operator: is
+              value: not approved
+    - states:
+        - name: reservation form filled
+      trigger:
+        name: policies revoked
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: policies
+            condition:
+              operator: is
+              value: not approved
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: email address
+              condition:
+                operator: is
+                value: approved
+            - name: name
+              condition:
+                operator: is
+                value: not approved
+            - name: policies
+              condition:
+                operator: is
+                value: not approved
+      trigger:
+        name: email address cleared
+      result:
+        name: reservation form unfilled
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: name
+              condition:
+                operator: is
+                value: approved
+            - name: email address
+              condition:
+                operator: is
+                value: not approved
+            - name: policies
+              condition:
+                operator: is
+                value: not approved
+      trigger:
+        name: name cleared
+      result:
+        name: reservation form unfilled
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: policies
+              condition:
+                operator: is
+                value: approved
+            - name: email address
+              condition:
+                operator: is
+                value: not approved
+            - name: name
+              condition:
+                operator: is
+                value: not approved
+      trigger:
+        name: policies revoked
+      result:
+        name: reservation form unfilled
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: email address
+              condition:
+                operator: is
+                value: approved
+            - name: name
+              condition:
+                operator: is
+                value: approved
+      trigger:
+        name: email address cleared
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: email address
+            condition:
+              operator: is
+              value: not approved
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: email address
+              condition:
+                operator: is
+                value: approved
+            - name: policies
+              condition:
+                operator: is
+                value: approved
+      trigger:
+        name: email address cleared
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: email address
+            condition:
+              operator: is
+              value: not approved
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: name
+              condition:
+                operator: is
+                value: approved
+            - name: policies
+              condition:
+                operator: is
+                value: approved
+      trigger:
+        name: name cleared
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: name
+            condition:
+              operator: is
+              value: not approved
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: name
+              condition:
+                operator: is
+                value: approved
+            - name: email address
+              condition:
+                operator: is
+                value: approved
+      trigger:
+        name: name cleared
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: name
+            condition:
+              operator: is
+              value: not approved
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: policies
+              condition:
+                operator: is
+                value: approved
+            - name: email address
+              condition:
+                operator: is
+                value: approved
+      trigger:
+        name: policies revoked
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: policies
+            condition:
+              operator: is
+              value: not approved
+    - states:
+        - name: reservation form partially filled
+          arguments:
+            - qualifier: with
+              name: policies
+              condition:
+                operator: is
+                value: approved
+            - name: name
+              condition:
+                operator: is
+                value: approved
+      trigger:
+        name: policies revoked
+      result:
+        name: reservation form partially filled
+        arguments:
+          - qualifier: with
+            name: policies
+            condition:
+              operator: is
+              value: not approved
+  impossible:
+    defined:
+      - states:
+          - reservation form unfilled
+        trigger:
+          name: name cleared
+      - states:
+          - reservation form unfilled
+        trigger:
+          name: email address cleared
+      - states:
+          - reservation form unfilled
+        trigger:
+          name: policy acceptance revoked
+      - states:
+          - reservation form filled
+        trigger:
+          name: name entered
+      - states:
+          - reservation form filled
+        trigger:
+          name: email address entered
+      - states:
+          - reservation form filled
+        trigger:
+          name: policies approved
+  irrelevant: []
+  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\state-machines\reservation-form.state-machine.md
+- name: user authentication
+  overview: Users are identified by email address only. No passwords or other
+    credentials are used.
+  states:
+    - name: user authenticated
+    - name: user unauthenticated
+  initialState: user unauthenticated
+  data:
+    email address: ""
+  dataExampleValues:
+    - email address: info@domain.com
+  dataOtherValues:
+    - email address: other@example.com
+  defaultPreconditions:
+    - state: user session present
+  transitions:
+    - id: "014"
+      states:
+        - name: default user identity available
+          arguments:
+            - qualifier: as
+              name: email address
+        - name: user session absent
+        - name: user unauthenticated
+      trigger:
+        name: user session present
+      result:
+        name: user authenticated
+        arguments:
+          - qualifier: as
+            name: email address
+      notes: Implicitly signed in
+    - id: "015"
+      states:
+        - name: default user identity unavailable
+        - name: user session absent
+        - name: user unauthenticated
+      trigger:
+        name: user session present
+      result:
+        name: user unauthenticated
+    - id: "016"
+      states:
+        - name: default user identity available
+          arguments:
+            - qualifier: as
+              name: email address
+        - name: user session present
+        - name: user unauthenticated
+      trigger:
+        name: sign in started with email address prefilled
+      result:
+        name: user unauthenticated
+    - id: "017"
+      states:
+        - name: user unauthenticated
+      trigger:
+        name: user signed in with email address
+      result:
+        name: user authenticated
+        arguments:
+          - qualifier: as
+            name: email address
+    - id: "018"
+      states:
+        - name: painting in cart
+        - name: user unauthenticated
+      trigger:
+        name: painting reserved under email address
+      result:
+        name: user authenticated
+        arguments:
+          - qualifier: as
+            name: email address
+      notes: Implicitly signed in
+    - id: "019"
+      states:
+        - name: painting in cart
+        - name: user authenticated
+          arguments:
+            - modifier: not
+              postQualifier: as
+              name: email address
+      trigger:
+        name: painting reserved under email address
+      result:
+        name: user authenticated
+        arguments:
+          - qualifier: as
+            name: email address
+      notes: Implicitly re-signed in
+    - id: "020"
+      states:
+        - name: user authenticated
+      trigger:
+        name: user signed out
+      result:
+        name: user unauthenticated
+    - id: "021"
+      states:
+        - name: user authenticated
+      trigger:
+        name: user session absent
+      result:
+        name: user unauthenticated
+      notes: Implicitly signed out
+  impossible:
+    defined:
+      - states:
+          - default user identity unavailable
+        trigger:
+          name: sign in started
+          arguments:
+            - qualifier: with
+              name: email address
+              suffix: prefilled`
+      - states:
+          - user session absent
+        trigger:
+          name: sign in started
+          arguments:
+            - qualifier: with
+              name: email address
+              suffix: prefilled`
+      - states:
+          - user session absent
+        trigger:
+          name: user signed in
+          arguments:
+            - qualifier: with
+              name: email address
+  irrelevant: []
+  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\state-machines\user-authentication.state-machine.md
+- name: user profile
+  overview: User profile consists of authenticated user's email address and
+    optionally associated user name. Painting database contains email address to
+    user name associations. Single user name may be associated with multiple
+    email addresses.
+  states:
+    - name: user profile unavailable
+    - name: unnamed user profile available
+    - name: named user profile available
+  initialState: user profile unavailable
+  data:
+    email address: ""
+    user name: ""
+  dataExampleValues:
+    - email address: info@domain.com
+      user name: john doe
+  dataOtherValues:
+    - email address: other@example.com
+      user name: alice smith
+  defaultPreconditions:
+    - state: user session present
+  transitions:
+    - id: "022"
+      states:
+        - name: painting reserved
+          arguments:
+            - qualifier: under
+              name: email address
+        - name: user profile <br/>unavailable
+      trigger:
+        name: user signed in
+        arguments:
+          - preQualifier: with
+            modifier: other
+            name: email address
+      result:
+        name: unnamed user profile available
+    - id: "023"
+      states:
+        - name: painting reserved
+          arguments:
+            - qualifier: under
+              name: email address
+        - name: user profile <br/>unavailable
+      trigger:
+        name: user signed in
+        arguments:
+          - qualifier: with
+            name: email address
+      result:
+        name: named user profile available
+        arguments:
+          - qualifier: for
+            name: email address
+    - id: "024"
+      states:
+        - name: user authenticated
+        - name: painting in cart
+          arguments:
+            - qualifier: of
+              name: email address
+        - name: user <br/>profile unavailable
+      trigger:
+        name: painting reserved
+        arguments:
+          - qualifier: under
+            name: email address
+      result:
+        name: named user profile available
+        arguments:
+          - qualifier: for
+            name: email address
+    - id: "025"
+      states:
+        - name: user authenticated
+        - name: painting in cart
+          arguments:
+            - qualifier: of
+              name: email address
+        - name: unnamed user profile available
+      trigger:
+        name: painting reserved
+        arguments:
+          - qualifier: under
+            name: email address
+      result:
+        name: named user profile available
+        arguments:
+          - qualifier: for
+            name: email address
+    - id: "026"
+      states:
+        - name: unnamed user profile available
+      trigger:
+        name: user unauthenticated
+      result:
+        name: user profile unavailable
+    - id: "027"
+      states:
+        - name: named user profile available
+      trigger:
+        name: user unauthenticated
+      result:
+        name: user profile unavailable
+  impossible:
+    defined:
+      - states:
+          - user session absent
+        trigger:
+          name: user signed in
+          arguments:
+            - qualifier: with
+              name: email address
+  irrelevant:
+    - states:
+        - painting available
+      trigger:
+        name: user signed in
+        arguments:
+          - qualifier: with
+            name: email address
+    - states:
+        - painting in cart
+      trigger:
+        name: user signed in
+        arguments:
+          - qualifier: with
+            name: email address
+    - states:
+        - painting loaned
+      trigger:
+        name: user signed in
+        arguments:
+          - qualifier: with
+            name: email address
+    - states:
+        - painting sold
+      trigger:
+        name: user signed in
+        arguments:
+          - qualifier: with
+            name: email address
+    - states:
+        - painting archived
+      trigger:
+        name: user signed in
+        arguments:
+          - qualifier: with
+            name: email address
+  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\state-machines\user-profile.state-machine.md
+- name: user session
+  states:
+    - name: user session absent
+      description: No gallery subsite page open in user device's browser.
+    - name: user session present
+      description: At least one gallery subsite page open in user device's browser.
+  initialState: user session absent
+  data:
+    session id: ""
+  dataExampleValues: []
+  dataOtherValues: []
+  defaultPreconditions: []
+  transitions:
+    - id: "028"
+      states:
+        - name: user session absent
+      trigger:
+        name: first page opened
+      result:
+        name: user session present
+    - id: "029"
+      states:
+        - name: user session present
+      trigger:
+        name: last page closed
+      result:
+        name: user session absent
+  impossible:
+    defined:
+      - states:
+          - user session present
+        trigger:
+          name: first page opened
+      - states:
+          - user session absent
+        trigger:
+          name: last page closed
+  irrelevant: []
+  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\state-machines\user-session.state-machine.md

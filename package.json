@@ -1,0 +1,23 @@
+{
+  "name": "smtt",
+  "version": "1.0.0",
+  "description": "State-machine test tooling",
+  "type": "module",
+  "bin": {
+    "smtt": "./src/smtt.ts"
+  },
+  "scripts": {
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "generate": "tsx ./src/smtt.ts generate"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "ohm-js": "^17.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.0",
+    "yaml": "^2.4.5"
+  }
+}

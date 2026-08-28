@@ -1,0 +1,26 @@
+- Add to AST validation:
+  - Check that all identifiers are properly matched to owning state machine and no duplicates.
+  - If state arguments are different then it should be checked whether they are not disjunct.
+    E.g. a = 1 and a = 2
+  - smtt.generate.features.md REQ-117 ("when two references share the
+    same state name but carry different arguments, both shall be kept") may be
+    an invalid requirement — the same state name with different arguments in
+    the same Given list looks like a contradiction rather than a legitimate
+    case. Confirm whether this scenario can genuinely occur and, if not, remove
+    REQ-117 (and dedupeStateRefs' handling of it) from the spec/generator;
+    otherwise fix the wording/example and re-add a proper test case
+    (previously TST-052, removed from state-trigger-expansion.test.ts pending
+    this review).
+  - A modifier is only valid whenever a base reference to the same attribute exists. 
+    It's invalid when there's no prior reference to derive from.
+    In other words, When attribute modifier used then there must also be a reference to unmodified attribute.
+    The latter using the base column values and former the extra column with modified attribute value.
+  - Arguments used without example values defined.
+  - Transition precondition states can be duplicated or from same state machine. That should not be allowed. Checker needed for that.
+    Default preconditions shall only be for external states.
+  - Transition triggers can not be triggers of own state. Only state from other state machines.
+  - missing preconditions
+  - missing states (e.g. when used in preconditions)
+  - if only single example, then 'not' modifier (or others as well) will not work. Raise error.
+  - Dependency validation. Check all external states used to have corresponding dep to machine.
+

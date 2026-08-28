@@ -1,0 +1,878 @@
+{
+  "stateMachines": [
+    {
+      "name": "m1",
+      "overview": "Base machine. Tracks whether a named session is active.",
+      "states": [
+        {
+          "name": "m1 inactive",
+          "description": "M1 has not been started or has been stopped."
+        },
+        {
+          "name": "m1 active",
+          "description": "M1 is currently running, identified by an `A1` value."
+        }
+      ],
+      "data": {
+        "a1": "The identifier associated with the active M1 instance."
+      },
+      "dataExampleValues": [
+        {
+          "a1": "V1"
+        },
+        {
+          "a1": "V2"
+        }
+      ],
+      "dataOtherValues": [
+        {
+          "a1": "V3"
+        }
+      ],
+      "defaultPreconditions": [],
+      "transitions": [
+        {
+          "id": "001",
+          "states": [
+            {
+              "name": "m1 inactive"
+            }
+          ],
+          "trigger": {
+            "name": "e1",
+            "arguments": [
+              {
+                "qualifier": "with",
+                "name": "a1"
+              }
+            ],
+            "type": "event"
+          },
+          "result": {
+            "name": "m1 active",
+            "arguments": [
+              {
+                "qualifier": "with",
+                "name": "a1"
+              }
+            ]
+          }
+        },
+        {
+          "id": "002",
+          "states": [
+            {
+              "name": "m1 active",
+              "arguments": [
+                {
+                  "qualifier": "with",
+                  "name": "a1"
+                }
+              ]
+            }
+          ],
+          "trigger": {
+            "name": "e1",
+            "arguments": [
+              {
+                "preQualifier": "with",
+                "modifier": "different",
+                "name": "a1"
+              }
+            ],
+            "type": "event"
+          },
+          "result": {
+            "name": "m1 active",
+            "arguments": [
+              {
+                "preQualifier": "with",
+                "modifier": "different",
+                "name": "a1"
+              }
+            ]
+          },
+          "notes": "Re-activation under a different identifier"
+        },
+        {
+          "id": "003",
+          "states": [
+            {
+              "name": "m1 active"
+            }
+          ],
+          "trigger": {
+            "name": "e2",
+            "type": "event"
+          },
+          "result": {
+            "name": "m1 inactive"
+          }
+        }
+      ],
+      "impossible": {
+        "defined": [
+          {
+            "states": [
+              "m1 inactive"
+            ],
+            "trigger": {
+              "name": "e2",
+              "type": "event"
+            }
+          }
+        ]
+      },
+      "irrelevant": [],
+      "initialState": "m1 inactive",
+      "source": "C:\\Users\\pfpme\\WebstormProjects\\Malerien\\tests\\smtt\\src\\tests\\state-machines\\m1.state-machine.md"
+    },
+    {
+      "name": "m2",
+      "overview": "Counter machine. Counts items from 0 to 3. Requires `M1 active` to operate.",
+      "states": [
+        {
+          "name": "m2 empty",
+          "description": "No items are counted.",
+          "impliedConditions": [
+            {
+              "attribute": "a2",
+              "condition": {
+                "operator": "=",
+                "value": "0"
+              }
+            }
+          ]
+        },
+        {
+          "name": "m2 partial",
+          "description": "Some items are counted, below the maximum.",
+          "impliedConditions": [
+            {
+              "attribute": "a2",
+              "condition": {
+                "operator": ">",
+                "value": "0"
+              }
+            }
+          ]
+        },
+        {
+          "name": "m2 full",
+          "description": "The maximum item count has been reached.",
+          "impliedConditions": [
+            {
+              "attribute": "a2",
+              "condition": {
+                "operator": "=",
+                "value": "3"
+              }
+            }
+          ]
+        }
+      ],
+      "data": {
+        "a2": "The current item count."
+      },
+      "dataExampleValues": [
+        {
+          "a2": "0"
+        },
+        {
+          "a2": "1"
+        },
+        {
+          "a2": "2"
+        },
+        {
+          "a2": "3"
+        }
+      ],
+      "dataOtherValues": [],
+      "defaultPreconditions": [
+        {
+          "state": "m1 active",
+          "description": "Counter operations are only valid while M1 is active."
+        }
+      ],
+      "transitions": [
+        {
+          "id": "004",
+          "states": [
+            {
+              "name": "m2 empty",
+              "arguments": [
+                {
+                  "qualifier": "with",
+                  "name": "a2",
+                  "condition": {
+                    "operator": "=",
+                    "value": "0"
+                  }
+                }
+              ]
+            }
+          ],
+          "trigger": {
+            "name": "e3",
+            "type": "event"
+          },
+          "result": {
+            "name": "m2 partial",
+            "arguments": [
+              {
+                "preQualifier": "with",
+                "modifier": "incremented",
+                "name": "a2"
+              }
+            ]
+          }
+        },
+        {
+          "id": "005",
+          "states": [
+            {
+              "name": "m2 partial",
+              "arguments": [
+                {
+                  "qualifier": "with",
+                  "name": "a2",
+                  "condition": {
+                    "operator": "<",
+                    "value": "2"
+                  }
+                }
+              ]
+            }
+          ],
+          "trigger": {
+            "name": "e3",
+            "type": "event"
+          },
+          "result": {
+            "name": "m2 partial",
+            "arguments": [
+              {
+                "preQualifier": "with",
+                "modifier": "incremented",
+                "name": "a2"
+              }
+            ]
+          }
+        },
+        {
+          "id": "006",
+          "states": [
+            {
+              "name": "m2 partial",
+              "arguments": [
+                {
+                  "qualifier": "with",
+                  "name": "a2",
+                  "condition": {
+                    "operator": "=",
+                    "value": "2"
+                  }
+                }
+              ]
+            }
+          ],
+          "trigger": {
+            "name": "e3",
+            "type": "event"
+          },
+          "result": {
+            "name": "m2 full",
+            "arguments": [
+              {
+                "qualifier": "with",
+                "name": "a2",
+                "condition": {
+                  "operator": "=",
+                  "value": "3"
+                }
+              }
+            ]
+          },
+          "notes": "Ceiling reached"
+        },
+        {
+          "id": "007",
+          "states": [
+            {
+              "name": "m2 partial",
+              "arguments": [
+                {
+                  "qualifier": "with",
+                  "name": "a2",
+                  "condition": {
+                    "operator": ">",
+                    "value": "1"
+                  }
+                }
+              ]
+            }
+          ],
+          "trigger": {
+            "name": "e4",
+            "type": "event"
+          },
+          "result": {
+            "name": "m2 partial",
+            "arguments": [
+              {
+                "preQualifier": "with",
+                "modifier": "decremented",
+                "name": "a2"
+              }
+            ]
+          }
+        },
+        {
+          "id": "008",
+          "states": [
+            {
+              "name": "m2 partial",
+              "arguments": [
+                {
+                  "qualifier": "with",
+                  "name": "a2",
+                  "condition": {
+                    "operator": "=",
+                    "value": "1"
+                  }
+                }
+              ]
+            }
+          ],
+          "trigger": {
+            "name": "e4",
+            "type": "event"
+          },
+          "result": {
+            "name": "m2 empty",
+            "arguments": [
+              {
+                "qualifier": "with",
+                "name": "a2",
+                "condition": {
+                  "operator": "=",
+                  "value": "0"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "009",
+          "states": [
+            {
+              "name": "m2 full",
+              "arguments": [
+                {
+                  "qualifier": "with",
+                  "name": "a2",
+                  "condition": {
+                    "operator": "=",
+                    "value": "3"
+                  }
+                }
+              ]
+            }
+          ],
+          "trigger": {
+            "name": "e4",
+            "type": "event"
+          },
+          "result": {
+            "name": "m2 partial",
+            "arguments": [
+              {
+                "preQualifier": "with",
+                "modifier": "decremented",
+                "name": "a2"
+              }
+            ]
+          }
+        },
+        {
+          "id": "010",
+          "states": [
+            {
+              "name": "m2 partial"
+            }
+          ],
+          "trigger": {
+            "name": "m1 inactive",
+            "type": "state"
+          },
+          "result": {
+            "name": "m2 empty"
+          },
+          "notes": "Counter cleared when M1 deactivates"
+        },
+        {
+          "id": "011",
+          "states": [
+            {
+              "name": "m2 full"
+            }
+          ],
+          "trigger": {
+            "name": "m1 inactive",
+            "type": "state"
+          },
+          "result": {
+            "name": "m2 empty"
+          },
+          "notes": "Counter cleared when M1 deactivates"
+        }
+      ],
+      "impossible": {
+        "defined": [
+          {
+            "states": [
+              "m1 inactive"
+            ],
+            "trigger": {
+              "name": "e3",
+              "type": "event"
+            }
+          },
+          {
+            "states": [
+              "m1 inactive"
+            ],
+            "trigger": {
+              "name": "e4",
+              "type": "event"
+            }
+          },
+          {
+            "states": [
+              "m2 full"
+            ],
+            "trigger": {
+              "name": "e3",
+              "type": "event"
+            }
+          },
+          {
+            "states": [
+              "m2 empty"
+            ],
+            "trigger": {
+              "name": "e4",
+              "type": "event"
+            }
+          }
+        ]
+      },
+      "irrelevant": [],
+      "initialState": "m2 empty",
+      "source": "C:\\Users\\pfpme\\WebstormProjects\\Malerien\\tests\\smtt\\src\\tests\\state-machines\\m2.state-machine.md"
+    },
+    {
+      "name": "m3",
+      "overview": "Workflow machine. Tracks a labelled process through its lifecycle. Requires `M1 active` and coordinates with `M2`.",
+      "states": [
+        {
+          "name": "m3 pending",
+          "description": "Workflow has not yet been started.",
+          "impliedConditions": [
+            {
+              "attribute": "a4",
+              "condition": {
+                "operator": "=",
+                "value": "0"
+              }
+            }
+          ]
+        },
+        {
+          "name": "m3 open",
+          "description": "Workflow is actively progressing.",
+          "impliedConditions": [
+            {
+              "attribute": "a4",
+              "condition": {
+                "operator": ">",
+                "value": "0"
+              }
+            }
+          ]
+        },
+        {
+          "name": "m3 paused",
+          "description": "Workflow is temporarily suspended."
+        },
+        {
+          "name": "m3 closed",
+          "description": "Workflow has ended, either completed or aborted."
+        }
+      ],
+      "data": {
+        "a3": "The label assigned to this workflow instance.",
+        "a4": "The progress score accumulated during the workflow."
+      },
+      "dataExampleValues": [
+        {
+          "a3": "P1",
+          "a4": "0"
+        },
+        {
+          "a3": "P2",
+          "a4": "10"
+        }
+      ],
+      "dataOtherValues": [
+        {
+          "a3": "P3",
+          "a4": "20"
+        }
+      ],
+      "defaultPreconditions": [
+        {
+          "state": "m1 active",
+          "description": "Workflow operations require M1 to be active."
+        }
+      ],
+      "transitions": [
+        {
+          "id": "012",
+          "states": [
+            {
+              "name": "m2 partial"
+            },
+            {
+              "name": "m3 pending",
+              "arguments": [
+                {
+                  "qualifier": "with",
+                  "name": "a4",
+                  "condition": {
+                    "operator": "=",
+                    "value": "0"
+                  }
+                }
+              ]
+            }
+          ],
+          "trigger": {
+            "name": "e5",
+            "arguments": [
+              {
+                "qualifier": "with",
+                "name": "a3"
+              }
+            ],
+            "type": "event"
+          },
+          "result": {
+            "name": "m3 open",
+            "arguments": [
+              {
+                "qualifier": "with",
+                "name": "a3"
+              },
+              {
+                "name": "a4",
+                "condition": {
+                  "operator": "=",
+                  "value": "10"
+                }
+              }
+            ]
+          },
+          "notes": "Starting the workflow assigns label and score"
+        },
+        {
+          "id": "013",
+          "states": [
+            {
+              "name": "m3 open"
+            }
+          ],
+          "trigger": {
+            "name": "e6",
+            "type": "event"
+          },
+          "result": {
+            "name": "m3 paused"
+          }
+        },
+        {
+          "id": "014",
+          "states": [
+            {
+              "name": "m3 paused"
+            }
+          ],
+          "trigger": {
+            "name": "e7",
+            "type": "event"
+          },
+          "result": {
+            "name": "m3 open"
+          }
+        },
+        {
+          "id": "015",
+          "states": [
+            {
+              "name": "m3 open"
+            },
+            {
+              "name": "m2 full"
+            }
+          ],
+          "trigger": {
+            "name": "e8",
+            "type": "event"
+          },
+          "result": {
+            "name": "m3 closed",
+            "arguments": [
+              {
+                "qualifier": "with",
+                "name": "a4",
+                "condition": {
+                  "operator": "=",
+                  "value": "20"
+                }
+              }
+            ]
+          },
+          "notes": "Completion requires full M2; score set to max"
+        },
+        {
+          "id": "016",
+          "states": [
+            {
+              "name": "m3 open"
+            },
+            {
+              "name": "m2 empty"
+            }
+          ],
+          "trigger": {
+            "name": "e9",
+            "type": "event"
+          },
+          "result": {
+            "name": "m3 closed",
+            "arguments": [
+              {
+                "qualifier": "with",
+                "name": "a4",
+                "condition": {
+                  "operator": "=",
+                  "value": "0"
+                }
+              }
+            ]
+          },
+          "notes": "Abort from open with empty counter"
+        },
+        {
+          "id": "017",
+          "states": [
+            {
+              "name": "m3 paused"
+            }
+          ],
+          "trigger": {
+            "name": "e9",
+            "type": "event"
+          },
+          "result": {
+            "name": "m3 closed",
+            "arguments": [
+              {
+                "qualifier": "with",
+                "name": "a4",
+                "condition": {
+                  "operator": "=",
+                  "value": "0"
+                }
+              }
+            ]
+          },
+          "notes": "Abort while paused"
+        },
+        {
+          "id": "018",
+          "states": [
+            {
+              "name": "m3 open"
+            }
+          ],
+          "trigger": {
+            "name": "m1 inactive",
+            "type": "state"
+          },
+          "result": {
+            "name": "m3 paused"
+          },
+          "notes": "Auto-paused when M1 deactivates"
+        },
+        {
+          "id": "019",
+          "states": [
+            {
+              "name": "m1 inactive"
+            },
+            {
+              "name": "m3 paused"
+            }
+          ],
+          "trigger": {
+            "name": "m1 active",
+            "arguments": [
+              {
+                "qualifier": "with",
+                "name": "a1"
+              }
+            ],
+            "type": "state"
+          },
+          "result": {
+            "name": "m3 open"
+          },
+          "notes": "Auto-resumed when M1 reactivates"
+        }
+      ],
+      "impossible": {
+        "defined": [
+          {
+            "states": [
+              "m3 closed"
+            ],
+            "trigger": {
+              "name": "e5",
+              "arguments": [
+                {
+                  "qualifier": "with",
+                  "name": "a3"
+                }
+              ],
+              "type": "event"
+            }
+          },
+          {
+            "states": [
+              "m3 closed"
+            ],
+            "trigger": {
+              "name": "e6",
+              "type": "event"
+            }
+          },
+          {
+            "states": [
+              "m3 closed"
+            ],
+            "trigger": {
+              "name": "e7",
+              "type": "event"
+            }
+          },
+          {
+            "states": [
+              "m3 closed"
+            ],
+            "trigger": {
+              "name": "e8",
+              "type": "event"
+            }
+          },
+          {
+            "states": [
+              "m3 closed"
+            ],
+            "trigger": {
+              "name": "e9",
+              "type": "event"
+            }
+          },
+          {
+            "states": [
+              "m3 pending"
+            ],
+            "trigger": {
+              "name": "e6",
+              "type": "event"
+            }
+          },
+          {
+            "states": [
+              "m3 pending"
+            ],
+            "trigger": {
+              "name": "e7",
+              "type": "event"
+            }
+          },
+          {
+            "states": [
+              "m3 pending"
+            ],
+            "trigger": {
+              "name": "e8",
+              "type": "event"
+            }
+          },
+          {
+            "states": [
+              "m3 pending"
+            ],
+            "trigger": {
+              "name": "e9",
+              "type": "event"
+            }
+          }
+        ]
+      },
+      "irrelevant": [
+        {
+          "states": [
+            "m3 pending"
+          ],
+          "trigger": {
+            "name": "e2",
+            "type": "event"
+          }
+        },
+        {
+          "states": [
+            "m3 open"
+          ],
+          "trigger": {
+            "name": "e2",
+            "type": "event"
+          }
+        },
+        {
+          "states": [
+            "m3 paused"
+          ],
+          "trigger": {
+            "name": "e2",
+            "type": "event"
+          }
+        },
+        {
+          "states": [
+            "m3 closed"
+          ],
+          "trigger": {
+            "name": "e2",
+            "type": "event"
+          }
+        }
+      ],
+      "initialState": "m3 pending",
+      "source": "C:\\Users\\pfpme\\WebstormProjects\\Malerien\\tests\\smtt\\src\\tests\\state-machines\\m3.state-machine.md"
+    }
+  ]
+}

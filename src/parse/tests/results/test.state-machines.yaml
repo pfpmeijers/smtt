@@ -1,0 +1,575 @@
+- name: argument variations
+  overview: Exercises data reference modifiers and value conditions recognized by
+    the parser.
+  states:
+    - name: phase one
+      description: Initial phase with no data.
+    - name: phase two
+      description: Phase with data and various transitions.
+    - name: phase three
+      description: Final phase reached through various conditions and modifiers.
+  data:
+    count: Number of items.
+    label: Display label.
+    score: Numeric score. ... extra description ...
+  dataExampleValues:
+    - count: "2"
+      label: alpha
+      score: "10"
+  dataOtherValues:
+    - count: "3"
+      label: beta
+      score: "20"
+  defaultPreconditions:
+    - state: idle
+  transitions:
+    - states:
+        - name: phase one
+      trigger:
+        name: started
+        arguments:
+          - qualifier: for
+            name: label
+        type: event
+      result:
+        name: phase two
+        arguments:
+          - qualifier: for
+            name: label
+      notes: Plain data ref
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: as
+              name: label
+      trigger:
+        name: renamed
+        arguments:
+          - preQualifier: to
+            modifier: different
+            name: label
+        type: event
+      result:
+        name: phase two
+        arguments:
+          - qualifier: as
+            name: label
+      notes: "Negation: different"
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: as
+              name: label
+      trigger:
+        name: swapped
+        arguments:
+          - preQualifier: with
+            modifier: other
+            name: label
+        type: event
+      result:
+        name: phase two
+        arguments:
+          - qualifier: as
+            name: label
+      notes: "Negation: not"
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: as
+              name: label
+      trigger:
+        name: replaced
+        arguments:
+          - preQualifier: by
+            modifier: unequal
+            name: label
+        type: event
+      result:
+        name: phase two
+        arguments:
+          - qualifier: as
+            name: label
+      notes: "Negation: unequal"
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: count
+              condition:
+                operator: =
+                value: "0"
+      trigger:
+        name: item added
+        type: event
+      result:
+        name: phase two
+        arguments:
+          - preQualifier: with
+            modifier: incremented
+            name: count
+      notes: Eq condition + incremented
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: count
+              condition:
+                operator: ">"
+                value: "0"
+      trigger:
+        name: item removed
+        type: event
+      result:
+        name: phase two
+        arguments:
+          - preQualifier: with
+            modifier: decremented
+            name: count
+      notes: Gt condition + decremented
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: count
+              condition:
+                operator: ">="
+                value: "3"
+      trigger:
+        name: threshold reached
+        type: event
+      result:
+        name: phase three
+      notes: Ge condition
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: count
+              condition:
+                operator: <=
+                value: "1"
+      trigger:
+        name: below minimum
+        type: event
+      result:
+        name: phase one
+      notes: Le condition
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: count
+              condition:
+                operator: <>
+                value: "0"
+            - name: score
+              condition:
+                operator: ">="
+                value: "10"
+      trigger:
+        name: non-empty confirmed
+        type: event
+      result:
+        name: phase two
+        arguments:
+          - preQualifier: with
+            modifier: next
+            name: score
+      notes: Ne condition + next modifier
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: count
+              condition:
+                operator: <
+                value: "5"
+            - name: score
+              condition:
+                operator: =
+                value: "10"
+      trigger:
+        name: space available
+        type: event
+      result:
+        name: phase two
+        arguments:
+          - preQualifier: with
+            modifier: previous
+            name: score
+      notes: Lt condition + previous modifier
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: count
+              condition:
+                operator: in range
+                value:
+                  - "1"
+                  - "5"
+      trigger:
+        name: range validated
+        type: event
+      result:
+        name: phase three
+      notes: Range condition
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: label
+              condition:
+                operator: in
+                value:
+                  - alpha
+                  - beta
+      trigger:
+        name: selected from set
+        type: event
+      result:
+        name: phase three
+      notes: Set condition
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: label
+              condition:
+                operator: as
+                value: alpha
+      trigger:
+        name: default confirmed
+        type: event
+      result:
+        name: phase three
+      notes: "Text equality: literal value"
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: label
+              condition:
+                operator: not as
+                value: alpha
+      trigger:
+        name: custom confirmed
+        type: event
+      result:
+        name: phase three
+      notes: "Text inequality: literal value"
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: count
+              condition:
+                operator: not in range
+                value:
+                  - "1"
+                  - "5"
+      trigger:
+        name: out-of-range confirmed
+        type: event
+      result:
+        name: phase three
+      notes: Not-in-range condition
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: label
+              condition:
+                operator: not in
+                value:
+                  - alpha
+                  - beta
+      trigger:
+        name: unlisted label confirmed
+        type: event
+      result:
+        name: phase three
+      notes: Not-in-set condition
+    - states:
+        - name: phase three
+      trigger:
+        name: reset
+        type: event
+      result:
+        name: phase one
+      notes: Simple reset
+  impossible:
+    defined: []
+  irrelevant: []
+  initialState: phase one
+  source: C:\Users\pfpme\WebstormProjects\smtt\src\parse\tests\state-machines\argument-variations.state-machine.md
+- name: comments machine
+  states:
+    - name: idling
+      description: The machine is idling.
+    - name: active
+      description: The machine is active.
+  data:
+    count: ""
+  dataExampleValues:
+    - count: "0"
+    - count: "1"
+  dataOtherValues: []
+  defaultPreconditions: []
+  transitions:
+    - states:
+        - name: idling
+      trigger:
+        name: start
+        type: event
+      result:
+        name: active
+      notes: started
+    - states:
+        - name: active
+      trigger:
+        name: stop
+        type: event
+      result:
+        name: idling
+      notes: stopped
+  impossible:
+    defined: []
+  irrelevant: []
+  initialState: idling
+  source: C:\Users\pfpme\WebstormProjects\smtt\src\parse\tests\state-machines\comments.state-machine.md
+- name: minimal machine
+  states:
+    - name: idle
+      description: The machine stays in a single valid state.
+  data: {}
+  dataExampleValues: []
+  dataOtherValues: []
+  defaultPreconditions: []
+  transitions:
+    - states:
+        - name: idle
+      trigger:
+        name: start
+        type: event
+      result:
+        name: idle
+  impossible:
+    defined: []
+  irrelevant: []
+  source: C:\Users\pfpme\WebstormProjects\smtt\src\parse\tests\state-machines\minimal.state-machine.md
+- name: note variations machine
+  overview: This state machine validates layout-oriented combinations. It includes
+    notes subsections and plain trailing notes. Dependencies are intentionally
+    omitted.
+  states:
+    - name: to be started
+    - name: draft
+      description: First step before review. Extra state description line to exercise
+        continuation parsing.
+    - name: review
+      description: Intermediate state for confirmation.
+    - name: published
+      description: Final state visible to users.
+  data: {}
+  dataExampleValues: []
+  dataOtherValues: []
+  defaultPreconditions: []
+  transitions:
+    - id: "1"
+      states:
+        - name: to be started
+      trigger:
+        name: started
+        type: event
+      result:
+        name: draft
+    - id: "2"
+      states:
+        - name: draft
+      trigger:
+        name: reviewing started
+        type: event
+      result:
+        name: review
+    - id: "3"
+      states:
+        - name: review
+      trigger:
+        name: confirmed
+        type: event
+      result:
+        name: published
+  impossible:
+    defined: []
+  irrelevant: []
+  initialState: to be started
+  source: C:\Users\pfpme\WebstormProjects\smtt\src\parse\tests\state-machines\note-variations.state-machine.md
+- name: rich sections machine
+  overview: This state machine validates dependency entries, data examples, and
+    table-based transition constraints.
+  states:
+    - name: awaiting payment
+      description: Waiting for user confirmation.
+    - name: verified user
+      description: User identity was verified.
+    - name: reserved stock
+      description: Inventory was tentatively reserved.
+    - name: completed
+      description: The process is finished.
+  data:
+    customer id: Stable customer identifier.
+    quantity: Ordered amount.
+    tier: Customer level.
+  dataExampleValues:
+    - customer id: A-42
+      quantity: "5"
+      tier: gold
+    - customer id: B-21
+      quantity: "9"
+      tier: silver
+    - customer id: C-11
+      quantity: "1"
+      tier: bronze
+  dataOtherValues: []
+  defaultPreconditions:
+    - state: idling
+    - state: user authenticated
+  transitions:
+    - states:
+        - name: awaiting payment
+      trigger:
+        name: reserve
+        arguments:
+          - qualifier: for
+            name: customer id
+        type: event
+      result:
+        name: reserved stock
+        arguments:
+          - qualifier: for
+            name: customer id
+      notes: Event with argument parsing.
+    - states:
+        - name: reserved stock
+          arguments:
+            - qualifier: with
+              name: quantity
+              condition:
+                operator: in range
+                value:
+                  - "1"
+                  - "10"
+            - name: customer id
+              condition:
+                operator: =
+                value: B-21
+      trigger:
+        name: confirmation
+        arguments:
+          - preQualifier: by
+            modifier: next
+            name: customer id
+        type: event
+      result:
+        name: completed
+      notes: Range condition and modifier.
+    - states:
+        - name: reserved stock
+          arguments:
+            - qualifier: for
+              name: tier
+              condition:
+                operator: not in
+                value:
+                  - gold
+                  - silver
+              suffix: "`"
+      trigger:
+        name: reject
+        type: event
+      result:
+        name: awaiting payment
+      notes: Set-negation condition.
+    - states:
+        - name: reserved stock
+      trigger:
+        name: confirmation
+        arguments:
+          - qualifier: of
+            name: quantity
+            condition:
+              operator: =
+              value: "1"
+        type: event
+      result:
+        name: reserved stock
+        arguments:
+          - preQualifier: with
+            modifier: incremented
+            name: quantity
+            suffix: of 1 unit
+      notes: Argument suffix text is preserved.
+  impossible:
+    defined:
+      - states:
+          - awaiting payment
+        trigger:
+          name: pay
+          arguments:
+            - qualifier: with
+              name: quantity
+              condition:
+                operator: <
+                value: "0"
+          type: event
+      - states:
+          - reserved stock
+          - verified user
+        trigger:
+          name: drop
+          arguments:
+            - qualifier: for
+              name: customer id
+          type: event
+  irrelevant:
+    - states:
+        - completed
+      trigger:
+        name: ping
+        type: event
+    - states:
+        - completed
+      trigger:
+        name: check status
+        type: event
+  initialState: awaiting payment
+  source: C:\Users\pfpme\WebstormProjects\smtt\src\parse\tests\state-machines\rich-sections.state-machine.md
+- name: session
+  states:
+    - name: session active
+    - name: user authenticated
+  data: {}
+  dataExampleValues: []
+  dataOtherValues: []
+  defaultPreconditions: []
+  transitions:
+    - states:
+        - name: session active
+      trigger:
+        name: start
+        type: event
+      result:
+        name: session active
+    - states:
+        - name: user authenticated
+      trigger:
+        name: start
+        type: event
+      result:
+        name: session active
+  impossible:
+    defined: []
+  irrelevant: []
+  source: C:\Users\pfpme\WebstormProjects\smtt\src\parse\tests\state-machines\session.state-machine.md

@@ -1,0 +1,182 @@
+{
+  "stateMachines": [
+    {
+      "name": "device",
+      "overview": "Exercises cross-machine impossibility inference dependent on Mode. Trigger \"Start triggered\" is only handled when Mode is active and Device is ready, so Mode inactive and Device busy are each inferred impossible for it. Trigger \"Done triggered\" is handled only for Device busy with no Mode precondition, so Mode active, Mode inactive, and Device ready are each inferred impossible for it.",
+      "states": [
+        {
+          "name": "device ready",
+          "description": "Device is ready to start processing."
+        },
+        {
+          "name": "device busy",
+          "description": "Device is currently processing."
+        }
+      ],
+      "data": {},
+      "dataExampleValues": [],
+      "dataOtherValues": [],
+      "defaultPreconditions": [],
+      "transitions": [
+        {
+          "states": [
+            {
+              "name": "mode active"
+            },
+            {
+              "name": "device ready"
+            }
+          ],
+          "trigger": {
+            "name": "start triggered",
+            "type": "event"
+          },
+          "result": {
+            "name": "device busy"
+          }
+        },
+        {
+          "states": [
+            {
+              "name": "device busy"
+            }
+          ],
+          "trigger": {
+            "name": "done triggered",
+            "type": "event"
+          },
+          "result": {
+            "name": "device ready"
+          }
+        }
+      ],
+      "impossible": {
+        "defined": [],
+        "inferred": [
+          {
+            "states": [
+              "mode inactive"
+            ],
+            "trigger": {
+              "type": "event",
+              "name": "start triggered"
+            }
+          },
+          {
+            "states": [
+              "device busy"
+            ],
+            "trigger": {
+              "type": "event",
+              "name": "start triggered"
+            }
+          },
+          {
+            "states": [
+              "mode active"
+            ],
+            "trigger": {
+              "type": "event",
+              "name": "done triggered"
+            }
+          },
+          {
+            "states": [
+              "mode inactive"
+            ],
+            "trigger": {
+              "type": "event",
+              "name": "done triggered"
+            }
+          },
+          {
+            "states": [
+              "device ready"
+            ],
+            "trigger": {
+              "type": "event",
+              "name": "done triggered"
+            }
+          }
+        ]
+      },
+      "irrelevant": [],
+      "initialState": "device ready",
+      "source": "C:\\Users\\pfpme\\WebstormProjects\\Malerien\\tests\\smtt\\src\\infer\\tests\\state-machines\\device.state-machine.md"
+    },
+    {
+      "name": "mode",
+      "overview": "Exercises pure own-state impossibility inference with no external dependencies. Each trigger is handled by exactly one state, so the other state is always inferred impossible.",
+      "states": [
+        {
+          "name": "mode active",
+          "description": "System is currently active."
+        },
+        {
+          "name": "mode inactive",
+          "description": "System is currently inactive."
+        }
+      ],
+      "data": {},
+      "dataExampleValues": [],
+      "dataOtherValues": [],
+      "defaultPreconditions": [],
+      "transitions": [
+        {
+          "states": [
+            {
+              "name": "mode inactive"
+            }
+          ],
+          "trigger": {
+            "name": "activated",
+            "type": "event"
+          },
+          "result": {
+            "name": "mode active"
+          }
+        },
+        {
+          "states": [
+            {
+              "name": "mode active"
+            }
+          ],
+          "trigger": {
+            "name": "deactivated",
+            "type": "event"
+          },
+          "result": {
+            "name": "mode inactive"
+          }
+        }
+      ],
+      "impossible": {
+        "defined": [],
+        "inferred": [
+          {
+            "states": [
+              "mode active"
+            ],
+            "trigger": {
+              "type": "event",
+              "name": "activated"
+            }
+          },
+          {
+            "states": [
+              "mode inactive"
+            ],
+            "trigger": {
+              "type": "event",
+              "name": "deactivated"
+            }
+          }
+        ]
+      },
+      "irrelevant": [],
+      "initialState": "mode inactive",
+      "source": "C:\\Users\\pfpme\\WebstormProjects\\Malerien\\tests\\smtt\\src\\infer\\tests\\state-machines\\mode.state-machine.md"
+    }
+  ]
+}

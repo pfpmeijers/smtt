@@ -1,0 +1,394 @@
+/*
+ * State Machine Specification — Ohm Grammar
+ *
+ * Identifiers (state machine dependencies, state names, and attribute names)
+ * are read as backticked alphanumeric tokens via `identifier`.
+ * Text values are read via `string`.
+ * The grammar performs NO semantic classification: it does not distinguish
+ * a machine's own state from a dependency state, a text attribute from a
+ * numeric one, or which values belong to which attribute. That alignment is
+ * the responsibility of a later post-parse step.
+ */
+
+StateMachine {
+
+  // --- Top-level ---
+
+  stateMachineFile
+    = ignoredLine*
+      title
+      overview?
+      statesSection
+      dataSection?
+      transitionsSection
+      notesSection?
+
+  // --- Title ---
+
+  // The H1 holds the plain (non-backticked) state machine name only.
+  title
+    = h1 stateMachineName eol
+
+  stateMachineName
+    = (~commentStart ~nl any)+
+
+  // --- Overview ---
+
+  // Each line is consumed with its `EoL` so newlines are not left unread.
+  // Stops naturally when `textChar` hits a `sectionStart`.
+  overview
+    = (text eol)+
+
+  // --- States section ---
+
+  statesSection
+    = h2 literal<"States"> eol stateSectionBody notesSubSection?
+
+  stateSectionBody
+    = stateDeclaration+ ignoredLine* initialStateLine?
+
+  stateDeclaration
+    = listItem identifier stateDescription impliedConditions? -- withDescription
+    | listItem identifier comment? nl impliedConditions       -- withoutDescription
+    | listItem identifier comment? eol                        -- bare
+
+  stateDescription
+    = ":" stateDescriptionLine+
+
+  stateDescriptionLine
+    = ~(sublistItem | listItem | initialStateCaption) textChar+ comment? nl
+
+  initialStateLine
+    = initialStateCaption identifier comment? eol
+
+  initialStateCaption
+    = "Initial state:" hsp?
+
+  // --- Implied conditions ---
+
+  // One or more sub-bullet conditions that follow a state declaration.
+  // Each bullet carries exactly one attribute-condition pair.
+  impliedConditions
+    = (sublistItem conditionalAttributeExpression comment? eol)+
+
+  // --- Data section (optional) ---
+
+  dataSection
+    = h2 literal<"Data"> eol dataSectionBody notesSubSection?
+
+  dataSectionBody
+    = none eol                                                                                   -- none
+    | attribute+ attributeValuesTable<"Example values:">? attributeValuesTable<"Other values:">? -- withEntries
+
+  attribute
+    = listItem identifier attributeDescription -- withDescription
+    | listItem identifier comment? eol         -- withoutDescription
+
+  attributeDescription
+    = description<listItem>
+
+  attributeValuesTable<caption>
+    = literal<caption> eol attributeValuesTableHeader tableSeparatorRow attributeValuesTableRow+ ignoredLine*
+
+  attributeValuesTableHeader
+    = pipe (identifier inlineComment? pipe)+ nl
+
+  attributeValuesTableRow
+    = pipe (attributeValue? inlineComment? pipe)+ nl
+
+  // A value is either a backticked non-empty string token or a bare number.
+  // Which values belong to which attribute is resolved post-parse.
+  attributeValue 
+    = string | number
+
+  // --- Transitions section ---
+
+  transitionsSection
+    = h2 literal<"Transitions"> eol transitionsSectionBody notesSubSection?
+
+  transitionsSectionBody
+    = defaultPreconditions? transitionRules impossibleBlock? irrelevantBlock?
+
+  // --- Default preconditions subsection ---
+
+  // Optional block listing default precondition states for all transitions.
+  // The owning machine is resolved from the state name in a post-parse step.
+  defaultPreconditions
+    = h3 literal<"Default preconditions"> eol defaultPreconditionsBody
+
+  defaultPreconditionsBody
+    = none eol            -- none
+    | defaultPrecondition+ -- withEntries
+
+  defaultPrecondition
+    = listItem stateReference defaultPreconditionDescription -- withDescription
+    | listItem stateReference comment? eol                   -- withoutDescription
+
+  defaultPreconditionDescription
+    = description<listItem>
+
+  // --- Transition rules subsection ---
+
+  transitionRules = h3 literal<"Rules"> eol transitionsTable
+
+  transitionsTable
+    = transitionsHeaderRow tableSeparatorRow transitionRow+ ignoredLine*
+
+  transitionsHeaderRow
+    = pipe
+     ("#"       pipe)?
+      "States"  pipe
+      "Trigger" pipe
+      "Result"  pipe
+     ("Notes"   pipe)?
+      nl
+
+  transitionRow
+    = pipe
+      (transitionId?   inlineComment? pipe)?
+      stateCombination inlineComment? pipe
+      trigger          inlineComment? pipe
+      stateReference   inlineComment? pipe
+      (inlineText?     inlineComment? pipe)?
+      nl
+
+  transitionId
+    = digit+
+
+  // --- State combinations ---
+
+  // A comma-separated list of state references. Ordering and which entry
+  // belongs to which machine is interpreted post-parse.
+  stateCombination
+    = stateReference (comma stateReference)*
+
+  // --- State reference ---
+
+  // A state reference (used in a transition's pre/post-condition) and a state
+  // trigger share the same structure: a backticked `identifier` optionally
+  // followed by one or more `Argument`s.
+
+  stateReference = identifier argument? (argumentSeparator argument)*
+
+  argumentSeparator
+    = literal<"and">
+
+  // --- State argument ---
+
+  argument
+    = hsp? argumentPreQualifier? argumentModifier argumentPostQualifier? argumentExpression argumentSuffix? -- withModifier
+    | hsp? argumentQualifier? argumentExpression argumentSuffix?                                            -- noModifier
+
+  // Separate tokens for Qualifier position to keep that explicit in the AST.
+  argumentPreQualifier
+    = argumentQualifier
+
+  argumentPostQualifier
+    = argumentQualifier
+
+  argumentQualifier
+    = literal<"about"> | literal<"on"> | literal<"as"> | literal<"for"> | literal<"from"> | literal<"into"> | literal<"of"> | literal<"so"> | literal<"to"> | literal<"under"> | literal<"with"> | literal<"using">
+    | literal<"at"> | literal<"by"> | literal<"over"> | literal<"within"> | literal<"outside"> | literal<"between"> | literal<"against"> | literal<"per"> | literal<"via"> | literal<"around"> | literal<"during">
+    | literal<"through">
+
+  argumentModifier
+    = literal<"not"> | literal<"different"> | literal<"unequal"> | literal<"other">
+    | literal<"next"> | literal<"previous"> | literal<"first"> | literal<"last">
+    | literal<"incremented"> | literal<"decremented">
+
+  // Suffix literals that follow an argument expression and its optional condition.
+  // Stops before the next argument, separator, or cell boundary.
+  argumentSuffix
+    = (~argumentSeparator ~comma ~pipe ~nl ~commentStart any)+
+
+  // Argument expressions reference a backticked `identifier` directly.
+  argumentExpression
+    = conditionalAttributeExpression -- conditional
+    | identifier                     -- bare
+
+  // A condition: an attribute identifier followed by an operator and value(s).
+  // Both the attribute and the comparison value(s) are generic tokens; whether
+  // the operator/value are valid for the attribute is checked post-parse.
+  conditionalAttributeExpression
+    = identifier rangeOperator literal<"["> attributeValue literal<","> attributeValue literal<"]"> -- range
+    | identifier setCompare literal<"("> attributeValue (comma attributeValue)* literal<")">        -- set
+    | identifier numericOperator attributeValue                                                     -- numericComparison
+    | identifier textCompare attributeValue                                                         -- textComparison
+    | identifier undefinedCompare                                                                   -- undefined
+
+  undefinedCompare
+    = literal<"undefined"> | literal<"is undefined">
+
+  numericOperator
+    = literal<">="> | literal<"<="> | literal<"<>"> | literal<">"> | literal<"<"> | literal<"=">
+
+  rangeOperator
+      = literal<"in">     -- in
+      | literal<"not in"> -- notIn
+
+  textCompare
+    = literal<"as"> | literal<"is"> | literal<"are">             -- is
+    | literal<"not as"> | literal<"is not"> | literal<"are not"> -- isNot
+
+  setCompare
+    = literal<"in">     -- in
+    | literal<"not in"> -- notIn
+
+  // --- Triggers ---
+
+  // Trigger parsing is generic. State triggers and event triggers are both
+  // represented by the same grammar rule; post-parse processing distinguishes
+  // the trigger kind.
+  trigger
+    = stateReference
+
+  // --- Impossible / Irrelevant subsections ---
+
+  impossibleBlock
+    = h3 literal<"Impossible"> eol impossibleBlockBody
+
+  impossibleBlockBody
+    = none eol             -- none
+    | nonTriggerablesTable -- table
+
+  irrelevantBlock
+    = h3 literal<"Irrelevant"> eol irrelevantBlockBody
+
+  irrelevantBlockBody
+    = none eol             -- none
+    | nonTriggerablesTable -- table
+
+  nonTriggerablesTable
+    = pipe "States" pipe "Trigger" pipe eol
+      tableSeparatorRow
+      nonTriggerablesTableRow+
+      ignoredLine*
+
+  nonTriggerablesTableRow
+    = pipe stateCombination inlineComment? pipe trigger inlineComment? pipe nl
+
+  // --- Notes (sub)section ---
+
+  notesSection    = h2 literal<"Notes"> eol notesSectionBody
+  notesSubSection = h3 literal<"Notes"> eol notesSectionBody
+
+  // Each line is consumed with its `EoL` so newlines are not left unread.
+  notesSectionBody = (text eol)*
+
+  // --- Identifiers ---
+
+  // Every identifier is a backticked token containing alphanumeric characters
+  // only. No semantic meaning is attached here; classification (state vs
+  // attribute, text vs numeric, value-to-attribute alignment) happens in a
+  // post-parse step.
+  // FIXME: This remark about classification might not be correct. Not implemented or not needed ?
+  identifier
+    = "`" identifierChar+ "`"
+
+  identifierChar
+    = ~"`" ~nl any
+
+  // --- Text ---
+
+  // A backticked value string; empty strings are not allowed.
+  string
+    = "`" stringChar+ "`"
+
+  stringChar
+    = ~"`" ~nl any
+
+  description<stopAt>
+    = ":" descriptionLine<stopAt>+ ignoredLine*
+
+  descriptionLine<stopAt>
+    = ~stopAt textChar+ comment? nl
+
+  text
+    = textChar+ comment?
+
+  textChar
+    = ~commentStart ~nl ~sectionStart any
+
+  inlineText
+    = inlineTextChar+ inlineComment?
+
+  inlineTextChar
+    = ~commentStart ~pipe ~nl any
+
+  // --- Number ---
+
+  number = sign? (digit+ fractionalPart? | "." digit+) exponent?
+  fractionalPart = "." digit*
+  sign = "+" | "-"
+  exponent = ("e" | "E") sign? digit+
+
+  // --- Table primitives ---
+
+  tableSeparatorRow = pipe tableSeparatorCell+ nl
+
+  tableSeparatorCell = ":"? "-"+ ":"? pipe
+
+  // --- Literals ---
+
+  literal<lemma>
+    = hsp? lemma hsp?
+
+  // Headings — ordered most-specific first to avoid `#` matching `##`.
+  h1
+    = ~h2 ~h3 "#" hsp+
+
+  h2
+    = ~h3 "##" hsp+
+
+  h3
+    = "###" hsp+
+
+  sectionStart
+    = h2 | h3
+
+  listItem
+    = "- "
+
+  sublistItem
+    = "  - "
+
+  none
+    = literal<"None">
+
+  pipe
+    = literal<"|">
+
+  comma
+    = literal<",">
+
+  // --- Whitespace & Comments ---
+
+  // Stops before the final newline so `EoL` can catch it.
+  comment
+    = hsp? commentStart (~nl any)*
+
+  inlineComment
+    = hsp? commentStart (~pipe ~nl any)*
+
+  commentStart
+    = "//"
+
+  // Ensures a statement cleanly ends, absorbing the newline and any
+  // subsequent line to ignore.
+  eol
+    = nl ignoredLine*
+
+  // Blank or comment-only lines before a next rule begins.
+  ignoredLine
+    = comment nl -- comment
+    | blankLine  -- blank
+
+  blankLine
+    = hsp? nl
+
+  hsp
+    = (" " | "\t" | "<br/>" | "<br>")+
+
+  nl
+    = "\r\n" | "\n"
+}
