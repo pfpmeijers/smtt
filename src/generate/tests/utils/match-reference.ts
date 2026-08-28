@@ -35,7 +35,7 @@ const REFERENCES_DIR = path.resolve(testDir, "..", "references")
  * @returns File content as a UTF-8 string.
  */
 function readReferenceFile(file: string): string {
-    return fs.readFileSync(path.join(REFERENCES_DIR, file), "utf8")
+    return normalizeNewlines(fs.readFileSync(path.join(REFERENCES_DIR, file), "utf8"))
 }
 
 /**

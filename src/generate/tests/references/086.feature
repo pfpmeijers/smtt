@@ -5,6 +5,7 @@
 #      - name: s
 #    dataExampleValues:
 #      - a: "1"
+#      - a: "2"
 #    transitions:
 #      - trigger:
 #          type: event
@@ -22,4 +23,4 @@
 #   the AST. The generator shall raise an error when a result condition uses a non-equality
 #   operator.
 
-# Throws: Invalid result condition for attribute "a": operator "not as" is not supported. Result conditions only allow "=" or "as" (REQ-089).
+# Throws: Invalid result condition for attribute "a": operator "not as" is not supported. Result conditions only allow "=", "as", or "undefined" (REQ-089).

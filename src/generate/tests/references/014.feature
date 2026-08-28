@@ -23,4 +23,4 @@
 # - [REQ-100] If all rows are filtered out, the generator shall raise an error — an empty examples
 #   table is not valid.
 
-# Throws: Empty examples table for transition undefined in state machine m
+# Throws: Empty examples table for transition undefined in state machine `m`

@@ -37,6 +37,9 @@ Scope:
   example data rows for these argument(s).
 - [REQ-412] Any argument using a modifier shall have a base reference to the
   same attribute name somewhere in the same effective transition context.
+- [REQ-418] Every attribute value referenced in a condition (argument condition
+  or implied state condition) shall be defined in the example or other data
+  values table for that attribute.
 - [REQ-413] For modifiers `not`, `other`, `different`, `unequal`, `next`, and
   `previous`, the attribute's combined values pool shall contain at least two
   distinct values.
@@ -45,5 +48,3 @@ Scope:
   value.
 - [REQ-415] A condition attached to a result argument shall use only an
   equality-style operator.
-
-

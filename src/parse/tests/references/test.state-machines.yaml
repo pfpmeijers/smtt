@@ -17,7 +17,16 @@
       label: alpha
       score: "10"
   dataOtherValues:
+    - count: "0"
+      label: beta
+      score: "20"
+    - count: "1"
+      label: beta
+      score: "20"
     - count: "3"
+      label: beta
+      score: "20"
+    - count: "5"
       label: beta
       score: "20"
   defaultPreconditions:
@@ -432,7 +441,13 @@
     - customer id: C-11
       quantity: "1"
       tier: bronze
-  dataOtherValues: []
+  dataOtherValues:
+    - customer id: D-99
+      quantity: "0"
+      tier: gold
+    - customer id: D-99
+      quantity: "10"
+      tier: gold
   defaultPreconditions:
     - state: idling
     - state: user authenticated

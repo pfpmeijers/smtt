@@ -1,0 +1,12 @@
+- Infer certain attribute value combinations, not nescearily from example/other values.
+  See reservation-form.state-machine.md. Now all combinations need to be specified explicitly.
+  Currently this is guarded by [REQ-418]. Introduced because otherwise the filtering on values
+  could result in empty examples table for the scenario. But in case of filtering against explicit value, 
+  and the attr examples table does not have the referred value, then add a row for it in the scenarios example table, 
+  and take the first value for the other attributes. 
+- Remove the "other data values" concept and simply require that when the "different" modifier is used, 
+  then there shall be at least one other value specified in the examples table. 
+  And then the first different value is to be taken (for the scenario).
+- Remove requirement that referred states of other state machines need to exist explicitly in a separate 
+  *.state-machine.md file. Instead, when there is no state machine for a state defined explicitly, 
+  then the state machine can be considered anonymous. 

@@ -47,11 +47,11 @@ export function validateCondition(condition: Condition, attributeName: string): 
  */
 export function validateResultCondition(condition: Condition, attributeName: string): void {
     validateCondition(condition, attributeName)
-    if (condition.operator !== "=" && condition.operator !== "as") {
+    if (condition.operator !== "=" && condition.operator !== "as" && condition.operator !== "undefined") {
         throw new Error(
             `Invalid result condition for attribute "${attributeName}": ` +
             `operator "${condition.operator}" is not supported. ` +
-            `Result conditions only allow "=" or "as" (REQ-089).`,
+            `Result conditions only allow "=", "as", or "undefined" (REQ-089).`,
         )
     }
 }

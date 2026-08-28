@@ -121,7 +121,7 @@ function buildExamplesTable(context: RenderContext, transition: Transition, colu
     const rows = filterRows(exampleValues, filters, exampleValues, otherValues)
     if (rows.length === 0) {
         throw new Error(
-            `Empty examples table for transition ${transition.id} in state machine ${stateMachine.name}`,
+            `Empty examples table for transition ${transition.id} in state machine \`${stateMachine.name}\``,
         )
     }
     return formatExamplesTable(columns, rows, exampleValues, otherValues)
