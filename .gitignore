@@ -4,6 +4,6 @@ coverage/
 *.log
 *.tsbuildinfo
 .DS_Store
-
 **/results/
 /obsolete/
+/.idea/
