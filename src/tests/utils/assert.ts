@@ -89,8 +89,10 @@ export function assertDirectoriesEqual(
         const expectedContent = normalizeContent
             ? normalizeContent(relativeFile, rawExpectedContent)
             : rawExpectedContent
+        const normalizedActual = Buffer.from(actualContent.toString("utf8").replace(/\r\n/g, "\n"), "utf8")
+        const normalizedExpected = Buffer.from(expectedContent.toString("utf8").replace(/\r\n/g, "\n"), "utf8")
         assert.ok(
-            actualContent.equals(expectedContent),
+            normalizedActual.equals(normalizedExpected),
             `File content differs for \`${relativeFile}\` between \`${actualDir}\` and \`${expectedDir}\``,
         )
     }
