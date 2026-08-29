@@ -97,12 +97,11 @@ test("[TST-053] → [REQ-065/081/082]: Previous modifier uses circular previous 
     assertMatchesReference(stateMachines, feature)
 })
 
-test("[TST-054] → [REQ-065/070/071/072/083/084/085]: Different modifier uses concatenated tables with circular next", () => {
+test("[TST-054] → [REQ-065/070/083/085]: Different modifier selects first different value from examples table", () => {
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "a1"}, {a: "a2"}],
-        dataOtherValues: [{a: "a3"}],
+        dataExampleValues: [{a: "a1"}, {a: "a2"}, {a: "a3"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e", arguments: [{modifier: "different", name: "a"}]},
@@ -116,7 +115,8 @@ test("[TST-054] → [REQ-065/070/071/072/083/084/085]: Different modifier uses c
         feature,
         "      | a  | different a |\n" +
         "      | a1 | a2          |\n" +
-        "      | a2 | a3          |"
+        "      | a2 | a1          |\n" +
+        "      | a3 | a1          |"
     )
     assertMatchesReference(stateMachines, feature)
 })
@@ -126,7 +126,6 @@ test("[TST-055] → [REQ-083/085]: Other modifier is synonym for different", () 
         name: "m",
         states: [{name: "s"}],
         dataExampleValues: [{a: "1"}, {a: "2"}],
-        dataOtherValues: [{a: "3"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e", arguments: [{modifier: "other", name: "a"}]},
@@ -145,7 +144,6 @@ test("[TST-056] → [REQ-083/085]: Not modifier is synonym for different", () =>
         name: "m",
         states: [{name: "s"}],
         dataExampleValues: [{a: "1"}, {a: "2"}],
-        dataOtherValues: [{a: "3"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e", arguments: [{modifier: "not", name: "a"}]},

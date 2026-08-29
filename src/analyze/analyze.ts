@@ -2,8 +2,8 @@
  * State machine static analyzer and reachability reporting orchestrator.
  */
 
-import fs from "fs"
-import path from "path"
+import * as fs from "fs"
+import * as path from "path"
 import { loadStateMachines, parse } from "../parse"
 import type { StateMachine } from "../parse"
 import { computeInferredImpossibilities } from "../infer/impossibilities"
@@ -14,7 +14,7 @@ import {
     buildStateIndex,
     buildTransitionById,
     traceDependencies,
-} from "./normalize"
+} from "./normalize.js"
 import { buildMarkdownReport, buildReport } from "./report"
 import type {
     AnalysisReport,
@@ -22,7 +22,7 @@ import type {
     AnalyzeResult,
     DependencyTreeNode,
     ImpossibilityMode,
-} from "./types"
+} from "./types.js"
 
 export { buildMarkdownReport } from "./report"
 

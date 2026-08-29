@@ -269,6 +269,10 @@ Derived attribute columns are described in next sections.
 
 - [REQ-067] Row construction shall use `$example-data-values` as starting
   point.
+- [REQ-160] Rendered examples table rows shall be unique: any row whose
+  displayed values repeat an earlier row in the final `Examples:` block shall be
+  removed, keeping the first occurrence. Duplicate rows shall be eliminated after
+  filtering and before the final table is emitted.
 - [REQ-068] The `$example-data-values` shall be taken from AST path
   `[i].dataExampleValues`.
 - [REQ-157] The generator shall raise an error when arguments are referenced
@@ -276,29 +280,17 @@ Derived attribute columns are described in next sections.
   `$example-data-values` table is absent or empty after row filtering.
 - [REQ-069] State/trigger conditions shall be applied as row filters.
 - [REQ-070] Modifiers shall be added as additional columns per
-  surviving row, based on additional attribute value mappings from the
-  `$other-data-values` table where necessary.
-- [REQ-072] Values in `$other-data-values` serve as additional value pool
-  entries for the `different`/`not`/`other` modifier. They are not added as
-  test example rows themselves, but provide alternate values that can be
-  selected via the circular derivation logic (REQ-083/084).
-- [REQ-071] The `$other-data-values` shall be taken from AST path
-  `[i].dataOtherValues`.
+  surviving row.
 
 Example — given:
 
 ```markdown
   Example values:
 
-  | `email address`   | `associated user name` |
-  |-------------------|------------------------|
-  | `info@domain.com` | `John Doe`             |
-
-  Other values:
-
   | `email address`     | `associated user name` |
   |---------------------|------------------------|
-  | `other@example.com` |                        |
+  | `info@domain.com`   | `John Doe`             |
+  | `other@example.com` | `Jane Doe`             |
 ```
 
 Scenario example table:
@@ -306,13 +298,14 @@ Scenario example table:
   Scenario Outline: ...
     ...
     Examples:
-    | email address   | different email address |
-    | info@domain.com | other@example.com       |
+    | email address     | different email address |
+    | info@domain.com   | other@example.com       |
+    | other@example.com | info@domain.com         |
 ```
 
 ### Empty Values in Data Tables
 
-- [REQ-073] An empty string (`""`) in `$example-data-values` or `$other-data-values`
+- [REQ-073] An empty string (`""`) in `$example-data-values`
   shall represent an undefined/absent value for that attribute.
 - [REQ-074] When used in modifier lookups or condition filtering, empty strings
   shall be treated as undefined.
@@ -357,15 +350,15 @@ Scenario Outline: [REQ-001] state a → state b; when event x
 
 #### Modifier summary
 
-| Modifier                  | Column name         | Value derivation                       | Constraints         |
-|---------------------------|---------------------|----------------------------------------|---------------------|
-| `incremented`             | `incremented $attr` | base value + 1                         | Numeric only        |
-| `decremented`             | `decremented $attr` | base value − 1                         | Numeric only        |
-| `next`                    | `next $attr`        | next row circular                      | Uses original table |
-| `previous`                | `previous $attr`    | previous row circular                  | Uses original table |
-| `first`                   | `first $attr`       | first table value                      | —                   |
-| `last`                    | `last $attr`        | last table value                       | —                   |
-| `not`/`other`/`different` | `different $attr`   | next-row-circular from examples+others | ≥2 distinct values  |
+| Modifier                  | Column name         | Value derivation                       | Constraints                   |
+|---------------------------|---------------------|----------------------------------------|-------------------------------|
+| `incremented`             | `incremented $attr` | base value + 1                         | Numeric only                  |
+| `decremented`             | `decremented $attr` | base value − 1                         | Numeric only                  |
+| `next`                    | `next $attr`        | next row circular                      | Uses original table           |
+| `previous`                | `previous $attr`    | previous row circular                  | Uses original table           |
+| `first`                   | `first $attr`       | first table value                      | —                             |
+| `last`                    | `last $attr`        | last table value                       | —                             |
+| `not`/`other`/`different` | `different $attr`   | first different value in example table | ≥2 distinct values in example |
 
 Detailed modifier specifications follow.
 
@@ -451,12 +444,11 @@ Detailed modifier specifications follow.
 
 - `not` / `other` / `different`
 
-  - [REQ-083] The `not` / `other` / `different` modifiers (with different
-    wording options, but meaning the same) shall select the next-row-circular
-    value from the concatenation of the example values table and the other
-    values table (examples first, then others).
-  - [REQ-084] For the row at index `n`, the selected value shall be taken from
-    row `(n + 1) % total row count` of the concatenated list.
+  - [REQ-083] The `not` / `other` / `different` / `unequal` modifiers (with 
+    different wording options, but meaning the same) shall select the first 
+    value in the example values table that is different from the condition's 
+    value. I.e. for the row holding value `v`, the selected value shall be the
+    first value `w` in the example values table where `w != v`.
   - [REQ-085] Regardless of which synonym (`not`, `other`, `different`,
     `unequal`) appears in the source, the derived column shall always be named
     `different $attribute-name`.

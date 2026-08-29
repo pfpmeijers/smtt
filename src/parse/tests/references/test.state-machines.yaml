@@ -16,7 +16,6 @@
     - count: "2"
       label: alpha
       score: "10"
-  dataOtherValues:
     - count: "0"
       label: beta
       score: "20"
@@ -324,7 +323,6 @@
   dataExampleValues:
     - count: "0"
     - count: "1"
-  dataOtherValues: []
   defaultPreconditions: []
   transitions:
     - states:
@@ -354,7 +352,6 @@
       description: The machine stays in a single valid state.
   data: {}
   dataExampleValues: []
-  dataOtherValues: []
   defaultPreconditions: []
   transitions:
     - states:
@@ -383,7 +380,6 @@
       description: Final state visible to users.
   data: {}
   dataExampleValues: []
-  dataOtherValues: []
   defaultPreconditions: []
   transitions:
     - id: "1"
@@ -441,7 +437,6 @@
     - customer id: C-11
       quantity: "1"
       tier: bronze
-  dataOtherValues:
     - customer id: D-99
       quantity: "0"
       tier: gold
@@ -567,7 +562,6 @@
     - name: user authenticated
   data: {}
   dataExampleValues: []
-  dataOtherValues: []
   defaultPreconditions: []
   transitions:
     - states:

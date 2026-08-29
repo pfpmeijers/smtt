@@ -6,8 +6,6 @@
 #    dataExampleValues:
 #      - a: "1"
 #      - a: "2"
-#    dataOtherValues:
-#      - a: "3"
 #    transitions:
 #      - states:
 #          - name: s
@@ -23,9 +21,10 @@
 #          name: s
 #        notes: ""
 # Covers requirements:
-# - [REQ-083] The `not` / `other` / `different` modifiers (with different wording options, but
-#   meaning the same) shall select the next-row-circular value from the concatenation of the example
-#   values table and the other values table (examples first, then others).
+# - [REQ-083] The `not` / `other` / `different` / `unequal` modifiers (with different wording
+#   options, but meaning the same) shall select the first value in the example values table that is
+#   different from the condition's value. I.e. for the row holding value `v`, the selected value
+#   shall be the first value `w` in the example values table where `w != v`.
 # - [REQ-085] Regardless of which synonym (`not`, `other`, `different`, `unequal`) appears in the
 #   source, the derived column shall always be named `different $attribute-name`.
 
@@ -38,4 +37,4 @@ Feature: m
     Examples:
       | a | different a |
       | 1 | 2           |
-      | 2 | 3           |
+      | 2 | 1           |

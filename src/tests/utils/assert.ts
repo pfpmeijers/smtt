@@ -1,6 +1,6 @@
-import fs from "fs";
-import path from "path";
-import { strict as assert } from "node:assert";
+import { strict as assert } from "node:assert"
+import * as fs from "fs"
+import * as path from "path"
 
 type ContentNormalizer = (relativeFile: string, content: Buffer) => Buffer
 

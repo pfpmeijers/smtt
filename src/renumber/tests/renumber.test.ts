@@ -1,7 +1,7 @@
 import { describe, it } from "node:test"
 import * as assert from "node:assert/strict"
-import fs from "fs"
-import path from "path"
+import * as fs from "fs"
+import * as path from "path"
 import { fileURLToPath } from "url"
 
 import { renumber } from "../renumber"

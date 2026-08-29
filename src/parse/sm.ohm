@@ -77,8 +77,8 @@ StateMachine {
     = h2 literal<"Data"> eol dataSectionBody notesSubSection?
 
   dataSectionBody
-    = none eol                                                                                   -- none
-    | attribute+ attributeValuesTable<"Example values:">? attributeValuesTable<"Other values:">? -- withEntries
+    = none eol                                                          -- none
+    | attribute+ attributeValuesTable<"Example values:">?               -- withEntries
 
   attribute
     = listItem identifier attributeDescription -- withDescription

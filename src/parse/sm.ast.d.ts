@@ -61,12 +61,6 @@ export interface StateMachine {
     [k: string]: string;
   }[];
   /**
-   * Additional data values declared in the 'Other values:' table. These are behaviorally equivalent to the example values from a state machine perspective and exist to enrich the value pool for data modifiers such as 'not', 'other', or 'different'. By schema convention, an empty string value encodes an undefined/absent value for that attribute.
-   */
-  dataOtherValues?: {
-    [k: string]: string;
-  }[];
-  /**
    * Default precondition states declared in the Transitions section under 'Default preconditions:'. Each entry is a state name whose owning machine is resolved at generation time. The state is prepended as a Given precondition step for every transition that does not already mention a state from the same machine.
    */
   defaultPreconditions?: DefaultPrecondition[];

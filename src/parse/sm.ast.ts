@@ -31,7 +31,6 @@ type DataAttribute = {
 type DataSection = {
     data: Record<string, string>
     dataExampleValues: Record<string, string>[]
-    dataOtherValues: Record<string, string>[]
 }
 
 type DataTable = {
@@ -196,7 +195,6 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
                 states,
                 data: dataSection?.data ?? {},
                 dataExampleValues: dataSection?.dataExampleValues ?? [],
-                dataOtherValues: dataSection?.dataOtherValues ?? [],
                 defaultPreconditions: transitions.defaultPreconditions ?? [],
                 transitions: transitions.transitions as unknown as Transition[],
                 impossible: { defined: transitions.impossible ?? [] },
@@ -301,13 +299,12 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
         },
 
         dataSectionBody_none(_none, _terminateLine) {
-            return { data: {}, dataExampleValues: [], dataOtherValues: [] }
+            return { data: {}, dataExampleValues: [] }
         },
 
-        dataSectionBody_withEntries(attributesNode, tableNode, otherTableNode) {
+        dataSectionBody_withEntries(attributesNode, tableNode) {
             const dataAttributes = attributesNode.children.map(attribute => attribute.toAST()) as DataAttribute[]
             const table = tableNode.children[0]?.toAST() as DataTable | undefined
-            const otherTable = otherTableNode.children[0]?.toAST() as DataTable | undefined
 
             const data: Record<string, string> = {}
             for (const dataAttribute of dataAttributes) {
@@ -318,11 +315,7 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
                 ? table.rows.map(row => Object.fromEntries(table.columns.map((column, index) => [column, (row[index] ?? "").trim()])))
                 : []
 
-            const dataOtherValues = otherTable
-                ? otherTable.rows.map(row => Object.fromEntries(otherTable.columns.map((column, index) => [column, (row[index] ?? "").trim()])))
-                : []
-
-            return { data, dataExampleValues, dataOtherValues }
+            return { data, dataExampleValues }
         },
 
         attribute_withoutDescription(_li, nameNode, _commentOpt, _terminateLine) {

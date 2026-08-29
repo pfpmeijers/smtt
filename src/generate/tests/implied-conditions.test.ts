@@ -10,7 +10,7 @@ test("[TST-026] → [REQ-148/165/166/167]: Implied conditions on a precondition 
             // and applied as an example-row filter because `s` is a precondition.
             impliedConditions: [{attribute: "a", condition: {operator: ">", value: "5"}}],
         }],
-        dataExampleValues: [{a: "1"}, {a: "9"}],
+        dataExampleValues: [{a: "1"}, {a: "5"}, {a: "9"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},
@@ -22,6 +22,7 @@ test("[TST-026] → [REQ-148/165/166/167]: Implied conditions on a precondition 
     const feature = createFeatures(stateMachines)["m"]
     assertContains(feature, "| 9")
     assertNotContains(feature, "| 1")
+    assertNotContains(feature, "| 5")
     assertMatchesReference(stateMachines, feature)
 })
 
@@ -33,7 +34,7 @@ test("[TST-027] → [REQ-166]: Implied condition on an attribute absent from the
             // Attribute `b` is not a column in the examples table → no filter (REQ-166).
             impliedConditions: [{attribute: "b", condition: {operator: ">", value: "5"}}],
         }],
-        dataExampleValues: [{a: "1"}, {a: "9"}],
+        dataExampleValues: [{a: "1", b: "5"}, {a: "9", b: "5"}, {a: "9", b: "6"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},
@@ -43,7 +44,7 @@ test("[TST-027] → [REQ-166]: Implied condition on an attribute absent from the
     }]
     validateStateMachines(stateMachines)
     const feature = createFeatures(stateMachines)["m"]
-    assertContains(feature, "| 1")
+    assertNotContains(feature, "| 1")
     assertContains(feature, "| 9")
     assertMatchesReference(stateMachines, feature)
 })

@@ -5,9 +5,64 @@ import { type FilterCondition, evaluateCondition, validateResultCondition } from
 /** One row of example attribute values, keyed by attribute name. */
 export type ExampleRow = Record<string, string>
 
+/**
+ * Produce a canonical serialization of a row for stable deduplication.
+ *
+ * @param row Row to serialize.
+ * @returns A deterministic key that ignores object insertion order.
+ */
+function rowSignature(row: ExampleRow): string {
+    return Object.entries(row)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, value]) => `${key}=${String(value)}`)
+        .join("|")
+}
+
+/**
+ * Remove duplicate example rows while preserving the first occurrence of each row.
+ *
+ * @param rows Rows to suppress duplicates from.
+ * @returns A new array with the first instance of each row retained.
+ */
+export function deduplicateRows(rows: ExampleRow[]): ExampleRow[] {
+    const seen = new Set<string>()
+    const uniqueRows: ExampleRow[] = []
+    for (const row of rows) {
+        const signature = rowSignature(row)
+        if (seen.has(signature)) continue
+        seen.add(signature)
+        uniqueRows.push(row)
+    }
+    return uniqueRows
+}
+
+/**
+ * Remove duplicate rendered value tuples while preserving the first occurrence of each one.
+ *
+ * @param cells Rows of rendered cell text.
+ * @returns A de-duplicated list of rows in their first-seen order.
+ */
+function deduplicateRenderedRows(cells: string[][]): string[][] {
+    const seen = new Set<string>()
+    const uniqueCells: string[][] = []
+    for (const row of cells) {
+        const signature = row.join("\u0001")
+        if (seen.has(signature)) continue
+        seen.add(signature)
+        uniqueCells.push(row)
+    }
+    return uniqueCells
+}
+
 // --- Value tables ---
 
-/** Natural join of two row sets: intersect on shared column values, union the columns. */
+/**
+ * Natural-join two row sets by their shared column names while keeping all columns from both sides.
+ *
+ * @param left Left-hand example rows.
+ * @param right Right-hand example rows.
+ * @returns The joined rows, preserving the left row order and right row iteration order.
+ */
 function naturalJoinRows(left: ExampleRow[], right: ExampleRow[]): ExampleRow[] {
     const sharedKeys = Object.keys(left[0] ?? {}).filter((key) => right[0] && key in right[0])
     const joinedRows: ExampleRow[] = []
@@ -41,22 +96,6 @@ export function mergeExampleValues(
     return tables.reduce((joined, table) => naturalJoinRows(joined, table))
 }
 
-/**
- * Effective alternate value pool: the `dataOtherValues` rows of all contributing state machines
- * (REQ-071).
- *
- * @param stateMachines State machines available for lookup.
- * @param stateMachineNames Names of contributing state machines.
- * @returns The concatenated alternate value rows.
- */
-export function mergeOtherValues(
-    stateMachines: StateMachine[],
-    stateMachineNames: Iterable<string>,
-): ExampleRow[] {
-    return [...stateMachineNames].flatMap(
-        (name) => stateMachines.find((stateMachine) => stateMachine.name === name)?.dataOtherValues ?? [],
-    )
-}
 
 // --- Columns ---
 
@@ -76,7 +115,13 @@ export interface ExampleColumn {
     conditionValue?: string
 }
 
-/** Argument lists of a transition in examples column scan order (REQ-064). */
+/**
+ * Collect the argument groups of a transition in the order they are scanned for example columns.
+ *
+ * @param transition Transition being inspected.
+ * @param defaultPreconditions Default preconditions attached to the owning state machine.
+ * @returns Argument groups in scan order, including result arguments flagged for result processing.
+ */
 function argumentGroups(
     transition: Transition,
     defaultPreconditions: DefaultPrecondition[],
@@ -89,7 +134,12 @@ function argumentGroups(
     ]
 }
 
-/** Fixed cell value of a result condition column, taken directly from the condition (REQ-089). */
+/**
+ * Read the fixed value carried by a result-condition argument.
+ *
+ * @param argument Result argument whose condition value should be extracted.
+ * @returns The first condition value, or an empty string when no fixed value is present.
+ */
 function resultConditionValue(argument: Argument): string {
     const value = argument.condition?.value
     return (Array.isArray(value) ? value[0] : value) ?? ""
@@ -175,7 +225,15 @@ export function collectExampleColumns(
 
 // --- Cell values ---
 
-/** Numeric derivation of the `incremented` / `decremented` modifiers (REQ-077/REQ-079). */
+/**
+ * Derive the value for an incremented or decremented modifier from a numeric source value.
+ *
+ * @param sourceValue Current attribute value in the source row.
+ * @param modifier Modifier to apply.
+ * @param attributeName Attribute being evaluated.
+ * @returns The incremented or decremented value as a string.
+ * @throws Error When the source value is not numeric.
+ */
 function steppedValue(sourceValue: string | undefined, modifier: string, attributeName: string): string {
     const numericValue = Number(sourceValue)
     if (Number.isNaN(numericValue)) {
@@ -187,7 +245,15 @@ function steppedValue(sourceValue: string | undefined, modifier: string, attribu
     return String(numericValue + (modifier === "incremented" ? 1 : -1))
 }
 
-/** Circular row shift used by the `next` / `previous` modifiers (REQ-081/REQ-158). */
+/**
+ * Rotate a row index through the available example rows for circular `next` / `previous` logic.
+ *
+ * @param attributeName Attribute to read from the shifted row.
+ * @param rowIndex Index of the current row.
+ * @param shift Number of steps to shift by.
+ * @param rows Original example rows.
+ * @returns The shifted attribute value, or an empty string when no rows exist.
+ */
 function shiftedValue(attributeName: string, rowIndex: number, shift: number, rows: ExampleRow[]): string {
     if (rows.length === 0) return ""
     const shiftedIndex = ((rowIndex + shift) % rows.length + rows.length) % rows.length
@@ -195,13 +261,15 @@ function shiftedValue(attributeName: string, rowIndex: number, shift: number, ro
 }
 
 /**
- * Next-row-circular value that differs from the row's own value, taken from the example values
- * followed by the other values (REQ-083/REQ-084).
+ * Find the first distinct value in the source table that differs from the current row.
  *
- * @throws Error When the pool holds fewer than two distinct values (REQ-141), or when no
- *   differing value can be found.
+ * @param attributeName Attribute to inspect.
+ * @param currentValue Current value on the row under evaluation.
+ * @param pool Candidate rows used to select a different value.
+ * @returns The first different value found in the pool.
+ * @throws Error When the pool holds fewer than two distinct values or no differing value exists.
  */
-function differentValue(attributeName: string, currentValue: string, rowIndex: number, pool: ExampleRow[]): string {
+function differentValue(attributeName: string, currentValue: string, pool: ExampleRow[]): string {
     const distinctValues = new Set(pool.map((candidateRow) => candidateRow[attributeName] ?? ""))
     if (distinctValues.size < 2) {
         throw new Error(
@@ -210,9 +278,8 @@ function differentValue(attributeName: string, currentValue: string, rowIndex: n
         )
     }
 
-    const startIndex = ((rowIndex + 1) % pool.length + pool.length) % pool.length
-    for (let step = 0; step < pool.length; step++) {
-        const candidate = pool[(startIndex + step) % pool.length][attributeName] ?? ""
+    for (const candidateRow of pool) {
+        const candidate = candidateRow[attributeName] ?? ""
         if (candidate !== currentValue) return candidate
     }
     throw new Error(
@@ -222,15 +289,13 @@ function differentValue(attributeName: string, currentValue: string, rowIndex: n
 }
 
 /**
- * Cell value of a modifier column for one row (REQ-070). Positional modifiers derive from the
- * original, unfiltered example values table (REQ-158).
+ * Resolve the value of a modifier column for one row.
  *
- * @param column Modifier column to derive a value for.
- * @param row Row to derive the value from.
- * @param sourceRowIndex Index of the row within `allRows`.
- * @param allRows Original, unfiltered example values table.
- * @param otherRows Alternate value pool used by the `different` modifier.
- * @returns The derived value; `""` for an unknown modifier.
+ * @param column Modifier column to evaluate.
+ * @param row Row containing the source value.
+ * @param sourceRowIndex Index of the row in the original value table.
+ * @param allRows Original, unfiltered example rows used for positional modifiers.
+ * @returns The derived cell value, or an empty string for unknown modifiers.
  * @throws Error When the modifier cannot be derived from the available values.
  */
 function resolveModifierValue(
@@ -238,7 +303,6 @@ function resolveModifierValue(
     row: ExampleRow,
     sourceRowIndex: number,
     allRows: ExampleRow[],
-    otherRows: ExampleRow[],
 ): string {
     const attributeName = column.sourceName
     const sourceValue = row[attributeName]
@@ -255,34 +319,32 @@ function resolveModifierValue(
         case "previous":
             return shiftedValue(attributeName, sourceRowIndex, -1, allRows)
         case DIFFERENT_MODIFIER:
-            return differentValue(attributeName, sourceValue ?? "", sourceRowIndex, [...allRows, ...otherRows])
+            return differentValue(attributeName, sourceValue ?? "", allRows)
         default:
             return ""
     }
 }
 
 /**
- * Cell value of any column kind for one row.
+ * Resolve the rendered cell value for any column kind from a single row.
  *
- * @param column Column to resolve.
- * @param row Row to read values from.
- * @param sourceRowIndex Row index within the original table.
- * @param allRows Original example rows.
- * @param otherRows Alternate example rows.
- * @returns The rendered cell value.
+ * @param column Column definition to evaluate.
+ * @param row Row containing the source values.
+ * @param sourceRowIndex Index of the row in the original table.
+ * @param allRows Original example rows used for derived modifier values.
+ * @returns The rendered cell value for the row and column.
  */
 function resolveCellValue(
     column: ExampleColumn,
     row: ExampleRow,
     sourceRowIndex: number,
     allRows: ExampleRow[],
-    otherRows: ExampleRow[],
 ): string {
     switch (column.kind) {
         case "base":
             return row[column.sourceName] ?? ""
         case "modifier":
-            return resolveModifierValue(column, row, sourceRowIndex, allRows, otherRows)
+            return resolveModifierValue(column, row, sourceRowIndex, allRows)
         case "result-condition":
             return column.conditionValue ?? ""
     }
@@ -297,30 +359,36 @@ function resolveCellValue(
  * @param rows Rows to filter.
  * @param filters Filters to apply; no filters keep all rows.
  * @param allRows Original, unfiltered table used for positional modifier derivation.
- * @param otherRows Alternate value pool used by the `different` modifier.
  * @returns The surviving rows.
  */
 export function filterRows(
     rows: ExampleRow[],
     filters: FilterCondition[],
     allRows: ExampleRow[],
-    otherRows: ExampleRow[],
 ): ExampleRow[] {
-    if (filters.length === 0) return rows
-    return rows.filter((row, rowIndex) =>
-        filters.every(({ sourceName, condition, modifier }) => {
-            const value = modifier
-                ? resolveModifierValue(
-                    { kind: "modifier", name: "", sourceName, modifier }, row, rowIndex, allRows, otherRows)
-                : row[sourceName]
-            return evaluateCondition(value, condition)
-        }),
-    )
+    const filteredRows = filters.length === 0
+        ? rows
+        : rows.filter((row, rowIndex) =>
+            filters.every(({ sourceName, condition, modifier }) => {
+                const value = modifier
+                    ? resolveModifierValue(
+                        { kind: "modifier", name: "", sourceName, modifier }, row, rowIndex, allRows)
+                    : row[sourceName]
+                return evaluateCondition(value, condition)
+            }),
+        )
+    return deduplicateRows(filteredRows)
 }
 
 // --- Rendering ---
 
-/** Render one examples table row, padded to the column widths and indented per REQ-126. */
+/**
+ * Format one rendered examples-table row with the correct padding and indentation.
+ *
+ * @param cells Cell values to render in order.
+ * @param widths Column widths used for padding.
+ * @returns A single formatted table row string.
+ */
 function formatTableRow(cells: string[], widths: number[]): string {
     return `      |${cells.map((cell, index) => ` ${cell.padEnd(widths[index])} `).join("|")}|`
 }
@@ -331,20 +399,19 @@ function formatTableRow(cells: string[], widths: number[]): string {
  * @param columns Columns to render.
  * @param rows Surviving rows to render.
  * @param allRows Original, unfiltered table used for positional modifier derivation (REQ-158).
- * @param otherRows Alternate value pool used by the `different` modifier.
  * @returns The rendered `Examples:` block.
  */
 export function formatExamplesTable(
     columns: ExampleColumn[],
     rows: ExampleRow[],
     allRows: ExampleRow[],
-    otherRows: ExampleRow[],
 ): string {
-    const rowCells = rows.map((row, rowIndex) => {
+    const uniqueRows = deduplicateRows(rows)
+    const rowCells = deduplicateRenderedRows(uniqueRows.map((row, rowIndex) => {
         const originalRowIndex = allRows.indexOf(row)
         const sourceRowIndex = originalRowIndex >= 0 ? originalRowIndex : rowIndex
-        return columns.map((column) => resolveCellValue(column, row, sourceRowIndex, allRows, otherRows))
-    })
+        return columns.map((column) => resolveCellValue(column, row, sourceRowIndex, allRows))
+    }))
 
     const headerCells = columns.map((column) => column.name)
     const widths = headerCells.map((header, columnIndex) =>

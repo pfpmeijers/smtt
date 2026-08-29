@@ -1,5 +1,5 @@
-import fs from "fs"
-import path from "path"
+import * as fs from "fs"
+import * as path from "path"
 import { fileURLToPath } from "url"
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv"
 import type { Argument, Condition, DefaultPrecondition, StateMachine, Transition } from "./sm.ast.d"
@@ -192,12 +192,6 @@ export function validateDataValueTableColumns(stateMachines: StateMachine[]): vo
             stateMachine,
             "Example values",
             stateMachine.dataExampleValues ?? [],
-            declaredAttributes,
-        )
-        validateDataRowsContainDeclaredAttributes(
-            stateMachine,
-            "Other values",
-            stateMachine.dataOtherValues ?? [],
             declaredAttributes,
         )
     }
@@ -541,10 +535,7 @@ export function validateModifierValuePoolSize(stateMachines: StateMachine[]): vo
                 const contributingMachine = machineByName.get(contributingName)
                 if (!contributingMachine) continue
 
-                const rows = [
-                    ...(contributingMachine.dataExampleValues ?? []),
-                    ...(contributingMachine.dataOtherValues ?? []),
-                ]
+                const rows = contributingMachine.dataExampleValues ?? []
                 for (const row of rows) {
                     for (const [attributeName, attributeValue] of Object.entries(row as Record<string, string | undefined>)) {
                         if (typeof attributeValue !== "string" && attributeValue !== undefined) continue
@@ -636,7 +627,7 @@ function extractConditionValues(condition: Condition): string[] {
 /**
  * [REQ-418] Validates that every attribute value referenced in a condition
  * (argument condition or implied state condition) is defined in the
- * example or other data values table for that attribute.
+ * example data values table for that attribute.
  *
  * @param stateMachines Parsed state-machine AST nodes.
  * @returns Nothing. Validation succeeds by not throwing.
@@ -648,10 +639,7 @@ export function validateConditionValues(stateMachines: StateMachine[]): void {
 
     for (const stateMachine of stateMachines) {
         const ownValuePool = new Map<string, Set<string>>()
-        const ownRows = [
-            ...(stateMachine.dataExampleValues ?? []),
-            ...(stateMachine.dataOtherValues ?? []),
-        ]
+        const ownRows = stateMachine.dataExampleValues ?? []
         for (const row of ownRows) {
             for (const [attributeName, attributeValue] of Object.entries(row as Record<string, string | undefined>)) {
                 if (typeof attributeValue !== "string" || attributeValue === "") continue
@@ -670,7 +658,7 @@ export function validateConditionValues(stateMachines: StateMachine[]): void {
                     if (!allowedValues.has(value)) {
                         throw new Error(
                             `State \`${state.name}\` in state machine \`${stateMachine.name}\`: Condition value \`${value}\` ` +
-                            `for attribute \`${implied.attribute}\` is not defined in the example or other values table.`,
+                            `for attribute \`${implied.attribute}\` is not defined in the example values table.`,
                         )
                     }
                 }
@@ -684,10 +672,7 @@ export function validateConditionValues(stateMachines: StateMachine[]): void {
             const ownerName = ownership[precondition.state.toLowerCase()] ?? stateMachine.name
             const ownerMachine = machineByName.get(ownerName) ?? stateMachine
             const ownerPool = new Map<string, Set<string>>()
-            const ownerRows = [
-                ...(ownerMachine.dataExampleValues ?? []),
-                ...(ownerMachine.dataOtherValues ?? []),
-            ]
+            const ownerRows = ownerMachine.dataExampleValues ?? []
             for (const row of ownerRows) {
                 for (const [attributeName, attributeValue] of Object.entries(row as Record<string, string | undefined>)) {
                     if (typeof attributeValue !== "string" || attributeValue === "") continue
@@ -705,7 +690,7 @@ export function validateConditionValues(stateMachines: StateMachine[]): void {
                     if (!allowedValues.has(value)) {
                         throw new Error(
                             `State machine \`${stateMachine.name}\`: Default precondition state \`${precondition.state}\` ` +
-                            `- condition value \`${value}\` for attribute \`${argument.name}\` is not defined in the example or other values table.`,
+                            `- condition value \`${value}\` for attribute \`${argument.name}\` is not defined in the example values table.`,
                         )
                     }
                 }
@@ -728,10 +713,7 @@ export function validateConditionValues(stateMachines: StateMachine[]): void {
                 const contributingMachine = machineByName.get(contributingName)
                 if (!contributingMachine) continue
 
-                const rows = [
-                    ...(contributingMachine.dataExampleValues ?? []),
-                    ...(contributingMachine.dataOtherValues ?? []),
-                ]
+                const rows = contributingMachine.dataExampleValues ?? []
                 for (const row of rows) {
                     for (const [attributeName, attributeValue] of Object.entries(row as Record<string, string | undefined>)) {
                         if (typeof attributeValue !== "string" || attributeValue === "") continue
@@ -751,7 +733,7 @@ export function validateConditionValues(stateMachines: StateMachine[]): void {
                     if (!allowedValues.has(value)) {
                         throw new Error(
                             `${formatTransitionContext(stateMachine.name, transition)}: Condition value \`${value}\` ` +
-                            `for attribute \`${argument.name}\` is not defined in the example or other values table.`,
+                            `for attribute \`${argument.name}\` is not defined in the example values table.`,
                         )
                     }
                 }

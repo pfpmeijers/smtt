@@ -50,8 +50,7 @@ test("[TST-021] → [REQ-073/074]: Empty string in modifier lookup is treated as
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}],
-        dataOtherValues: [{a: ""}],
+        dataExampleValues: [{a: "1"}, {a: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e", arguments: [{modifier: "different", name: "a"}]},
@@ -61,7 +60,7 @@ test("[TST-021] → [REQ-073/074]: Empty string in modifier lookup is treated as
     }]
     validateStateMachines(stateMachines)
     const feature = createFeatures(stateMachines)["m"]
-    assertContains(feature, "| 1 |             |")
+    assertContains(feature, "| 1 | 2           |")
     assertMatchesReference(stateMachines, feature)
 })
 

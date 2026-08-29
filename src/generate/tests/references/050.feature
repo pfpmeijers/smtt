@@ -24,8 +24,7 @@
 # Covers requirements:
 # - [REQ-053] `$modifier` shall be the qualifying word/phrase before the attribute name.
 # - [REQ-065] The table shall add _derived_ columns required by modifiers.
-# - [REQ-070] Modifiers shall be added as additional columns per surviving row, based on additional
-#   attribute value mappings from the `$other-data-values` table where necessary.
+# - [REQ-070] Modifiers shall be added as additional columns per surviving row.
 # - [REQ-076] Modifiers shall extend the data combination tables (`Examples`) by adding columns
 #   based on the data attribute values.
 # - [REQ-077] The `incremented` / `decremented` modifiers shall take the incremented / decremented

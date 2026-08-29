@@ -10,6 +10,7 @@
 #              value: "5"
 #    dataExampleValues:
 #      - a: "1"
+#      - a: "5"
 #      - a: "9"
 #    transitions:
 #      - states:

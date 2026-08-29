@@ -18,7 +18,7 @@ Feature: m1
     Examples:
       | a1 | different a1 |
       | V1 | V2           |
-      | V2 | V3           |
+      | V2 | V1           |
 
   Scenario: [003] m1 active → m1 inactive; when e2
     Given initially m1 active

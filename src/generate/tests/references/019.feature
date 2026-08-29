@@ -21,8 +21,8 @@
 #          name: s
 #        notes: ""
 # Covers requirements:
-# - [REQ-073] An empty string (`""`) in `$example-data-values` or `$other-data-values` shall
-#   represent an undefined/absent value for that attribute.
+# - [REQ-073] An empty string (`""`) in `$example-data-values` shall represent an undefined/absent
+#   value for that attribute.
 # - [REQ-074] When used in modifier lookups or condition filtering, empty strings shall be treated
 #   as undefined.
 # - [REQ-075] Empty strings shall not match any comparison operator except `undefined`.

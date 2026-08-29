@@ -9,7 +9,7 @@ import type {
     FailingPrecondition,
     NormalizedTransition,
     UnhandledTriggerEntry,
-} from "./types"
+} from "./types.js"
 
 // --- Helper functions for state vector conversion and trigger inspection ---
 

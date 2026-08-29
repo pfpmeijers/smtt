@@ -10,7 +10,11 @@
 #              value: "5"
 #    dataExampleValues:
 #      - a: "1"
+#        b: "5"
 #      - a: "9"
+#        b: "5"
+#      - a: "9"
+#        b: "6"
 #    transitions:
 #      - states:
 #          - name: s
@@ -36,5 +40,4 @@ Feature: m
     Then expect s
     Examples:
       | a |
-      | 1 |
       | 9 |

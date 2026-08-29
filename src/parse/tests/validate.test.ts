@@ -1,5 +1,5 @@
 import { describe, it } from "node:test"
-import assert from "node:assert/strict"
+import * as assert from "node:assert/strict"
 
 import type { StateMachine } from "../sm.ast.d"
 import { validateStateMachines } from "../validate"
@@ -25,8 +25,8 @@ function buildValidStateMachines(): StateMachine[] {
             dataExampleValues: [
                 { a1: "v1", a2: "1" },
                 { a1: "v2", a2: "2" },
+                { a1: "v3", a2: "3" },
             ],
-            dataOtherValues: [{ a1: "v3", a2: "3" }],
         },
         {
             name: "m2",
@@ -163,7 +163,6 @@ describe("validateStateMachines business rules", () => {
     it("REQ-413: rejects not-like modifiers when value pool has fewer than 2 distinct values", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].dataExampleValues = [{ a1: "v1" }]
-        stateMachines[0].dataOtherValues = []
         stateMachines[1].dataExampleValues = [{ a1: "v1" }]
         stateMachines[0].transitions = [
             {
@@ -187,7 +186,6 @@ describe("validateStateMachines business rules", () => {
     it("REQ-414: rejects incremented-like modifiers when value pool contains non-numeric values", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].dataExampleValues = [{ a2: "1" }, { a2: "x" }]
-        stateMachines[0].dataOtherValues = []
         stateMachines[1].dataExampleValues = []
         stateMachines[0].transitions = [
             {
@@ -237,19 +235,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("REQ-417: rejects Other values tables missing columns for declared attributes", () => {
-        const stateMachines = cloneStateMachines(buildValidStateMachines())
-        stateMachines[0].data = { a1: "", a2: "" }
-        stateMachines[0].dataExampleValues = [{ a1: "v1", a2: "1" }]
-        stateMachines[0].dataOtherValues = [{ a1: "v2" }]
-
-        assert.throws(
-            () => validateStateMachines(stateMachines),
-            /Other values table is missing column\(s\) for declared attribute\(s\): `a2`/,
-        )
-    })
-
-    it("REQ-418: rejects condition values not defined in example or other values table for transition state argument", () => {
+    it("REQ-418: rejects condition values not defined in example values table for transition state argument", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].transitions = [
             {
@@ -262,11 +248,11 @@ describe("validateStateMachines business rules", () => {
 
         assert.throws(
             () => validateStateMachines(stateMachines),
-            /Condition value `unknown_val` for attribute `a1` is not defined in the example or other values table/,
+            /Condition value `unknown_val` for attribute `a1` is not defined in the example values table/,
         )
     })
 
-    it("REQ-418: rejects condition values not defined in example or other values table for transition trigger argument", () => {
+    it("REQ-418: rejects condition values not defined in example values table for transition trigger argument", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].transitions = [
             {
@@ -279,11 +265,11 @@ describe("validateStateMachines business rules", () => {
 
         assert.throws(
             () => validateStateMachines(stateMachines),
-            /Condition value `unknown_val` for attribute `a1` is not defined in the example or other values table/,
+            /Condition value `unknown_val` for attribute `a1` is not defined in the example values table/,
         )
     })
 
-    it("REQ-418: rejects condition values not defined in example or other values table for transition result argument", () => {
+    it("REQ-418: rejects condition values not defined in example values table for transition result argument", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].transitions = [
             {
@@ -296,11 +282,11 @@ describe("validateStateMachines business rules", () => {
 
         assert.throws(
             () => validateStateMachines(stateMachines),
-            /Condition value `unknown_val` for attribute `a1` is not defined in the example or other values table/,
+            /Condition value `unknown_val` for attribute `a1` is not defined in the example values table/,
         )
     })
 
-    it("REQ-418: rejects condition values not defined in example or other values table for state implied condition", () => {
+    it("REQ-418: rejects condition values not defined in example values table for state implied condition", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].states[0].impliedConditions = [
             { attribute: "a1", condition: { operator: "=", value: "unknown_val" } },
@@ -308,11 +294,11 @@ describe("validateStateMachines business rules", () => {
 
         assert.throws(
             () => validateStateMachines(stateMachines),
-            /State `s1` in state machine `m1`: Condition value `unknown_val` for attribute `a1` is not defined in the example or other values table/,
+            /State `s1` in state machine `m1`: Condition value `unknown_val` for attribute `a1` is not defined in the example values table/,
         )
     })
 
-    it("REQ-418: rejects condition values not defined in example or other values table for default precondition argument", () => {
+    it("REQ-418: rejects condition values not defined in example values table for default precondition argument", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].defaultPreconditions = [
             { state: "s3", arguments: [{ name: "a1", condition: { operator: "=", value: "unknown_val" } }] },
@@ -320,7 +306,7 @@ describe("validateStateMachines business rules", () => {
 
         assert.throws(
             () => validateStateMachines(stateMachines),
-            /Default precondition state `s3` - condition value `unknown_val` for attribute `a1` is not defined in the example or other values table/,
+            /Default precondition state `s3` - condition value `unknown_val` for attribute `a1` is not defined in the example values table/,
         )
     })
 
@@ -337,22 +323,22 @@ describe("validateStateMachines business rules", () => {
 
         assert.throws(
             () => validateStateMachines(stateMachines),
-            /Condition value `v99` for attribute `a1` is not defined in the example or other values table/,
+            /Condition value `v99` for attribute `a1` is not defined in the example values table/,
         )
 
         stateMachines[0].transitions[0].states![0].arguments![0].name = "a2"
         stateMachines[0].transitions[0].states![0].arguments![0].condition = { operator: "in range", value: "[1, 99]" }
         assert.throws(
             () => validateStateMachines(stateMachines),
-            /Condition value `99` for attribute `a2` is not defined in the example or other values table/,
+            /Condition value `99` for attribute `a2` is not defined in the example values table/,
         )
     })
 
-    it("REQ-418: accepts valid condition values from dataExampleValues or dataOtherValues, and undefined operator", () => {
+    it("REQ-418: accepts valid condition values from dataExampleValues, and undefined operator", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].states[0].impliedConditions = [
             { attribute: "a1", condition: { operator: "=", value: "v1" } },
-            { attribute: "a1", condition: { operator: "as", value: "v3" } }, // from dataOtherValues
+            { attribute: "a1", condition: { operator: "as", value: "v3" } },
             { attribute: "a1", condition: { operator: "undefined" } },
         ]
         stateMachines[0].transitions = [

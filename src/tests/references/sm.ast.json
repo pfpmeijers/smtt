@@ -24,11 +24,6 @@
           "a1": "V2"
         }
       ],
-      "dataOtherValues": [
-        {
-          "a1": "V3"
-        }
-      ],
       "defaultPreconditions": [],
       "transitions": [
         {
@@ -125,7 +120,7 @@
       },
       "irrelevant": [],
       "initialState": "m1 inactive",
-      "source": "C:\\Users\\pfpme\\WebstormProjects\\Malerien\\tests\\smtt\\src\\tests\\state-machines\\m1.state-machine.md"
+      "source": "C:\\Users\\pfpme\\WebstormProjects\\smtt\\src\\tests\\state-machines\\m1.state-machine.md"
     },
     {
       "name": "m2",
@@ -188,7 +183,6 @@
           "a2": "3"
         }
       ],
-      "dataOtherValues": [],
       "defaultPreconditions": [
         {
           "state": "m1 active",
@@ -470,7 +464,7 @@
       },
       "irrelevant": [],
       "initialState": "m2 empty",
-      "source": "C:\\Users\\pfpme\\WebstormProjects\\Malerien\\tests\\smtt\\src\\tests\\state-machines\\m2.state-machine.md"
+      "source": "C:\\Users\\pfpme\\WebstormProjects\\smtt\\src\\tests\\state-machines\\m2.state-machine.md"
     },
     {
       "name": "m3",
@@ -523,9 +517,7 @@
         {
           "a3": "P2",
           "a4": "10"
-        }
-      ],
-      "dataOtherValues": [
+        },
         {
           "a3": "P3",
           "a4": "20"
@@ -872,7 +864,7 @@
         }
       ],
       "initialState": "m3 pending",
-      "source": "C:\\Users\\pfpme\\WebstormProjects\\Malerien\\tests\\smtt\\src\\tests\\state-machines\\m3.state-machine.md"
+      "source": "C:\\Users\\pfpme\\WebstormProjects\\smtt\\src\\tests\\state-machines\\m3.state-machine.md"
     }
   ]
 }

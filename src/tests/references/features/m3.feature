@@ -11,11 +11,6 @@ Feature: m3
     Examples:
       | a4 | a3 | resulting a4 |
       | 0  | P1 | 10           |
-      | 0  | P1 | 10           |
-      | 0  | P1 | 10           |
-      | 0  | P1 | 10           |
-      | 0  | P1 | 10           |
-      | 0  | P1 | 10           |
 
   Scenario: [013] m3 open → m3 paused; when e6; given m1 active
     Given initially m1 active
@@ -39,7 +34,7 @@ Feature: m3
     Examples:
       | a4 | resulting a4 |
       | 10 | 20           |
-      | 10 | 20           |
+      | 20 | 20           |
 
   Scenario Outline: [016] m3 open → m3 closed with "<resulting a4>"; when e9; given m1 active, m2 empty
     Given initially m1 active
@@ -51,7 +46,7 @@ Feature: m3
     Examples:
       | a4 | resulting a4 |
       | 10 | 0            |
-      | 10 | 0            |
+      | 20 | 0            |
 
   Scenario Outline: [017] m3 paused → m3 closed with "<resulting a4>"; when e9; given m1 active
     Given initially m1 active
@@ -62,9 +57,8 @@ Feature: m3
     Examples:
       | a4 | resulting a4 |
       | 0  | 0            |
-      | 0  | 0            |
       | 10 | 0            |
-      | 10 | 0            |
+      | 20 | 0            |
 
   Scenario: [018] m3 open → m3 paused; when m1 inactive; given m1 active
     Given initially m1 active
@@ -83,7 +77,5 @@ Feature: m3
     # Notes: Auto-resumed when M1 reactivates
     Examples:
       | a1 |
-      | V1 |
-      | V2 |
       | V1 |
       | V2 |

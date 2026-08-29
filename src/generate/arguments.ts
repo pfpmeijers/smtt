@@ -3,7 +3,7 @@ import type { Argument } from "../parse"
 // --- Modifiers ---
 
 /** Modifier spellings that all denote the canonical `different` modifier (REQ-085). */
-const DIFFERENT_MODIFIER_ALIASES = new Set(["different", "other", "not"])
+const DIFFERENT_MODIFIER_ALIASES = new Set(["different", "other", "not", "unequal"])
 
 /** Canonical modifier name of the `not`/`other`/`different` family (REQ-085). */
 export const DIFFERENT_MODIFIER = "different"

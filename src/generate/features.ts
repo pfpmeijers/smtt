@@ -1,5 +1,5 @@
-import fs from "fs"
-import path from "path"
+import * as fs from "fs"
+import * as path from "path"
 import type { DefaultPrecondition, StateMachine, StateRef, Transition } from "../parse"
 import {
     collectChainFilterConditions,
@@ -19,7 +19,6 @@ import {
     filterRows,
     formatExamplesTable,
     mergeExampleValues,
-    mergeOtherValues,
     type ExampleColumn,
 } from "./examples"
 import { buildEffectiveGivens } from "./givens"
@@ -102,7 +101,6 @@ function buildExamplesTable(context: RenderContext, transition: Transition, colu
         stateMachine, transition, defaultPreconditions, ownership, taggedTransitions,
     )
     const exampleValues = mergeExampleValues(stateMachines, contributingStateMachines)
-    const otherValues = mergeOtherValues(stateMachines, contributingStateMachines)
     if (exampleValues.length === 0) {
         throw new Error(
             `Invalid state machine "${stateMachine.name}": ${transitionDescription(transition)} ` +
@@ -118,13 +116,13 @@ function buildExamplesTable(context: RenderContext, transition: Transition, colu
             stateMachine, transition, defaultPreconditions, ownership, impliedIndex, availableAttributes,
         ),
     ]
-    const rows = filterRows(exampleValues, filters, exampleValues, otherValues)
+    const rows = filterRows(exampleValues, filters, exampleValues)
     if (rows.length === 0) {
         throw new Error(
             `Empty examples table for transition ${transition.id} in state machine \`${stateMachine.name}\``,
         )
     }
-    return formatExamplesTable(columns, rows, exampleValues, otherValues)
+    return formatExamplesTable(columns, rows, exampleValues)
 }
 
 // --- Scenario rendering ---

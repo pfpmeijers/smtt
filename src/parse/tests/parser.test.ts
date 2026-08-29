@@ -6,11 +6,11 @@
  */
 
 import { describe, it } from "node:test"
-import assert from "node:assert/strict"
-import fs from "fs"
-import path from "path"
+import * as assert from "node:assert/strict"
+import * as fs from "fs"
+import * as path from "path"
+import * as YAML from "yaml"
 import { fileURLToPath } from "url"
-import YAML from "yaml"
 
 import { parse } from "../parse"
 import { normalizeSourcePaths } from "../../tests/utils/assert"

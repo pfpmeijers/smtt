@@ -25,8 +25,8 @@
  *                global ordering by source file path and line number.
  */
 
-import fs from "fs"
-import path from "path"
+import * as fs from "fs"
+import * as path from "path"
 import { STATE_MACHINES_DIR } from "./common/dirs"
 import { parse } from "./parse"
 import { infer } from "./infer"

@@ -15,7 +15,6 @@
       ],
       "data": {},
       "dataExampleValues": [],
-      "dataOtherValues": [],
       "defaultPreconditions": [],
       "transitions": [
         {
@@ -119,7 +118,6 @@
       ],
       "data": {},
       "dataExampleValues": [],
-      "dataOtherValues": [],
       "defaultPreconditions": [],
       "transitions": [
         {

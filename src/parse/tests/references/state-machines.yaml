@@ -9,7 +9,6 @@
     - painting count: "0"
     - painting count: "1"
     - painting count: "2"
-  dataOtherValues: []
   defaultPreconditions:
     - state: user session present
   transitions:
@@ -142,7 +141,6 @@
     email address: ""
   dataExampleValues:
     - email address: info@domain.com
-  dataOtherValues: []
   defaultPreconditions: []
   transitions:
     - id: "001"
@@ -196,7 +194,6 @@
     - therapy subject: about-patricia
     - therapy subject: conditions
     - therapy subject: contact
-  dataOtherValues: []
   defaultPreconditions:
     - state: user session present
   transitions:
@@ -449,7 +446,6 @@
   dataExampleValues:
     - email address: info@domain.com
       user name: john doe
-  dataOtherValues: []
   defaultPreconditions: []
   transitions:
     - id: "003"
@@ -661,7 +657,6 @@
     - name: john doe
       email address: info@domain.com
       policies: approved
-  dataOtherValues: []
   defaultPreconditions:
     - state: reservation page open
   transitions:
@@ -1088,7 +1083,6 @@
     email address: ""
   dataExampleValues:
     - email address: info@domain.com
-  dataOtherValues:
     - email address: other@example.com
   defaultPreconditions:
     - state: user session present
@@ -1226,7 +1220,6 @@
   dataExampleValues:
     - email address: info@domain.com
       user name: john doe
-  dataOtherValues:
     - email address: other@example.com
       user name: alice smith
   defaultPreconditions:
@@ -1370,7 +1363,6 @@
   data:
     session id: ""
   dataExampleValues: []
-  dataOtherValues: []
   defaultPreconditions: []
   transitions:
     - id: "028"

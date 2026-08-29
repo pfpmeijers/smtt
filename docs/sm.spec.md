@@ -158,8 +158,8 @@ the attribute list.
 - **Format**: Use column headers matching attribute names. Each row represents
   one complete combination of values across all referenced attributes:
 
-- **Required columns**: When an `Example values:` or `Other values:` table is
-  present, include a column its header for every attribute declared in the 
+- **Required columns**: When an `Example values:` table is
+  present, include a column in its header for every attribute declared in the 
   `## Data` attribute list.
 
    ```markdown
@@ -173,22 +173,6 @@ the attribute list.
 
    An empty cell represents an undefined value for that attribute.
    Empty-string literals (`` `` ``) are not allowed.
-
-- **Other values**: Add an `Other values:` table after the
-  `Example values:` table, using the same column format. These values are
-  considered behaviorally equivalent to any row in the `Example values:` table
-  from a state machine perspective. They exist solely to make the attribute pool
-  richer for *data modifiers* such as `not` or `other`, which require at least
-  two distinct values to resolve their mapping. See the
-  [Data modifiers](#data-modifiers) section below for details.
-  
-   ```markdown
-   Other values:
-  
-   | `email address`     |
-   | ------------------- |
-   | `other@example.com` |
-   ```
 
 - **Backticks** — Put text-based attribute values between backticks.
 - **Numeric versus text attributes** — Numeric attributes only have
@@ -314,11 +298,14 @@ transition context.
 
 ##### Negation modifiers: `not` / `different` / `unequal` / `other`
 
-The value is any value other than the one the attribute currently holds (as
+The value is the first value other than the one the attribute currently holds (as
 declared by the corresponding reference in the same transition row).
 
 - Semantics: the attribute value is different from the attribute value used 
   elsewhere in the same transition rule.
+- When this modifier is used, there shall be at least one other value specified
+  for the attribute in the example values table (at least two distinct values in total).
+- The first different value from the example values table is taken for the scenario.
 - All these keywords are synonyms.
 
 Examples:

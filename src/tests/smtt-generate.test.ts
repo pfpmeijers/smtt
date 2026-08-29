@@ -1,9 +1,9 @@
 import { describe, it } from "node:test"
 import * as assert from "node:assert/strict"
-import fs from "fs"
-import path from "path"
+import * as fs from "fs"
+import * as path from "path"
 import { fileURLToPath } from "node:url"
-import { execSync } from "child_process"
+import { execFileSync } from "child_process"
 import { assertDirectoriesEqual, normalizeSourcePathsInJson } from "./utils/assert"
 
 // Resolve __dirname for ES modules.
@@ -37,11 +37,22 @@ describe("SMTT Generate Command", () => {
 		// Check that input directory exists.
 		assert.ok(fs.existsSync(inputDir), `Input directory exists: \`${inputDir}\``)
 
-		// Run the smtt generate command.
-		const command = `tsx "${smttScript}" generate --input-dir "${inputDir}" --ast-file "${astFile}" --output-dir "${resultsDir}"`
+		// Run the smtt generate command without relying on a shell PATH lookup for the local tsx binary.
+		const args = [
+			"--import",
+			"tsx",
+			smttScript,
+			"generate",
+			"--input-dir",
+			inputDir,
+			"--ast-file",
+			astFile,
+			"--output-dir",
+			resultsDir,
+		]
 
 		try {
-			execSync(command, { cwd: testDir, stdio: "inherit" })
+			execFileSync(process.execPath, args, { cwd: testDir, stdio: "inherit" })
 		} catch (error) {
 			assert.fail(`smtt generate command failed: ${error instanceof Error ? error.message : String(error)}`)
 		}

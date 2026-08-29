@@ -8,8 +8,8 @@
  * is performed in a later post-parse step.
  */
 
-import fs from "fs"
-import path from "path"
+import * as fs from "fs"
+import * as path from "path"
 import { fileURLToPath } from "url"
 import { grammar, Grammar } from "ohm-js"
 

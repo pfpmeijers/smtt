@@ -23,11 +23,6 @@ Example values:
 | `Count` | `Label` | `Score` |
 |---------|---------|---------|
 | 2       | `alpha` | 10      |
-
-Other values:
-
-| `Count` | `Label` | `Score` |
-|---------|---------|---------|
 | 0       | `beta`  | 20      |
 | 1       | `beta`  | 20      |
 | 3       | `beta`  | 20      |

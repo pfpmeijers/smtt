@@ -6,10 +6,10 @@
  */
 
 import { test } from "node:test"
-import assert from "node:assert/strict"
-import fs from "fs"
-import os from "os"
-import path from "path"
+import * as assert from "node:assert/strict"
+import * as fs from "fs"
+import * as os from "os"
+import * as path from "path"
 import { fileURLToPath } from "url"
 import { parse } from "../../parse"
 import { normalizeSourcePaths } from "../../tests/utils/assert"

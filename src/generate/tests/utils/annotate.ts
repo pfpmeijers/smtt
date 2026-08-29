@@ -13,10 +13,10 @@
  * the running test's title, so no source feature file needs to be parsed.
  */
 
-import fs from "fs"
-import path from "path"
+import * as fs from "fs"
+import * as path from "path"
+import * as YAML from "yaml"
 import { fileURLToPath } from "url"
-import YAML from "yaml"
 import { StateMachines } from "../../../parse"
 import { currentTestName, requirementIdsFromName, testTitleFromName } from "./test"
 
