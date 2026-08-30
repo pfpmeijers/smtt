@@ -13,7 +13,7 @@
     label: Display label.
     score: Numeric score. ... extra description ...
   dataExampleValues:
-    - count: "2"
+    - count: "0"
       label: alpha
       score: "10"
     - count: "0"
@@ -22,9 +22,15 @@
     - count: "1"
       label: beta
       score: "20"
+    - count: "2"
+      label: alpha
+      score: "10"
     - count: "3"
       label: beta
       score: "20"
+    - count: "5"
+      label: alpha
+      score: "10"
     - count: "5"
       label: beta
       score: "20"
@@ -311,7 +317,7 @@
     defined: []
   irrelevant: []
   initialState: phase one
-  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\smtt\src\parse\tests\state-machines\argument-variations.state-machine.md
+  source: C:\Users\pfpme\WebstormProjects\smtt\src\parse\tests\state-machines\argument-variations.state-machine.md
 - name: comments machine
   states:
     - name: idling
@@ -345,7 +351,7 @@
     defined: []
   irrelevant: []
   initialState: idling
-  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\smtt\src\parse\tests\state-machines\comments.state-machine.md
+  source: C:\Users\pfpme\WebstormProjects\smtt\src\parse\tests\state-machines\comments.state-machine.md
 - name: minimal machine
   states:
     - name: idle
@@ -364,7 +370,7 @@
   impossible:
     defined: []
   irrelevant: []
-  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\smtt\src\parse\tests\state-machines\minimal.state-machine.md
+  source: C:\Users\pfpme\WebstormProjects\smtt\src\parse\tests\state-machines\minimal.state-machine.md
 - name: note variations machine
   overview: This state machine validates layout-oriented combinations. It includes
     notes subsections and plain trailing notes. Dependencies are intentionally
@@ -410,7 +416,7 @@
     defined: []
   irrelevant: []
   initialState: to be started
-  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\smtt\src\parse\tests\state-machines\note-variations.state-machine.md
+  source: C:\Users\pfpme\WebstormProjects\smtt\src\parse\tests\state-machines\note-variations.state-machine.md
 - name: rich sections machine
   overview: This state machine validates dependency entries, data examples, and
     table-based transition constraints.
@@ -430,6 +436,12 @@
   dataExampleValues:
     - customer id: A-42
       quantity: "5"
+      tier: gold
+    - customer id: B-21
+      quantity: "1"
+      tier: gold
+    - customer id: B-21
+      quantity: "10"
       tier: gold
     - customer id: B-21
       quantity: "9"
@@ -555,7 +567,7 @@
         name: check status
         type: event
   initialState: awaiting payment
-  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\smtt\src\parse\tests\state-machines\rich-sections.state-machine.md
+  source: C:\Users\pfpme\WebstormProjects\smtt\src\parse\tests\state-machines\rich-sections.state-machine.md
 - name: session
   states:
     - name: session active
@@ -581,4 +593,4 @@
   impossible:
     defined: []
   irrelevant: []
-  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\smtt\src\parse\tests\state-machines\session.state-machine.md
+  source: C:\Users\pfpme\WebstormProjects\smtt\src\parse\tests\state-machines\session.state-machine.md

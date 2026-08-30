@@ -274,10 +274,13 @@ Derived attribute columns are described in next sections.
   removed, keeping the first occurrence. Duplicate rows shall be eliminated after
   filtering and before the final table is emitted.
 - [REQ-068] The `$example-data-values` shall be taken from AST path
-  `[i].dataExampleValues`.
+  `[i].dataExampleValues`. This table may contain both author-defined rows and
+  rows synthesised by the `complete` step (REQ-420/REQ-421); both kinds are
+  treated identically by the generator.
 - [REQ-157] The generator shall raise an error when arguments are referenced
-  in a transition (directly or indirectly) but the state machine's 
-  `$example-data-values` table is absent or empty after row filtering.
+  in a transition (directly or indirectly) but the effective `$example-data-values`
+  table across all contributing machines is empty after row merging — i.e. no
+  attribute columns exist to drive the `Examples:` block.
 - [REQ-069] State/trigger conditions shall be applied as row filters.
 - [REQ-070] Modifiers shall be added as additional columns per
   surviving row.

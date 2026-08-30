@@ -78,6 +78,7 @@ StateMachine {
 
   dataSectionBody
     = none eol                                                          -- none
+    | attributeValuesTable<"Example values:">                           -- valuesOnly
     | attribute+ attributeValuesTable<"Example values:">?               -- withEntries
 
   attribute
