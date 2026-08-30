@@ -6,7 +6,7 @@ This document defines the formalism for specifying state machines in
 > **Authoring principle** — state machine files are intended to read as natural,
 > plain English. State names, attribute names, and text values are wrapped in 
 > backticks; everything else reads as ordinary prose. A reader unfamiliar with 
-> the tooling should grasp the meaning of every sentence.
+> the notation should grasp the meaning of every sentence.
 
 ## TODO:
 - For result argument conditions, only operators allowed that lead to an 
@@ -136,6 +136,11 @@ Define data attributes associated with the state machine.
 - **Backticks** — Put the attribute names between backticks.
 - **Description** (optional): Use `: some text` format for additional info 
   about an attribute, in same way as for states.
+- **Optional**: The `## Data` attribute list is optional. Any attribute
+  referenced in a transition argument, state implied condition, or default
+  precondition argument is automatically inferred from usage. Explicit
+  declarations are only needed to attach a description or to control the
+  ordering of attributes in the generated output.
 - **None**: Write `None` when the state machine has no data entities, or omit
   the `## Data` section entirely. Both have the same effect.
 
@@ -158,9 +163,14 @@ the attribute list.
 - **Format**: Use column headers matching attribute names. Each row represents
   one complete combination of values across all referenced attributes:
 
-- **Required columns**: When an `Example values:` table is
-  present, include a column in its header for every attribute declared in the 
-  `## Data` attribute list.
+- **Optional**: The example values table is optional. When an attribute is
+  used in transitions or implied conditions but has no explicit example row,
+  the attribute implicitly has `undefined` value as example value.
+  The table is only needed to specify concrete value _combinations_.
+
+- **Attribute list also optional**: The example values table may appear
+  inside `## Data` without any preceding `- \`attr\`: ...` declarations.
+  The column headers in the table serve as the attribute declarations in that case.
 
    ```markdown
    Example values:
@@ -223,7 +233,7 @@ and `User authenticated` with `user@domain.com` as the first preconditions
 unless its `State` cell already mentions any user session state.
 
 ### Transition rules
-S
+
 - **Format**: Use a Markdown table with columns: 
   - **#** (optional): An optional unique number (identifier) for the transition 
     accross all state machines, e.g., `001`.
@@ -233,7 +243,43 @@ S
   - **Trigger**: The trigger that initiates the transition.                      
   - **Result**: The resulting state after the transition.                     
   - **Notes** (optional): Additional context or side effects.                
- 
+
+- **Condition-value auto-inference**: When a condition in a state definition, 
+  default precondition or transition references a value 
+  (e.g. `` `attr` = `foo` ``) that is not already present
+  in the example values table, that value is part of the implied example
+  combinations. For multiple conditions on the same transition
+  (e.g. `` `a` = `foo` and `b` = `bar` ``), a single combined row is implied
+  with all required values; all other attributes in that row
+  take the first available value from the existing table, or an empty
+  (undefined) value if the table has no prior rows.
+
+  Example — the following transition with no prior example rows:
+
+  ```markdown
+  ## States
+
+  - `idle`
+  - `active`
+    - `status` = `running`
+
+  ## Transitions
+
+  ### Rules
+
+  | States   | Trigger                                             | Result   |
+  |----------|-----------------------------------------------------|----------|
+  | `idle`   | `started` with `status` = `running` and `count` = 0 | `active` |
+  ```
+
+  This implies the following example value row:
+
+  ```markdown
+  | `status`  | `count` |
+  |-----------|---------|
+  | `running` | 0       |
+  ```
+
 Example:
 
 ```markdown
@@ -552,3 +598,5 @@ Initial state: `State A`
 ```
 
 ---
+
+

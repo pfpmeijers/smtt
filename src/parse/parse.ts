@@ -15,6 +15,7 @@ import { grammar, Grammar } from "ohm-js"
 
 import { createSemantics, saveStateMachines } from "./sm.ast"
 import type { StateMachine, Trigger } from "./sm.ast.d"
+import { completeStateMachines } from "./complete"
 import { validateStateMachines } from "./validate"
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
@@ -131,6 +132,8 @@ export function parse(inputDir: string, astFile?: string): StateMachine[] {
         return stateMachine
     })
     classifyTriggers(stateMachines)
+    // FIXME: Expect a validate-minimal-AST here.
+    completeStateMachines(stateMachines)
     validateStateMachines(stateMachines)
     if (astFile) saveStateMachines(astFile, stateMachines)
     return stateMachines

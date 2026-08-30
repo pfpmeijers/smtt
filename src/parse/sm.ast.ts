@@ -302,6 +302,14 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             return { data: {}, dataExampleValues: [] }
         },
 
+        dataSectionBody_valuesOnly(tableNode) {
+            const table = tableNode.toAST() as DataTable
+            const dataExampleValues = table.rows.map(row =>
+                Object.fromEntries(table.columns.map((column, index) => [column, (row[index] ?? "").trim()]))
+            )
+            return { data: {}, dataExampleValues }
+        },
+
         dataSectionBody_withEntries(attributesNode, tableNode) {
             const dataAttributes = attributesNode.children.map(attribute => attribute.toAST()) as DataAttribute[]
             const table = tableNode.children[0]?.toAST() as DataTable | undefined

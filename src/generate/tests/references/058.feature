@@ -20,7 +20,9 @@
 # Covers requirements:
 # - [REQ-063] When the scenario carries arguments, an examples table shall be appended.
 # - [REQ-067] Row construction shall use `$example-data-values` as starting point.
-# - [REQ-068] The `$example-data-values` shall be taken from AST path `[i].dataExampleValues`.
+# - [REQ-068] The `$example-data-values` shall be taken from AST path `[i].dataExampleValues`. This
+#   table may contain both author-defined rows and rows synthesised by the `complete` step
+#   (REQ-420/REQ-421); both kinds are treated identically by the generator.
 
 Feature: m
 
