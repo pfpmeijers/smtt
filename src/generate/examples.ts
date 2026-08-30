@@ -148,16 +148,21 @@ function resultConditionValue(argument: Argument): string {
 /**
  * Derived column of a modifier argument (REQ-076).
  *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param argument Modifier argument to turn into a derived column.
  * @param baseReferenceNames Base attribute names referenced anywhere in the transition.
  * @returns The derived modifier column.
  * @throws Error When the transition holds no base references for the modified attribute (REQ-136).
  */
-function modifierColumn(argument: Argument, baseReferenceNames: ReadonlySet<string>): ExampleColumn {
+function modifierColumn(
+    stateMachineName: string,
+    argument: Argument,
+    baseReferenceNames: ReadonlySet<string>,
+): ExampleColumn {
     if (!baseReferenceNames.has(argument.name)) {
         throw new Error(
-            `Invalid modifier "${argument.modifier}" for attribute "${argument.name}": ` +
-                `no base reference found in the transition`,
+            `State machine \`${stateMachineName}\`: Invalid modifier \`${argument.modifier}\` ` +
+                `for attribute \`${argument.name}\`: no base reference found in the transition`,
         )
     }
     return {
@@ -173,16 +178,18 @@ function modifierColumn(argument: Argument, baseReferenceNames: ReadonlySet<stri
  * first-encounter order, followed by the derived modifier and result condition columns in
  * their encounter order (REQ-064/REQ-065/REQ-066/REQ-151/REQ-152).
  *
- * @param transition Transition whose examples columns are being collected.
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param defaultPreconditions Default preconditions of the owning state machine.
+ * @param transition Transition whose examples columns are being collected.
  * @returns The ordered columns; empty when the transition references no arguments at all,
  *   in which case a plain `Scenario` is rendered instead of a `Scenario Outline` (REQ-047).
  * @throws Error When a modifier argument has no base references in the transition (REQ-136),
  *   or when a result condition uses a non-equality operator (REQ-089).
  */
 export function collectExampleColumns(
-    transition: Transition,
+    stateMachineName: string,
     defaultPreconditions: DefaultPrecondition[],
+    transition: Transition,
 ): ExampleColumn[] {
     const groups = argumentGroups(transition, defaultPreconditions)
     const baseReferenceNames = new Set(
@@ -204,12 +211,12 @@ export function collectExampleColumns(
     for (const { args, isResult } of groups) {
         for (const argument of args) {
             if (argument.modifier) {
-                addDerived(modifierColumn(argument, baseReferenceNames))
+                addDerived(modifierColumn(stateMachineName, argument, baseReferenceNames))
             } else {
                 addBase(argument.name)
             }
             if (isResult && argument.condition) {
-                validateResultCondition(argument.condition, argument.name)
+                validateResultCondition(stateMachineName, argument.name, argument.condition)
                 addDerived({
                     kind: "result-condition",
                     name: resultingColumnName(argument.name),
@@ -228,18 +235,24 @@ export function collectExampleColumns(
 /**
  * Derive the value for an incremented or decremented modifier from a numeric source value.
  *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param sourceValue Current attribute value in the source row.
  * @param modifier Modifier to apply.
  * @param attributeName Attribute being evaluated.
  * @returns The incremented or decremented value as a string.
  * @throws Error When the source value is not numeric.
  */
-function steppedValue(sourceValue: string | undefined, modifier: string, attributeName: string): string {
+function steppedValue(
+    stateMachineName: string,
+    sourceValue: string | undefined,
+    modifier: string,
+    attributeName: string,
+): string {
     const numericValue = Number(sourceValue)
     if (Number.isNaN(numericValue)) {
         throw new Error(
-            `Invalid modifier "${modifier}" for attribute "${attributeName}": ` +
-                `expected a numeric value but got ${JSON.stringify(sourceValue)}`,
+            `State machine \`${stateMachineName}\`: Invalid modifier \`${modifier}\` ` +
+                `for attribute \`${attributeName}\`: expected a numeric value but got ${JSON.stringify(sourceValue)}`,
         )
     }
     return String(numericValue + (modifier === "incremented" ? 1 : -1))
@@ -263,18 +276,24 @@ function shiftedValue(attributeName: string, rowIndex: number, shift: number, ro
 /**
  * Find the first distinct value in the source table that differs from the current row.
  *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param attributeName Attribute to inspect.
  * @param currentValue Current value on the row under evaluation.
  * @param pool Candidate rows used to select a different value.
  * @returns The first different value found in the pool.
  * @throws Error When the pool holds fewer than two distinct values or no differing value exists.
  */
-function differentValue(attributeName: string, currentValue: string, pool: ExampleRow[]): string {
+function differentValue(
+    stateMachineName: string,
+    attributeName: string,
+    currentValue: string,
+    pool: ExampleRow[],
+): string {
     const distinctValues = new Set(pool.map((candidateRow) => candidateRow[attributeName] ?? ""))
     if (distinctValues.size < 2) {
         throw new Error(
-            `Invalid modifier "different" for attribute "${attributeName}": ` +
-                `expected at least two distinct values but found ${distinctValues.size}`,
+            `State machine \`${stateMachineName}\`: Invalid modifier \`different\` ` +
+                `for attribute \`${attributeName}\`: expected at least two distinct values but found ${distinctValues.size}`,
         )
     }
 
@@ -283,14 +302,15 @@ function differentValue(attributeName: string, currentValue: string, pool: Examp
         if (candidate !== currentValue) return candidate
     }
     throw new Error(
-        `Invalid modifier "different" for attribute "${attributeName}": ` +
-            `could not find a value different from ${JSON.stringify(currentValue)}`,
+        `State machine \`${stateMachineName}\`: Invalid modifier \`different\` ` +
+            `for attribute \`${attributeName}\`: could not find a value different from ${JSON.stringify(currentValue)}`,
     )
 }
 
 /**
  * Resolve the value of a modifier column for one row.
  *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param column Modifier column to evaluate.
  * @param row Row containing the source value.
  * @param sourceRowIndex Index of the row in the original value table.
@@ -299,6 +319,7 @@ function differentValue(attributeName: string, currentValue: string, pool: Examp
  * @throws Error When the modifier cannot be derived from the available values.
  */
 function resolveModifierValue(
+    stateMachineName: string,
     column: ExampleColumn,
     row: ExampleRow,
     sourceRowIndex: number,
@@ -309,7 +330,7 @@ function resolveModifierValue(
     switch (column.modifier) {
         case "incremented":
         case "decremented":
-            return steppedValue(sourceValue, column.modifier, attributeName)
+            return steppedValue(stateMachineName, sourceValue, column.modifier, attributeName)
         case "first":
             return allRows[0]?.[attributeName] ?? ""
         case "last":
@@ -319,7 +340,7 @@ function resolveModifierValue(
         case "previous":
             return shiftedValue(attributeName, sourceRowIndex, -1, allRows)
         case DIFFERENT_MODIFIER:
-            return differentValue(attributeName, sourceValue ?? "", allRows)
+            return differentValue(stateMachineName, attributeName, sourceValue ?? "", allRows)
         default:
             return ""
     }
@@ -328,6 +349,7 @@ function resolveModifierValue(
 /**
  * Resolve the rendered cell value for any column kind from a single row.
  *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param column Column definition to evaluate.
  * @param row Row containing the source values.
  * @param sourceRowIndex Index of the row in the original table.
@@ -335,6 +357,7 @@ function resolveModifierValue(
  * @returns The rendered cell value for the row and column.
  */
 function resolveCellValue(
+    stateMachineName: string,
     column: ExampleColumn,
     row: ExampleRow,
     sourceRowIndex: number,
@@ -344,7 +367,7 @@ function resolveCellValue(
         case "base":
             return row[column.sourceName] ?? ""
         case "modifier":
-            return resolveModifierValue(column, row, sourceRowIndex, allRows)
+            return resolveModifierValue(stateMachineName, column, row, sourceRowIndex, allRows)
         case "result-condition":
             return column.conditionValue ?? ""
     }
@@ -356,15 +379,17 @@ function resolveCellValue(
  * Keep the rows satisfying all filters (REQ-069/REQ-099). A filter carrying a modifier is
  * evaluated against the derived value rather than the base value (REQ-143/REQ-144).
  *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param rows Rows to filter.
- * @param filters Filters to apply; no filters keep all rows.
  * @param allRows Original, unfiltered table used for positional modifier derivation.
+ * @param filters Filters to apply; no filters keep all rows.
  * @returns The surviving rows.
  */
 export function filterRows(
+    stateMachineName: string,
     rows: ExampleRow[],
-    filters: FilterCondition[],
     allRows: ExampleRow[],
+    filters: FilterCondition[],
 ): ExampleRow[] {
     const filteredRows = filters.length === 0
         ? rows
@@ -372,7 +397,7 @@ export function filterRows(
             filters.every(({ sourceName, condition, modifier }) => {
                 const value = modifier
                     ? resolveModifierValue(
-                        { kind: "modifier", name: "", sourceName, modifier }, row, rowIndex, allRows)
+                        stateMachineName, { kind: "modifier", name: "", sourceName, modifier }, row, rowIndex, allRows)
                     : row[sourceName]
                 return evaluateCondition(value, condition)
             }),
@@ -396,12 +421,14 @@ function formatTableRow(cells: string[], widths: number[]): string {
 /**
  * Render the `Examples:` block of a scenario outline (REQ-063/REQ-125/REQ-126/REQ-130).
  *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param columns Columns to render.
  * @param rows Surviving rows to render.
  * @param allRows Original, unfiltered table used for positional modifier derivation (REQ-158).
  * @returns The rendered `Examples:` block.
  */
 export function formatExamplesTable(
+    stateMachineName: string,
     columns: ExampleColumn[],
     rows: ExampleRow[],
     allRows: ExampleRow[],
@@ -410,7 +437,7 @@ export function formatExamplesTable(
     const rowCells = deduplicateRenderedRows(uniqueRows.map((row, rowIndex) => {
         const originalRowIndex = allRows.indexOf(row)
         const sourceRowIndex = originalRowIndex >= 0 ? originalRowIndex : rowIndex
-        return columns.map((column) => resolveCellValue(column, row, sourceRowIndex, allRows))
+        return columns.map((column) => resolveCellValue(stateMachineName, column, row, sourceRowIndex, allRows))
     }))
 
     const headerCells = columns.map((column) => column.name)

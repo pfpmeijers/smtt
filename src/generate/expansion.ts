@@ -45,8 +45,8 @@ function invalidTransitionPrefix(
 ): string {
     const owner = taggedTransitions.find((tagged) => tagged.transition === transition)?.stateMachineName
         ?? "<unknown>"
-    const transitionPart = transition?.id ? `transition "${transition.id}"` : "anonymous transition"
-    return `Invalid state machine "${owner}": ${transitionPart}`
+    const transitionPart = transition?.id ? `transition \`${transition.id}\`` : "Anonymous transition"
+    return `State machine \`${owner}\`: ${transitionPart}`
 }
 
 // --- Expansion source resolution ---
@@ -178,7 +178,7 @@ function validateExpansionSources(
         const stateMachineNames = new Set(candidates.map((tagged) => tagged.stateMachineName))
         if (stateMachineNames.size > 1) {
             throw new Error(
-                `${prefix} has an ambiguous state trigger "${trigger.name}" that resolves across ` +
+                `${prefix} has an ambiguous state trigger \`${trigger.name}\` that resolves across ` +
                     `multiple state machines (${[...stateMachineNames].join(", ")}) (REQ-154).`,
             )
         }
@@ -186,7 +186,7 @@ function validateExpansionSources(
     if (nameMatches.length > 0 && sources.length === 0) {
         // Raise a targeted error rather than silently falling back to the trigger name as event.
         throw new Error(
-            `${prefix} has an unresolvable state trigger "${trigger.name}" — no source transition's ` +
+            `${prefix} has an unresolvable state trigger \`${trigger.name}\` — no source transition's ` +
                 `result arguments satisfy the trigger's argument condition(s) (REQ-118/REQ-164).`,
         )
     }
@@ -220,7 +220,7 @@ export function expandStateTrigger(
     if (currentTransition && expansionStack.has(currentTransition)) {
         throw new Error(
             `${invalidTransitionPrefix(currentTransition, taggedTransitions)} participates in a circular ` +
-                `state-trigger expansion chain at trigger "${trigger.name}" (REQ-155).`,
+                `state-trigger expansion chain at trigger \`${trigger.name}\` (REQ-155).`,
         )
     }
     if (depth > MAX_EXPANSION_DEPTH) return []
@@ -231,9 +231,10 @@ export function expandStateTrigger(
     validateExpansionSources(trigger, nameMatches, sources, currentTransition, taggedTransitions)
 
     if (sources.length === 0) {
+        const ownerName = currentTransition ? transitionOwnerName(currentTransition, taggedTransitions) : "<unknown>"
         return [{
-            whenText: triggerText(trigger),
-            whenOwner: currentTransition ? transitionOwnerName(currentTransition, taggedTransitions) : "<unknown>",
+            whenText: triggerText(ownerName, trigger),
+            whenOwner: ownerName,
             intermediateThenTexts: [],
             intermediateThenOwners: [],
             injectedGivenStates: [],
@@ -245,11 +246,11 @@ export function expandStateTrigger(
     return sources.flatMap((source) => {
         const sourceTransition = source.transition
         const givenStates = sourceGivenStates(source, ownership)
-        const resultText = stateRefText(sourceTransition.result, true)
+        const resultText = stateRefText(source.stateMachineName, sourceTransition.result, true)
 
         if (sourceTransition.trigger.type !== "state") {
             return [{
-                whenText: triggerText(sourceTransition.trigger),
+                whenText: triggerText(source.stateMachineName, sourceTransition.trigger),
                 whenOwner: source.stateMachineName,
                 intermediateThenTexts: [resultText],
                 intermediateThenOwners: [source.stateMachineName],

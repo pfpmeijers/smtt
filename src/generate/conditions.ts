@@ -20,19 +20,20 @@ export interface FilterCondition {
  * paired with an empty value can never match a row (REQ-075), so rejecting it here avoids
  * silently producing an empty examples table.
  *
- * @param condition Condition to validate.
+ * @param stateMachineName Name of the state machine owning the condition, for error context.
  * @param attributeName Attribute name the condition applies to.
+ * @param condition Condition to validate.
  * @throws Error When a non-`undefined` operator is combined with an empty value.
  */
-export function validateCondition(condition: Condition, attributeName: string): void {
+export function validateCondition(stateMachineName: string, attributeName: string, condition: Condition): void {
     if (condition.operator === "undefined") return
     const value = condition.value
     const isEmpty = value === "" || (Array.isArray(value) && value.every((entry) => entry === ""))
     if (isEmpty) {
         throw new Error(
-            `Invalid condition for attribute "${attributeName}": operator "${condition.operator}" ` +
-            `cannot be used with an empty value. Use { operator: "undefined" } to match ` +
-            `absent/empty values instead.`,
+            `State machine \`${stateMachineName}\`: Invalid condition for attribute ` +
+            `\`${attributeName}\`: operator \`${condition.operator}\` cannot be used with an empty value. ` +
+            `Use { operator: "undefined" } to match absent/empty values instead.`,
         )
     }
 }
@@ -41,17 +42,18 @@ export function validateCondition(condition: Condition, attributeName: string): 
  * Validate a condition on a result argument: only equality operators are supported, since a
  * result condition provides the value of its derived column (REQ-089).
  *
- * @param condition Condition to validate.
+ * @param stateMachineName Name of the state machine owning the condition, for error context.
  * @param attributeName Attribute name the result condition applies to.
+ * @param condition Condition to validate.
  * @throws Error When the operator is empty-valued or not an equality operator.
  */
-export function validateResultCondition(condition: Condition, attributeName: string): void {
-    validateCondition(condition, attributeName)
+export function validateResultCondition(stateMachineName: string, attributeName: string, condition: Condition): void {
+    validateCondition(stateMachineName, attributeName, condition)
     if (condition.operator !== "=" && condition.operator !== "as" && condition.operator !== "undefined") {
         throw new Error(
-            `Invalid result condition for attribute "${attributeName}": ` +
-            `operator "${condition.operator}" is not supported. ` +
-            `Result conditions only allow "=", "as", or "undefined" (REQ-089).`,
+            `State machine \`${stateMachineName}\`: Invalid result condition for attribute ` +
+            `\`${attributeName}\`: operator \`${condition.operator}\` is not supported. ` +
+            `Result conditions only allow \`=\`, \`as\`, or \`undefined\` (REQ-089).`,
         )
     }
 }
@@ -148,10 +150,11 @@ export function evaluateCondition(rawValue: string | undefined, condition: Condi
  * Row filters declared on a transition's own precondition state and trigger arguments
  * (REQ-069/REQ-087). Result argument conditions are excluded: they add columns instead.
  *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param transition Transition whose own filters are being collected.
  * @returns Row filters extracted from the transition's own conditions.
  */
-function collectOwnFilterConditions(transition: Transition): FilterCondition[] {
+function collectOwnFilterConditions(stateMachineName: string, transition: Transition): FilterCondition[] {
     const args = [
         ...(transition.states ?? []).flatMap((stateRef) => stateRef.arguments ?? []),
         ...(transition.trigger.arguments ?? []),
@@ -161,7 +164,7 @@ function collectOwnFilterConditions(transition: Transition): FilterCondition[] {
     for (const argument of args) {
         const condition = argument.condition
         if (!condition) continue
-        validateCondition(condition, argument.name)
+        validateCondition(stateMachineName, argument.name, condition)
         const modifier = canonicalModifier(argument)
         filters.push({ sourceName: argument.name, condition, ...(modifier ? { modifier } : {}) })
     }
@@ -173,6 +176,7 @@ function collectOwnFilterConditions(transition: Transition): FilterCondition[] {
  * chain. Conditions across the chain combine as a conjunction: a row survives only when it
  * satisfies all of them (REQ-162).
  *
+ * @param stateMachineName Name of the state machine owning `transition`, for error context.
  * @param transition Transition to start the chain at.
  * @param taggedTransitions All transitions of all state machines.
  * @param visited Source transitions already accounted for, preventing repeated traversal.
@@ -180,12 +184,13 @@ function collectOwnFilterConditions(transition: Transition): FilterCondition[] {
  * @returns The chain-conjoined row filters.
  */
 export function collectChainFilterConditions(
+    stateMachineName: string,
     transition: Transition,
     taggedTransitions: TaggedTransition[],
     visited: Set<Transition> = new Set(),
     depth = 0,
 ): FilterCondition[] {
-    const ownFilters = collectOwnFilterConditions(transition)
+    const ownFilters = collectOwnFilterConditions(stateMachineName, transition)
     if (transition.trigger.type !== "state" || depth > MAX_EXPANSION_DEPTH) return ownFilters
 
     const excluded = new Set(visited).add(transition)
@@ -193,7 +198,7 @@ export function collectChainFilterConditions(
     for (const source of findExpansionSources(transition.trigger, taggedTransitions, excluded)) {
         visited.add(source.transition)
         chainedFilters.push(
-            ...collectChainFilterConditions(source.transition, taggedTransitions, visited, depth + 1),
+            ...collectChainFilterConditions(source.stateMachineName, source.transition, taggedTransitions, visited, depth + 1),
         )
     }
     return [...ownFilters, ...chainedFilters]
@@ -226,7 +231,7 @@ export function collectImpliedFilterConditions(
     for (const stateRef of givens) {
         for (const implied of impliedIndex[stateRef.name.toLowerCase()] ?? []) {
             if (!availableAttributes.has(implied.attribute)) continue
-            validateCondition(implied.condition, implied.attribute)
+            validateCondition(stateMachine.name, implied.attribute, implied.condition)
             filters.push({ sourceName: implied.attribute, condition: implied.condition })
         }
     }

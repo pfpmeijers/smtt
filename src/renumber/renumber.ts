@@ -54,11 +54,12 @@ function withHashColumn(cells: string[]): string[] {
 /**
  * Finds the transition rules table line indexes.
  *
+ * @param stateMachineName Name of the state machine owning the file, for error context.
  * @param lines File lines array.
  * @returns Header, separator, and transition row line indexes.
  * @throws Error if the rules table header or separator cannot be found.
  */
-function findTransitionTableLineIndexes(lines: string[]): {
+function findTransitionTableLineIndexes(stateMachineName: string, lines: string[]): {
     headerLineIndex: number
     separatorLineIndex: number
     rowLineIndexes: number[]
@@ -72,7 +73,7 @@ function findTransitionTableLineIndexes(lines: string[]): {
     }
 
     if (rulesHeadingLineIndex === -1) {
-        throw new Error("Could not find transitions rules heading.")
+        throw new Error(`State machine \`${stateMachineName}\`: Could not find transitions rules heading.`)
     }
 
     let headerLineIndex = -1
@@ -111,7 +112,7 @@ function findTransitionTableLineIndexes(lines: string[]): {
     }
 
     if (headerLineIndex === -1 || separatorLineIndex === -1) {
-        throw new Error("Could not find transitions table header.")
+        throw new Error(`State machine \`${stateMachineName}\`: Could not find transitions table header.`)
     }
 
     return { headerLineIndex, separatorLineIndex, rowLineIndexes }
@@ -151,10 +152,11 @@ function ensureHashColumn(
  * Reads the file, parses transition table rows, updates their ID column with
  * the provided transition IDs in order, and writes the modified content back.
  *
+ * @param stateMachineName Name of the state machine owning the file, for error context.
  * @param sourceFilePath Path to the state machine file to modify.
  * @param transitions Sorted array of transitions with their target IDs.
  */
-function renumberFile(sourceFilePath: string, transitions: TransitionTarget[]): void {
+function renumberFile(stateMachineName: string, sourceFilePath: string, transitions: TransitionTarget[]): void {
     if (transitions.length === 0) {
         return
     }
@@ -162,12 +164,13 @@ function renumberFile(sourceFilePath: string, transitions: TransitionTarget[]): 
     const content = fs.readFileSync(sourceFilePath, "utf8")
     const lines = content.split(/\r?\n/)
 
-    const { headerLineIndex, separatorLineIndex, rowLineIndexes } = findTransitionTableLineIndexes(lines)
+    const { headerLineIndex, separatorLineIndex, rowLineIndexes } = findTransitionTableLineIndexes(stateMachineName, lines)
 
     if (rowLineIndexes.length < transitions.length) {
         throw new Error(
-            `Could not renumber all transitions in \`${sourceFilePath}\`. Expected at least ` +
-                `\`${transitions.length}\` rule rows but found \`${rowLineIndexes.length}\`.`,
+            `State machine \`${stateMachineName}\`: Could not renumber all transitions in ` +
+                `\`${sourceFilePath}\`. Expected at least \`${transitions.length}\` rule rows but found ` +
+                `\`${rowLineIndexes.length}\`.`,
         )
     }
 
@@ -207,6 +210,7 @@ export function renumber(inputDir: string): void {
     const stateMachines = parse(inputDir)
     const transitionsByFile = new Map<string, TransitionTarget[]>()
     const numberedTransitions: { sourceFilePath: string }[] = []
+    const stateMachineNameByFile = new Map<string, string>()
 
     for (const stateMachine of stateMachines) {
         if (!stateMachine.source) {
@@ -215,6 +219,7 @@ export function renumber(inputDir: string): void {
 
         const sourceFilePath = path.resolve(stateMachine.source)
         const transitions = stateMachine.transitions ?? []
+        stateMachineNameByFile.set(sourceFilePath, stateMachine.name)
 
         for (const _transition of transitions) {
             numberedTransitions.push({ sourceFilePath })
@@ -235,7 +240,7 @@ export function renumber(inputDir: string): void {
     })
 
     for (const [sourceFilePath, transitions] of transitionsByFile.entries()) {
-        renumberFile(sourceFilePath, transitions)
+        renumberFile(stateMachineNameByFile.get(sourceFilePath) ?? "<unknown>", sourceFilePath, transitions)
     }
 }
 

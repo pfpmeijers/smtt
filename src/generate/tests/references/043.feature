@@ -23,4 +23,4 @@
 # - [REQ-080] The parser component shall verify that these modifiers are applied to numerical
 #   values.
 
-# Throws: Invalid modifier "incremented" for attribute "a": expected a numeric value but got "foo"
+# Throws: State machine `m`: Invalid modifier `incremented` for attribute `a`: expected a numeric value but got "foo"

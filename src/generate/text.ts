@@ -21,14 +21,15 @@ export function slugify(name: string): string {
  * Render an argument as inline text appended to its owning state/trigger name (REQ-048/REQ-050).
  * The leading separator (a space for the first argument, `, ` for subsequent ones) is included.
  *
+ * @param stateMachineName Name of the state machine owning the argument, for error context.
  * @param argument Argument to render.
  * @param isFirst Whether the argument is the first one of its owner.
  * @param isResult Whether the argument belongs to the transition result.
  * @throws Error When the argument combines a qualifier with a modifier.
  * @returns The rendered inline argument text.
  */
-function renderArgument(argument: Argument, isFirst: boolean, isResult: boolean): string {
-    validateArgument(argument)
+function renderArgument(stateMachineName: string, argument: Argument, isFirst: boolean, isResult: boolean): string {
+    validateArgument(stateMachineName, argument)
 
     const parts: string[] = []
     if (argument.qualifier) parts.push(argument.qualifier)
@@ -43,33 +44,38 @@ function renderArgument(argument: Argument, isFirst: boolean, isResult: boolean)
 /**
  * Render all arguments of a state or trigger as one inline text, or `""` when there are none.
  *
+ * @param stateMachineName Name of the state machine owning the arguments, for error context.
  * @param args Arguments to render.
  * @param isResult Whether the arguments belong to the transition result.
  * @returns The rendered argument text.
  */
-function renderArguments(args: Argument[] | undefined, isResult: boolean): string {
-    return (args ?? []).map((argument, index) => renderArgument(argument, index === 0, isResult)).join("")
+function renderArguments(stateMachineName: string, args: Argument[] | undefined, isResult: boolean): string {
+    return (args ?? [])
+        .map((argument, index) => renderArgument(stateMachineName, argument, index === 0, isResult))
+        .join("")
 }
 
 /**
  * Render a state references as step text, e.g. `user authenticated as "<email address>"`.
  *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param stateRef State references to render.
  * @param isResult Whether the state references belongs to the transition result.
  * @returns The rendered state references text.
  */
-export function stateRefText(stateRef: StateRef, isResult = false): string {
-    return `${stateRef.name}${renderArguments(stateRef.arguments, isResult)}`
+export function stateRefText(stateMachineName: string, stateRef: StateRef, isResult = false): string {
+    return `${stateRef.name}${renderArguments(stateMachineName, stateRef.arguments, isResult)}`
 }
 
 /**
  * Render a trigger as step text, e.g. `signed in with "<email address>"`.
  *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param trigger Trigger to render.
  * @returns The rendered trigger text.
  */
-export function triggerText(trigger: Trigger): string {
-    return `${trigger.name}${renderArguments(trigger.arguments, false)}`
+export function triggerText(stateMachineName: string, trigger: Trigger): string {
+    return `${trigger.name}${renderArguments(stateMachineName, trigger.arguments, false)}`
 }
 
 // --- Step generation ---

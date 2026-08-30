@@ -78,7 +78,7 @@ interface RenderContext {
  * @returns The transition description.
  */
 function transitionDescription(transition: Transition): string {
-    return transition.id ? `transition "${transition.id}"` : "anonymous transition"
+    return transition.id ? `transition \`${transition.id}\`` : "Anonymous transition"
 }
 
 /**
@@ -103,7 +103,7 @@ function buildExamplesTable(context: RenderContext, transition: Transition, colu
     const exampleValues = mergeExampleValues(stateMachines, contributingStateMachines)
     if (exampleValues.length === 0) {
         throw new Error(
-            `Invalid state machine "${stateMachine.name}": ${transitionDescription(transition)} ` +
+            `State machine \`${stateMachine.name}\`: ${transitionDescription(transition)} ` +
                 `references argument(s), but the state machine's dataExampleValues table is empty or ` +
                 `absent (REQ-157/REQ-163).`,
         )
@@ -111,18 +111,19 @@ function buildExamplesTable(context: RenderContext, transition: Transition, colu
 
     const availableAttributes = new Set(Object.keys(exampleValues[0]))
     const filters: FilterCondition[] = [
-        ...collectChainFilterConditions(transition, taggedTransitions),
+        ...collectChainFilterConditions(stateMachine.name, transition, taggedTransitions),
         ...collectImpliedFilterConditions(
             stateMachine, transition, defaultPreconditions, ownership, impliedIndex, availableAttributes,
         ),
     ]
-    const rows = filterRows(exampleValues, filters, exampleValues)
+    const rows = filterRows(stateMachine.name, exampleValues, exampleValues, filters)
     if (rows.length === 0) {
         throw new Error(
-            `Empty examples table for transition ${transition.id} in state machine \`${stateMachine.name}\``,
+            `State machine \`${stateMachine.name}\`: ` +
+            `Empty examples table for ${transitionDescription(transition).toLowerCase()}`,
         )
     }
-    return formatExamplesTable(columns, rows, exampleValues)
+    return formatExamplesTable(stateMachine.name, columns, rows, exampleValues)
 }
 
 // --- Scenario rendering ---
@@ -139,7 +140,7 @@ function resolveExpansionPaths(context: RenderContext, transition: Transition): 
         return expandStateTrigger(transition.trigger, context.ownership, context.taggedTransitions, transition)
     }
     return [{
-        whenText: triggerText(transition.trigger),
+        whenText: triggerText(context.stateMachine.name, transition.trigger),
         whenOwner: context.stateMachine.name,
         intermediateThenTexts: [],
         intermediateThenOwners: [],
@@ -152,6 +153,7 @@ function resolveExpansionPaths(context: RenderContext, transition: Transition): 
  * own state, result state, trigger and remaining context states. The part following the id is
  * lower cased (REQ-028) and the whole label is truncated to `MAX_LABEL_LENGTH` (REQ-159).
  *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param transition Transition being rendered.
  * @param keyword Scenario keyword, either `Scenario` or `Scenario Outline`.
  * @param ownGiven The `Given` state belonging to the rendering state machine, if any.
@@ -160,19 +162,20 @@ function resolveExpansionPaths(context: RenderContext, transition: Transition): 
  * @returns The rendered scenario label.
  */
 function buildScenarioLabel(
+    stateMachineName: string,
     transition: Transition,
     keyword: string,
     ownGiven: StateRef | undefined,
     contextGivens: StateRef[],
     idSuffix: string,
 ): string {
-    const ownText = ownGiven ? stateRefText(ownGiven) : "?"
+    const ownText = ownGiven ? stateRefText(stateMachineName, ownGiven) : "?"
     const contextPart = contextGivens.length === 0
         ? ""
-        : `; given ${contextGivens.map((stateRef) => stateRefText(stateRef)).join(", ")}`
+        : `; given ${contextGivens.map((stateRef) => stateRefText(stateMachineName, stateRef)).join(", ")}`
     const labelTail = lowerCaseLabelPreservingValueLiterals(
-        `${ownText} → ${stateRefText(transition.result, true)}` +
-            `; when ${triggerText(transition.trigger)}${contextPart}`,
+        `${ownText} → ${stateRefText(stateMachineName, transition.result, true)}` +
+            `; when ${triggerText(stateMachineName, transition.trigger)}${contextPart}`,
     )
 
     const label = `  ${keyword}: [${transition.id ?? ""}${idSuffix}] ${labelTail}`
@@ -182,19 +185,25 @@ function buildScenarioLabel(
 /**
  * Compose the `Given`/`When`/`Then` steps of a scenario (REQ-032 up to REQ-046/REQ-109).
  *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param transition Transition being rendered.
  * @param path Expansion path to render.
  * @param effectiveGivens Effective `Given` states of the scenario.
  * @returns The rendered step lines.
  */
-function buildScenarioSteps(transition: Transition, path: ExpansionPath, effectiveGivens: StateRef[]): string[] {
+function buildScenarioSteps(
+    stateMachineName: string,
+    transition: Transition,
+    path: ExpansionPath,
+    effectiveGivens: StateRef[],
+): string[] {
     const steps = effectiveGivens.map((stateRef, index) =>
-        `    ${index === 0 ? "Given" : "And"} initially ${stateRefText(stateRef)}`,
+        `    ${index === 0 ? "Given" : "And"} initially ${stateRefText(stateMachineName, stateRef)}`,
     )
     steps.push(`    When ${path.whenText}`)
 
     // Intermediate results of an expansion chain precede the transition's own result (REQ-146).
-    const thenTexts = [...path.intermediateThenTexts, stateRefText(transition.result, true)]
+    const thenTexts = [...path.intermediateThenTexts, stateRefText(stateMachineName, transition.result, true)]
     steps.push(...thenTexts.map((text, index) => `    ${index === 0 ? "Then" : "And"} expect ${text}`))
     return steps
 }
@@ -229,8 +238,8 @@ function renderScenarios(
         const idSuffix = expansionPaths.length > 1 ? `.${pathIndex + 1}` : ""
 
         const lines = [
-            buildScenarioLabel(transition, keyword, ownGiven, contextGivens, idSuffix),
-            ...buildScenarioSteps(transition, path, effectiveGivens),
+            buildScenarioLabel(stateMachine.name, transition, keyword, ownGiven, contextGivens, idSuffix),
+            ...buildScenarioSteps(stateMachine.name, transition, path, effectiveGivens),
         ]
         if (transition.notes) lines.push(`    # Notes: ${transition.notes}`)
         if (examplesTable) lines.push(examplesTable)
@@ -308,11 +317,11 @@ function collectTransitionSteps(
     taggedTransitions: ReturnType<typeof buildTaggedTransitions>,
     stateMachineData: Map<string, Step[]>,
 ): void {
-    const exampleColumns = collectExampleColumns(transition, defaultPreconditions)
+    const exampleColumns = collectExampleColumns(stateMachine.name, defaultPreconditions, transition)
     const expansionPaths = transition.trigger.type === "state"
         ? expandStateTrigger(transition.trigger, ownership, taggedTransitions, transition)
         : [{
-            whenText: triggerText(transition.trigger),
+            whenText: triggerText(stateMachine.name, transition.trigger),
             whenOwner: stateMachine.name,
             intermediateThenTexts: [],
             intermediateThenOwners: [],
@@ -333,9 +342,9 @@ function collectTransitionSteps(
                 stateMachineData,
                 owner,
                 "Given",
-                `initially ${toOutlinePattern(stateRefText(stateRef))}`,
-                resolveBaseParams(getStepParams(stateRefText(stateRef)), exampleColumns),
-                fixtureNameFromStep("Given", toOutlinePattern(`initially ${stateRefText(stateRef)}`)),
+                `initially ${toOutlinePattern(stateRefText(stateMachine.name, stateRef))}`,
+                resolveBaseParams(getStepParams(stateRefText(stateMachine.name, stateRef)), exampleColumns),
+                fixtureNameFromStep("Given", toOutlinePattern(`initially ${stateRefText(stateMachine.name, stateRef)}`)),
                 transition.id,
             )
         }
@@ -363,7 +372,7 @@ function collectTransitionSteps(
             )
         }
 
-        const resultText = stateRefText(transition.result, true)
+        const resultText = stateRefText(stateMachine.name, transition.result, true)
         registerStep(
             stateMachineData,
             ownerOfStateRef(transition.result, ownership) ?? stateMachine.name,
@@ -398,7 +407,7 @@ function renderFeatureHeader(stateMachine: StateMachine): string {
 function renderFeatureFile(context: RenderContext): string {
     const scenarioBlocks: string[] = []
     for (const transition of context.stateMachine.transitions ?? []) {
-        const columns = collectExampleColumns(transition, context.defaultPreconditions)
+        const columns = collectExampleColumns(context.stateMachine.name, context.defaultPreconditions, transition)
         const isOutline = columns.length > 0
         const examplesTable = isOutline ? buildExamplesTable(context, transition, columns) : null
         scenarioBlocks.push(...renderScenarios(context, transition, examplesTable, isOutline))

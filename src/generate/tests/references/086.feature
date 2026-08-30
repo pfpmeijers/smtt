@@ -23,4 +23,4 @@
 #   the AST. The generator shall raise an error when a result condition uses a non-equality
 #   operator.
 
-# Throws: Invalid result condition for attribute "a": operator "not as" is not supported. Result conditions only allow "=", "as", or "undefined" (REQ-089).
+# Throws: State machine `m`: Invalid result condition for attribute `a`: operator `not as` is not supported. Result conditions only allow `=`, `as`, or `undefined` (REQ-089).

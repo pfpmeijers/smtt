@@ -244,7 +244,7 @@ test("[TST-014] → [REQ-099/100]: All rows filtered out raises error", () => {
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        'Empty examples table for transition undefined in state machine `m`')
+        'State machine `m`: Empty examples table for anonymous transition')
 })
 
 test("[TST-015] → [REQ-075] Empty value on a non-undefined operator is rejected", () => {
@@ -259,7 +259,7 @@ test("[TST-015] → [REQ-075] Empty value on a non-undefined operator is rejecte
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        'Invalid condition for attribute "a": operator "=" cannot be used with an empty value. ' + 
+        'State machine `m`: Invalid condition for attribute `a`: operator `=` cannot be used with an empty value. ' +
         'Use { operator: "undefined" } to match absent/empty values instead.')
 })
 
