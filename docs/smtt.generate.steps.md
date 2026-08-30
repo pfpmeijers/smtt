@@ -87,6 +87,42 @@
 - [REQ-228] The generator shall be deterministic: equivalent input data shall
   produce the same step file content, regardless of scenario ordering.
 
+## Shared triggers
+
+Two different state machines may legitimately react to the same real-world
+event, so the same trigger name can appear as a `When` step in more than one
+state machine's transitions. Writing that step definition into every
+contributing state machine's file would register the same step pattern more
+than once across files, which the target step runner rejects.
+
+- [REQ-229] The generator shall determine, across all state machines, which
+  rendered `When` step pattern and keyword combinations occur in more than
+  one state machine. This applies regardless of whether the pattern comes
+  from a direct event trigger or from a resolved state-trigger expansion
+  (see [State Trigger Expansion](#state-trigger-expansion)).
+- [REQ-230] A `When` step pattern used by exactly one state machine shall
+  remain in that state machine's own `.steps.js` file, unaffected by this
+  section (REQ-226).
+- [REQ-231] A `When` step pattern used by two or more state machines shall be
+  written once, into a shared step file, instead of being duplicated into
+  each contributing state machine's file.
+- [REQ-232] The shared step file shall be named `shared.steps.js`.
+- [REQ-233] The shared step file shall follow the same structure as a
+  per-state-machine step file (REQ-204 up to REQ-217), restricted to a
+  single `When` section. `Given` and `Then` steps always belong to exactly
+  one state machine, because state names are unique across all state
+  machines, so they are never subject to sharing.
+- [REQ-234] When the contributing state machines register the same pattern
+  with different parameter lists, the shared step definition shall use the
+  widest parameter list encountered, following the same rule as for
+  duplicate patterns within one file (REQ-210).
+- [REQ-235] The transition-id comment above a shared step definition
+  (REQ-211) shall list the deduplicated, sorted transition ids contributed
+  by every state machine that uses the pattern.
+- [REQ-236] The assignment of a `When` step pattern to the shared file,
+  versus to a single state machine's own file, shall be deterministic and
+  independent of state machine or transition ordering (REQ-228).
+
 ## Example shape
 
 ```js7

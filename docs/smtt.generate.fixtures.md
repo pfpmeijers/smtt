@@ -50,6 +50,31 @@
 - [REQ-317] The generator shall be deterministic: equivalent input data shall
   produce the same fixture file content regardless of transition ordering.
 
+## Shared triggers
+
+Two different state machines may legitimately react to the same real-world
+event, so the same `When` step pattern can require a fixture stub in more
+than one state machine's transitions. Writing that fixture stub into every
+contributing state machine's file would export the same function name from
+more than one file, which the fixture index cannot re-export unambiguously.
+
+- [REQ-318] The generator shall write the fixture stub for a `When` step
+  pattern shared by more than one state machine (steps generation REQ-231)
+  into a single shared fixture file, instead of into each contributing state
+  machine's fixture file.
+- [REQ-319] The shared fixture file shall be named `shared.fixtures.js`.
+- [REQ-320] The shared fixture file shall follow the same structure as a
+  per-state-machine fixture file (REQ-306/307), restricted to a single
+  `Make (When)` section.
+- [REQ-321] When the contributing state machines register the pattern with
+  different parameter lists, the shared fixture stub shall use the widest
+  parameter list encountered, following the same rule as REQ-310.
+- [REQ-322] The `fixtures/index.js` file shall also re-export the shared
+  fixture file, when one is generated.
+- [REQ-323] `Given` and `Then` fixture stubs are always emitted into a single
+  state machine's fixture file, since the corresponding steps are never
+  shared (steps generation REQ-233).
+
 ## Example shape
 
 ```js

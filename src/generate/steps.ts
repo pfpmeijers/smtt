@@ -1,6 +1,10 @@
 import * as fs from "fs"
 import * as path from "path"
 import type { Feature, Step } from "./features"
+import { collectSharedTriggerSteps, ownSteps } from "./sharing"
+
+/** File name of the shared step file holding `When` steps used by more than one state machine. */
+const SHARED_STEPS_FILE_NAME = "shared.steps.js"
 
 /**
  * Sort steps by rendered pattern.
@@ -117,18 +121,37 @@ function slugify(name: string): string {
 }
 
 /**
- * Render one `.steps.js` file per state machine.
+ * Build the content of the shared step file: a single `When` section holding the trigger patterns
+ * registered by more than one state machine (REQ-231/232/233).
+ *
+ * @param sharedWhenSteps Merged `When` steps shared by more than one state machine.
+ * @returns Shared step file content.
+ */
+function buildSharedStepFileContent(sharedWhenSteps: Step[]): string {
+    const imports = "import { When } from '../utils'\n" +
+        "import * as fixtures from '../fixtures/index.js'\n"
+    const content = imports + buildSection(sortedByPattern(sharedWhenSteps), "When")
+    return `${content}\n`
+}
+
+/**
+ * Render one `.steps.js` file per state machine, plus a shared step file for `When` step patterns
+ * registered by more than one state machine (REQ-229 up to REQ-236).
  *
  * @param features Normalized feature data with generated steps.
  * @returns Step file content keyed by file name.
  */
 export function renderStepFiles(features: Feature[]): Map<string, string> {
     const files = new Map<string, string>()
+    const { steps: sharedWhenSteps, patterns: sharedPatterns } = collectSharedTriggerSteps(features)
     for (const feature of features) {
         files.set(
             `${slugify(feature.stateMachine.name)}.steps.js`,
-            buildStepFileContent(feature.steps),
+            buildStepFileContent(ownSteps(feature, sharedPatterns)),
         )
+    }
+    if (sharedWhenSteps.length > 0) {
+        files.set(SHARED_STEPS_FILE_NAME, buildSharedStepFileContent(sharedWhenSteps))
     }
     return files
 }

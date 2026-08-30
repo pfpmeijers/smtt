@@ -1,6 +1,10 @@
 import * as fs from "fs"
 import * as path from "path"
 import type { Feature, Step } from "./features"
+import { collectSharedTriggerSteps, ownSteps } from "./sharing"
+
+/** File name of the shared fixture file holding `When` fixtures used by more than one state machine. */
+const SHARED_FIXTURES_FILE_NAME = "shared.fixtures.js"
 
 /**
  * Sort steps by fixture function name.
@@ -49,10 +53,16 @@ function slugify(name: string): string {
  * Build the `fixtures/index.js` re-export file.
  *
  * @param stateMachineNames State machine names to re-export.
+ * @param includeShared Whether a shared fixture file was generated and should also be re-exported
+ *   (REQ-322).
  * @returns The generated index file content.
  */
-function buildFixtureIndex(stateMachineNames: string[]): string {
-    return `${stateMachineNames.map((stateMachineName) => `export * from './${slugify(stateMachineName)}.fixtures.js'`).join("\n")}\n`
+function buildFixtureIndex(stateMachineNames: string[], includeShared: boolean): string {
+    const exports = stateMachineNames.map(
+        (stateMachineName) => `export * from './${slugify(stateMachineName)}.fixtures.js'`,
+    )
+    if (includeShared) exports.push(`export * from './${SHARED_FIXTURES_FILE_NAME}'`)
+    return `${exports.join("\n")}\n`
 }
 
 /**
@@ -100,13 +110,31 @@ function buildFixtureFileContent(stateMachineName: string, steps: Step[]): strin
 }
 
 /**
- * Render one `.fixtures.js` file per state machine and a shared `index.js`.
+ * Build the content of the shared fixture file: a single `Make (When)` section holding the
+ * trigger fixtures registered by more than one state machine (REQ-318/319/320).
+ *
+ * @param sharedWhenSteps Merged `When` steps shared by more than one state machine.
+ * @returns Shared fixture file content.
+ */
+function buildSharedFixtureFileContent(sharedWhenSteps: Step[]): string {
+    const whens = sortedByName(deduplicateByName(sharedWhenSteps))
+    let content = "// Shared trigger fixtures.\n"
+    content += "// Implement each function to interact with the application under test.\n"
+    content += "\n// --- Make (When) ---\n\n"
+    content += whens.map(buildFunctionStub).join("\n")
+    return `${content}\n`
+}
+
+/**
+ * Render one `.fixtures.js` file per state machine, a shared fixture file for `When` fixtures
+ * registered by more than one state machine (REQ-318 up to REQ-323), and a shared `index.js`.
  *
  * @param features Normalized feature data with generated steps.
  * @returns Generated fixture file content keyed by file name.
  */
 export function renderFixtureFiles(features: Feature[]): Map<string, string> {
     const files = new Map<string, string>()
+    const { steps: sharedWhenSteps, patterns: sharedPatterns } = collectSharedTriggerSteps(features)
     const stateMachineNames = features
         .map((stateMachineData) => stateMachineData.stateMachine.name)
         .sort((left, right) => left.localeCompare(right))
@@ -115,11 +143,14 @@ export function renderFixtureFiles(features: Feature[]): Map<string, string> {
         if (stateMachineData !== undefined) {
             files.set(
                 `${slugify(stateMachineName)}.fixtures.js`,
-                buildFixtureFileContent(stateMachineName, stateMachineData.steps),
+                buildFixtureFileContent(stateMachineName, ownSteps(stateMachineData, sharedPatterns)),
             )
         }
     }
-    files.set("index.js", buildFixtureIndex(stateMachineNames))
+    if (sharedWhenSteps.length > 0) {
+        files.set(SHARED_FIXTURES_FILE_NAME, buildSharedFixtureFileContent(sharedWhenSteps))
+    }
+    files.set("index.js", buildFixtureIndex(stateMachineNames, sharedWhenSteps.length > 0))
     return files
 }
 
