@@ -19,4 +19,4 @@
 #   machines is empty after row merging — i.e. no attribute columns exist to drive the `Examples:`
 #   block.
 
-# Throws: Invalid state machine "m": anonymous transition references argument(s), but the state machine's dataExampleValues table is empty or absent (REQ-157/REQ-163).
+# Throws: State machine `m`: Anonymous transition references argument(s), but the state machine's dataExampleValues table is empty or absent (REQ-157/REQ-163).

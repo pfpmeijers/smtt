@@ -232,7 +232,7 @@ test("[TST-078] → [REQ-118/164]: Source transition not matched when result arg
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        "Invalid state machine \"m2\": anonymous transition has an unresolvable state trigger \"s1\" — no source transition's result arguments satisfy the trigger's argument condition(s) (REQ-118/REQ-164).",
+        "State machine `m2`: Anonymous transition has an unresolvable state trigger `s1` — no source transition's result arguments satisfy the trigger's argument condition(s) (REQ-118/REQ-164).",
     )
 })
 

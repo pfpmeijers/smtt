@@ -69,13 +69,15 @@ export function attributePlaceholderName(argument: Argument, isResult: boolean):
  * Verify that an argument does not combine a qualifier with a modifier: a qualifier is only
  * valid when no modifier is given (REQ-057).
  *
+ * @param stateMachineName Name of the state machine owning the argument, for error context.
  * @param argument Argument to validate.
  * @throws Error When both a qualifier and a modifier are present.
  */
-export function validateArgument(argument: Argument): void {
+export function validateArgument(stateMachineName: string, argument: Argument): void {
     if (argument.qualifier && argument.modifier) {
         throw new Error(
-            `Invalid argument "${argument.name}": qualifier and modifier are mutually exclusive`,
+            `State machine \`${stateMachineName}\`: Invalid argument \`${argument.name}\`: ` +
+                `qualifier and modifier are mutually exclusive`,
         )
     }
 }

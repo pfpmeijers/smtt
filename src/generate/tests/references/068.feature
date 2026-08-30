@@ -22,4 +22,4 @@
 # - [REQ-155] The generator shall detect circular expansion chains (e.g. machine A triggers on state
 #   of machine B, machine B triggers on state of machine A) and raise an error.
 
-# Throws: Invalid state machine "m1": anonymous transition participates in a circular state-trigger expansion chain at trigger "s2" (REQ-155).
+# Throws: State machine `m1`: Anonymous transition participates in a circular state-trigger expansion chain at trigger `s2` (REQ-155).

@@ -52,7 +52,7 @@ export function ownerOfStateName(stateName: string, ownership: StateOwnershipInd
     const owner = ownership[stateName.toLowerCase()]
     if (owner === AMBIGUOUS_OWNER) {
         throw new Error(
-            `Ambiguous state name lookup "${stateName}": the same state name appears in multiple state machines (REQ-154).`,
+            `Ambiguous state name lookup \`${stateName}\`: the same state name appears in multiple state machines (REQ-154).`,
         )
     }
     return owner

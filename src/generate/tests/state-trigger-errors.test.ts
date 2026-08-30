@@ -37,7 +37,7 @@ test("[TST-068] → [REQ-155]: Circular state-trigger expansion chain raises an 
         },
     ]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        'Invalid state machine "m1": ' +
-        'anonymous transition participates in a circular state-trigger expansion chain at trigger "s2" (REQ-155).')
+        'State machine `m1`: ' +
+        'Anonymous transition participates in a circular state-trigger expansion chain at trigger `s2` (REQ-155).')
 })
 

@@ -22,4 +22,4 @@
 #   attribute exists somewhere in the transition. The generator shall raise an error when no base
 #   reference exists.
 
-# Throws: Invalid modifier "incremented" for attribute "count": no base reference found in the transition
+# Throws: State machine `m`: Invalid modifier `incremented` for attribute `count`: no base reference found in the transition

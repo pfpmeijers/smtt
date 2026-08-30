@@ -40,4 +40,4 @@
 #   source transitions exist by result state name but none satisfies REQ-118's argument-matching
 #   rule. Then the generator shall raise an error.
 
-# Throws: Invalid state machine "m2": anonymous transition has an unresolvable state trigger "s1" — no source transition's result arguments satisfy the trigger's argument condition(s) (REQ-118/REQ-164).
+# Throws: State machine `m2`: Anonymous transition has an unresolvable state trigger `s1` — no source transition's result arguments satisfy the trigger's argument condition(s) (REQ-118/REQ-164).

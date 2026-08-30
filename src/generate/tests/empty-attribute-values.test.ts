@@ -75,7 +75,7 @@ test("[TST-022] → [REQ-157]: Arguments referenced with no dataExampleValues ta
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        "Invalid state machine \"m\": anonymous transition references argument(s), " +
+        "State machine `m`: Anonymous transition references argument(s), " +
         "but the state machine's dataExampleValues table is empty or absent (REQ-157/REQ-163).",
     )
 })

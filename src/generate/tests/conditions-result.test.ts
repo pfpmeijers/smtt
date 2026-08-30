@@ -51,6 +51,6 @@ test("[TST-086] → [REQ-089]: Result conditions shall be restricted to equality
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        "Invalid result condition for attribute \"a\": operator \"not as\" is not supported. " +
-        "Result conditions only allow \"=\", \"as\", or \"undefined\" (REQ-089).")
+        "State machine `m`: Invalid result condition for attribute `a`: operator `not as` is not supported. " +
+        "Result conditions only allow `=`, `as`, or `undefined` (REQ-089).")
 })

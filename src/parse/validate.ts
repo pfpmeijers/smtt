@@ -759,8 +759,8 @@ export function validateExampleValuesPresence(stateMachines: StateMachine[]): vo
             if (hasExampleValues) continue
 
             throw new Error(
-                `Invalid state machine "${stateMachine.name}": ` +
-                    `${transition.id ? `transition "${transition.id}"` : "anonymous transition"} references argument(s), but the machine's ` +
+                `State machine \`${stateMachine.name}\`: ` +
+                    `${transition.id ? `transition \`${transition.id}\`` : "Anonymous transition"} references argument(s), but the machine's ` +
                     `dataExampleValues table is empty or absent (REQ-157/REQ-163).`,
             )
         }

@@ -22,4 +22,4 @@
 # Covers requirements:
 # - [REQ-075] Empty strings shall not match any comparison operator except `undefined`.
 
-# Throws: Invalid condition for attribute "a": operator "=" cannot be used with an empty value. Use { operator: "undefined" } to match absent/empty values instead.
+# Throws: State machine `m`: Invalid condition for attribute `a`: operator `=` cannot be used with an empty value. Use { operator: "undefined" } to match absent/empty values instead.

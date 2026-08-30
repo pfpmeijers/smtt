@@ -24,4 +24,4 @@
 #   modifier contains fewer than two distinct values for the referenced attribute. The parser should
 #   validate this precondition.
 
-# Throws: Invalid modifier "different" for attribute "a": expected at least two distinct values but found 1
+# Throws: State machine `m`: Invalid modifier `different` for attribute `a`: expected at least two distinct values but found 1
