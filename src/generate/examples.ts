@@ -266,12 +266,15 @@ export function collectExampleColumns(
 
     for (const { args, isResult, source } of groups) {
         for (const argument of args) {
+            // A result argument with a condition renders as `<resulting X>`, never `<X>`
+            // (see `attributePlaceholderName`), so it contributes no base column of its own.
+            const isResultCondition = isResult && argument.condition
             if (argument.modifier) {
                 addDerived(modifierColumn(stateMachineName, argument, source, transition, baseReferenceNames))
-            } else {
+            } else if (!isResultCondition) {
                 addBase(argument.name)
             }
-            if (isResult && argument.condition) {
+            if (isResultCondition) {
                 validateResultCondition(stateMachineName, argument.name, argument.condition)
                 addDerived({
                     kind: "result-condition",
