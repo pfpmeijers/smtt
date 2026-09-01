@@ -76,15 +76,10 @@ function resolveCliPaths(subArgs: string[], commandName: string): { inputDir: st
     const outputDirArg = flagValue(subArgs, "--output-dir")
     const outputDir = outputDirArg ? path.resolve(outputDirArg) : process.cwd()
 
-    // The AST file defaults to `<input-dir>/state-machines.json`. When the user
-    // passes `--output-dir` (without `--ast-file`), the AST file is placed at
-    // `<output-dir>/state-machines.json` so chained subcommands (`infer`,
-    // `generate`) can share the same AST file via a single `--output-dir`.
+    // The AST file defaults to `<output-dir>/state-machines.json`.
     const astFile = astFileArg
         ? path.resolve(astFileArg)
-        : outputDirArg
-            ? path.join(outputDir, `${STATE_MACHINES_DIR}.json`)
-            : path.join(inputDir, `${STATE_MACHINES_DIR}.json`)
+        : path.join(outputDir, `${STATE_MACHINES_DIR}.json`)
 
     return { inputDir, astFile, outputDir }
 }
@@ -249,7 +244,7 @@ function printGenerateHelp(): void {
     console.log("  --input-dir INPUT_DIR    Directory searched recursively for `*.state-machine.md` files.")
     console.log("                           Default: `$CWD/state-machines/`.")
     console.log("  --ast-file AST_FILE      Intermediate AST JSON file written by `parse` and read by `generate`.")
-    console.log("                           Default: `INPUT_DIR/state-machines.json`.")
+    console.log("                           Default: `OUTPUT_DIR/state-machines.json`.")
     console.log("                       Relative paths are resolved from the current directory.")
     console.log("  --output-dir OUTPUT_DIR   Base directory for `features/`, `steps/`, and `fixtures/` output.")
     console.log("                       Default: current directory.")

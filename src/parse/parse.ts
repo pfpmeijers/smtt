@@ -135,6 +135,10 @@ export function parse(inputDir: string, astFile?: string): StateMachine[] {
     // FIXME: Expect a validate-minimal-AST here.
     completeStateMachines(stateMachines)
     validateStateMachines(stateMachines)
-    if (astFile) saveStateMachines(astFile, stateMachines)
+    if (astFile) {
+        const astDir = path.dirname(astFile)
+        fs.mkdirSync(astDir, { recursive: true })
+        saveStateMachines(astFile, stateMachines)
+    }
     return stateMachines
 }
