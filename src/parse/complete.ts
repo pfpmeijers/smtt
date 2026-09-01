@@ -352,15 +352,6 @@ function augmentExampleTable(stateMachine: StateMachine, synthesizedUndefinedRow
     }
 
     stateMachine.dataExampleValues = rows
-
-    // Sort to produce a stable, deterministic order (alphanumeric by row content).
-    stateMachine.dataExampleValues.sort((a, b) => {
-        for (const attr of allAttributes) {
-            const cmp = (a[attr] ?? "").localeCompare(b[attr] ?? "")
-            if (cmp !== 0) return cmp
-        }
-        return 0
-    })
 }
 
 // --- Public API ---

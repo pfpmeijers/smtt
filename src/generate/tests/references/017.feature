@@ -31,7 +31,5 @@ Feature: m
     When e
     Then expect s "<resulting a>"
     Examples:
-      | a | resulting a |
-      | 1 | 2           |
-      | 2 | 2           |
-      | 3 | 2           |
+      | resulting a |
+      | 2           |

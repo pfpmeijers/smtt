@@ -31,12 +31,34 @@ test("[TST-017] → [REQ-089]: Result conditions with equality operator", () => 
     }]
     validateStateMachines(stateMachines)
     const feature = createFeatures(stateMachines)["m"]
-    // Every `resulting a` cell carries the literal condition value `2`, regardless of the operator (`as`).
-    assertContains(feature, 
-        "      | a | resulting a |\n" + 
-        "      | 1 | 2           |\n" +
-        "      | 2 | 2           |\n" +
-        "      | 3 | 2           |\n")
+    // `a` is never referenced as a base placeholder (the result condition always renders as
+    // `<resulting a>`), so its column is dropped and the rows collapse to the one distinct
+    // `resulting a` value, `2`, regardless of the operator (`as`).
+    assertContains(feature,
+        "      | resulting a |\n" +
+        "      | 2           |\n")
+    assertMatchesReference(stateMachines, feature)
+})
+
+test("[TST-108] → [REQ-169]: Result condition attribute with no other reference drops its base column", () => {
+    const stateMachines: StateMachines = [{
+        name: "m",
+        states: [{name: "s"}],
+        dataExampleValues: [{a1: "x", a2: "1"}, {a1: "y", a2: "2"}],
+        transitions: [{
+            trigger: {type: "event", name: "e"},
+            result: {name: "s", arguments: [{name: "a1"}, {name: "a2", condition: {operator: "=", value: "2"}}]},
+        }],
+    }]
+    validateStateMachines(stateMachines)
+    const feature = createFeatures(stateMachines)["m"]
+    // `a2` is only ever referenced via the result condition — always rendered as `<resulting a2>`
+    // — so its base column is dropped. `a1` is a plain result reference (no condition), so it does
+    // render as `<a1>` and keeps its base column.
+    assertContains(feature,
+        "      | a1 | resulting a2 |\n" +
+        "      | x  | 2            |\n" +
+        "      | y  | 2            |\n")
     assertMatchesReference(stateMachines, feature)
 })
 

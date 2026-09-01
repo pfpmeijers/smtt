@@ -290,6 +290,18 @@ definition as follows:
 - [REQ-152] Derived columns (`resulting X`, `incremented X`, `different X`,
   etc.) shall be appended after all base columns, in their encounter order.
 
+- [REQ-169] A base attribute name shall not receive a column when its only
+  occurrence in the transition is a result argument carrying a condition — such
+  an argument's step placeholder always references the derived
+  `resulting $attribute-name` column instead (REQ-101), so the base column
+  would otherwise go unused in every rendered step. When the same attribute is
+  also referenced elsewhere in the transition without a result condition (e.g.
+  a precondition, trigger, or plain result reference), its base column is kept,
+  since that occurrence does render `"<$attribute-name>"`.
+  - Dropping the base column may leave rows that are identical in every
+    remaining column; these are collapsed to one by the existing row
+    de-duplication (REQ-160).
+
 Derived attribute columns are described in next sections.
 
 - [REQ-067] Row construction shall use `$example-data-values` as starting
@@ -696,6 +708,30 @@ Supported operators:
       Examples:
         | a  | resulting a |
         | 1  | 2           |
+  ```
+
+- When `a` is *not* otherwise referenced in the transition — no precondition,
+  trigger, or plain result argument for it, only the result condition — its
+  base column is dropped (REQ-169) and rows that then differ only by the
+  discarded `a` value collapse into one:
+  ```markdown
+    | a |
+    |---|
+    | 0 |
+    | 1 |
+    | 2 |
+  ```
+  With just `` `a = 2` `` on the result argument (no precondition on `a`),
+  <br/> (state `x`, trigger `e`, results in `` x with `a = 2` ``)<br/> then
+  scenario steps and examples table:
+  ```gherkin
+    Scenario Outline: [REQ-001] x â†’ x "<resulting a>"; when e
+      Given initially x
+      When e
+      Then expect x "<resulting a>"
+      Examples:
+        | resulting a |
+        | 2           |
   ```
 
 ---

@@ -6,3 +6,15 @@
   completed/normalized AST. The minimize function therefore first rigidly validates the input AST.
 
 - Add to spec that example values can be taken from other state machines.
+
+- ISSUE:
+  The "other" data values are moved to the example data values table. But now there are scenarios with examples
+  that are not really needed. A 2nd value just added to serve a "different" modifier for a specific scenario.
+  Use () between orginally "other" values to indicate these can be skipped unless needed for this modifier.
+  So you would get:
+      | email address       |
+      |---------------------|
+      | info@domain.com     |
+      | (other@example.com) |
+  This is not completely clean because "other" needs to be specified per row and not cell.
+  Note that overhead of running second scenario case is minimal. So why bother ...
