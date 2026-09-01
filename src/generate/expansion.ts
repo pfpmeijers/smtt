@@ -1,7 +1,7 @@
 import type { Argument, DefaultPrecondition, StateMachine, StateRef, Transition, Trigger } from "../parse"
 import { argumentsSignature } from "./arguments"
 import { defaultPreconditionToStateRef, impliedInitialStateRefs } from "./givens"
-import { ownerOfStateName, ownerOfStateRef, type StateOwnershipIndex } from "./ownership"
+import { ownerOfStateName, type StateOwnershipIndex } from "./ownership"
 import { stateRefText, triggerText } from "./text"
 
 /** Guard against runaway recursion through (near-)cyclic expansion chains. */
@@ -280,9 +280,13 @@ export function expandStateTrigger(
 
 /**
  * Names of every state machine that may contribute example value rows for a transition
- * (REQ-161): the owning state machine itself, the state machines owning its referenced default
- * precondition and explicit transition states, and the state machines reached by following its
- * state trigger expansion chain.
+ * (REQ-161): the owning state machine itself, plus — only for a state-trigger transition — the
+ * state machines reached by following the trigger's expansion chain, whose Given/When/Then text
+ * is stitched into this transition's own rendered scenario and therefore must share a consistent
+ * value. A referenced default precondition or explicit transition state never contributes another
+ * machine's table on its own, argument or not: a state machine must be sufficiently specified
+ * stand-alone, so an attribute it uses in an argument is expected to be declared in — and drawn
+ * from — its own `data`/example values, never another machine's.
  *
  * @param stateMachine State machine that owns the transition being rendered.
  * @param transition Transition whose contributing state machines are being collected.
@@ -303,11 +307,6 @@ export function collectContributingStateMachineNames(
     depth = 0,
 ): Set<string> {
     const names = new Set<string>([stateMachine.name])
-    const addOwner = (owner: string | undefined) => {
-        if (owner) names.add(owner)
-    }
-    for (const precondition of defaultPreconditions) addOwner(ownerOfStateName(precondition.state, ownership))
-    for (const stateRef of transition.states ?? []) addOwner(ownerOfStateRef(stateRef, ownership))
 
     if (transition.trigger.type !== "state" || depth > MAX_EXPANSION_DEPTH) return names
 

@@ -16,9 +16,11 @@ import {
 } from "./expansion"
 import {
     collectExampleColumns,
+    describeEmptyExampleValues,
     filterRows,
     formatExamplesTable,
     mergeExampleValues,
+    transitionDescription,
     type ExampleColumn,
 } from "./examples"
 import { buildEffectiveGivens } from "./givens"
@@ -72,16 +74,6 @@ interface RenderContext {
 // --- Examples table ---
 
 /**
- * Describe a transition by its id, for use in error messages.
- *
- * @param transition Transition to describe.
- * @returns The transition description.
- */
-function transitionDescription(transition: Transition): string {
-    return transition.id ? `transition \`${transition.id}\`` : "Anonymous transition"
-}
-
-/**
  * Build the `Examples:` block of a transition (REQ-063).
  *
  * @param context Rendering context for the owning state machine.
@@ -104,8 +96,8 @@ function buildExamplesTable(context: RenderContext, transition: Transition, colu
     if (exampleValues.length === 0) {
         throw new Error(
             `State machine \`${stateMachine.name}\`: ${transitionDescription(transition)} ` +
-                `references argument(s), but the state machine's dataExampleValues table is empty or ` +
-                `absent (REQ-157/REQ-163).`,
+                `references argument(s), but ${describeEmptyExampleValues(contributingStateMachines)} ` +
+                `(REQ-157/REQ-163).`,
         )
     }
 
@@ -116,14 +108,14 @@ function buildExamplesTable(context: RenderContext, transition: Transition, colu
             stateMachine, transition, defaultPreconditions, ownership, impliedIndex, availableAttributes,
         ),
     ]
-    const rows = filterRows(stateMachine.name, exampleValues, exampleValues, filters)
+    const rows = filterRows(stateMachines, stateMachine.name, exampleValues, exampleValues, filters)
     if (rows.length === 0) {
         throw new Error(
             `State machine \`${stateMachine.name}\`: ` +
             `Empty examples table for ${transitionDescription(transition).toLowerCase()}`,
         )
     }
-    return formatExamplesTable(stateMachine.name, columns, rows, exampleValues)
+    return formatExamplesTable(stateMachines, stateMachine.name, columns, rows, exampleValues)
 }
 
 // --- Scenario rendering ---

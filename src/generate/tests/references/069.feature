@@ -32,9 +32,9 @@
 #          arguments:
 #            - name: a2
 # Covers requirements:
-# - [REQ-161] For expanded state triggers, the effective data table shall be the combination (union
-#   of columns, intersection of shared-column rows) of the example data values tables from all
-#   machines in the expansion chain.
+# - [REQ-161] For expanded state triggers, the effective data table shall be the owning state
+#   machine's own example data values table, extended with columns for any attribute it does not
+#   itself declare, contributed (cross-joined) by other machines in the expansion chain.
 
 Feature: m2
 

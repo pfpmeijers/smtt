@@ -500,13 +500,55 @@ Examples:
   that match. For `state`-type triggers this is orthogonal to expansion
   candidate matching (REQ-118): expansion determines which source transitions
   apply; the condition then filters the data rows.
+
 - [REQ-161] For expanded state triggers, the effective data table shall be the
-  combination (union of columns, intersection of shared-column rows) of the
-  example data values tables from all machines in the expansion chain.
+  owning state machine's own example data values table, extended with columns
+  for any attribute it does not itself declare, contributed (cross-joined) by
+  other machines in the expansion chain.
+
+  Example: machine `m2` owns the transition being rendered and declares only
+  `a2` (values `3`, `4`); its state trigger expands into machine `m1`, which
+  declares `a1` (values `1`, `2`). `m2` does not declare `a1` itself, so the
+  effective table starts from `m2`'s own rows and is extended with the new
+  `a1` column, cross-joined against `m1`'s values:
+
+  ```gherkin
+  | a1 | a2 |
+  | 1  | 3  |
+  | 2  | 3  |
+  | 1  | 4  |
+  | 2  | 4  |
+  ```
+
+- [REQ-168] The cross-join in REQ-161 only ever adds columns the owning
+  machine does not already declare — it never overrides one. When an
+  attribute name is declared by both the owning machine and another
+  contributing machine, the owning machine's own example values are
+  authoritative for that attribute; a state machine must be sufficiently
+  specified stand-alone, so the two machines' values are never required to
+  match, and the other machine's values for that name are never consulted.
+
+  Example: State machine `m1` owns the transition and declares attribute `a1`
+  with its own value `v1`. Its transition also reaches machine `m2` (via the
+  expansion chain), which independently declares the *same* attribute `a1`
+  with a *different* value, `v2`, plus attribute `a2` (value `v3`) that `m1`
+  doesn't have:
+
+  ```gherkin
+  | a1 | a2 |
+  | v1 | v3 |
+  ```
+
+  `a1` stays `v1` — `m1`'s own value (per REQ-168) — and `a2` is added as a
+  new column (per REQ-161); `m2`'s own `a1` value (`v2`) is discarded, not
+  merged or checked for a match.
+
 - [REQ-162] Conditions from all transitions in an expansion chain shall be
   merged as a conjunction: a row survives only if it satisfies ALL conditions
   from the top-level transition AND all source transitions in the chain.
+
 - [REQ-088] Result conditions shall extend the columns.
+
 - [REQ-089] Result conditions shall be restricted to equality operators only
   (`=`, `as`). The `resulting $attribute-name` column cell value shall be taken
   directly from `condition.value` in the AST. The generator shall raise an error
