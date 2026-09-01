@@ -7,9 +7,11 @@ import type { ImpliedConditionsIndex, StateOwnershipIndex } from "./ownership"
 /** A row filter derived from an argument condition or an implied state condition. */
 export interface FilterCondition {
     sourceName: string
-    condition: Condition
+    /** Original modifier text from source for error reporting. */
+    sourceModifier?: string
     /** When set, derive this modifier on `sourceName` before evaluating the condition (REQ-143/REQ-144). */
     modifier?: string
+    condition: Condition
 }
 
 // --- Validation ---
@@ -166,7 +168,7 @@ function collectOwnFilterConditions(stateMachineName: string, transition: Transi
         if (!condition) continue
         validateCondition(stateMachineName, argument.name, condition)
         const modifier = canonicalModifier(argument)
-        filters.push({ sourceName: argument.name, condition, ...(modifier ? { modifier } : {}) })
+        filters.push({ sourceName: argument.name, sourceModifier: argument.modifier, ...(modifier ? { modifier } : {}), condition })
     }
     return filters
 }

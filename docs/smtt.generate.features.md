@@ -7,15 +7,19 @@
 
 - [REQ-001] The generator shall write one feature file per state machine in the
   AST file.
+
 - [REQ-002] The feature file shall be named
   `features/$state-machine-name.feature`.
+
 - [REQ-003] The `$state-machine-name` shall be taken from AST path `[i].name`.
+
 - [REQ-131] The file name `$state-machine-name` shall have remaining internal
   whitespace replaced by hyphens (`-`).
 
 ## Feature block
 
 - [REQ-004] The feature file shall start with a `Feature` block header.
+
 - [REQ-005] The feature file shall include the state machine overview as an
   indented description block when present.
 
@@ -25,6 +29,7 @@ Feature: $state-machine-name
 ```
 
 - [REQ-006] The `$overview` shall be taken from AST path `[i].overview`.
+
 - [REQ-008] The overview shall be omitted when `overview` is `null`.
 
 ## Scenario label
@@ -56,6 +61,7 @@ The scenario label shall be composed of the following parts:
 
 - [REQ-011] The label shall include `[$id]`, the transition id.
   - [REQ-012] The `$id` shall be taken from AST path `[i].transitions[j].id`.
+
 - [REQ-013] The label shall include `$original-state-name`, i.e. the state
   machine's own "from" state for this transition.
   - [REQ-014] The `$original-state-name` shall be taken from AST path
@@ -65,14 +71,17 @@ The scenario label shall be composed of the following parts:
     each entry's name against the state machine's defined state names taken from
     AST path `[i].states[*].name`, where `i` is the index of the state machine
     the scenario belongs to.
+
 - [REQ-017] The label shall include ` → $result-state-name`, the state
   machine's "to" state for this transition.
   - [REQ-018] The `$result-state-name` shall be taken from AST path
     `[i].transitions[j].result.name`.
+
 - [REQ-019] The label shall include `; when $trigger`, the trigger name, being
   an event or a state entered of another state machine.
   - [REQ-020] The `$trigger` shall be taken from AST path
     `[i].transitions[j].trigger.name`.
+
 - [REQ-021] The label shall include `; given $context-states`, all precondition
   states other than the own state.
   - [REQ-022] The `$context-states` shall be rendered as a comma-separated
@@ -89,13 +98,15 @@ The scenario label shall be composed of the following parts:
 - [REQ-026] Where any state or the trigger carries arguments, those arguments
   shall be appended to the name inline — see [State Arguments](#state-arguments)
   for the format.
+
 - [REQ-027] The inline argument appending shall apply to all name slots in the
   label: `$original-state-name`, `$trigger`, `$result-state-name`, and the
   other names within `$context-states`.
 
 - [REQ-028] The scenario label part following the ID shall be rendered in
   lower case. Lower-casing applies to textual name tokens (state names, trigger
-  names, qualifier words, attribute names). 
+  names, qualifier words, attribute names).
+
 - [REQ-159] The scenario label shall be truncated to a maximum of 200
   characters. The transition ID (`[$id]`) ensures uniqueness regardless of
   truncation. Truncation shall occur at the end, and appended with `...` suffix.
@@ -118,6 +129,7 @@ The scenario steps shall be generated from the transition information:
     - The first step uses the keyword `Given`.
     - Subsequent steps use `And`.
     - Each step is formatted as `Given|And initially $state-name [$arguments]`.
+
   - [REQ-035] The precondition steps shall be emitted in effective state array
     order (injected default preconditions first, explicit transition states
     after).
@@ -171,6 +183,7 @@ Scenario: [REQ-003] Item available → item in cart; when item added to cart; gi
 
 - [REQ-045] `# Notes:` shall be appended after the final `Then` step
   (including any intermediate expansion steps) when notes are defined.
+
 - [REQ-046] The notes shall be taken from AST path `[i].transitions[j].notes`.
 
 ## State Arguments
@@ -178,12 +191,15 @@ Scenario: [REQ-003] Item available → item in cart; when item added to cart; gi
 - [REQ-047] When any state, the trigger, or an applicable default precondition
   carries argument(s), the scenario shall be emitted as a `Scenario Outline`
   with an examples table (described further down), instead of a `Scenario`.
+
 - [REQ-048] The generator shall add the arguments information after the state
   name.
+
 - [REQ-049] The arguments shall be taken from AST paths:
   - `[i].transitions[j].states[*].arguments[*]`
   - `[i].transitions[j].trigger.arguments[*]`
   - `[i].transitions[j].result.arguments[*]`
+
 - [REQ-050] Each argument shall be appended comma separated to the state name in
   order.
 
@@ -215,21 +231,26 @@ Examples:
   modifier.
   - [REQ-052] The `$pre-qualifier` shall be taken from AST path
     `[i].transitions[j].states[*].arguments[*].preQualifier`.
+
 - [REQ-053] `$modifier` shall be the qualifying word/phrase before the
   attribute name.
   - [REQ-054] The `$modifier` shall be taken from AST path
     `[i].transitions[j].states[*].arguments[*].modifier`.
+
 - [REQ-055] `$post-qualifier` shall be the qualifying word/phrase after the
   modifier.
   - [REQ-056] The `$post-qualifier` shall be taken from AST path
     `[i].transitions[j].states[*].arguments[*].postQualifier`.
+
 - [REQ-057] `$qualifier` shall be a single qualifier before the attribute name,
   in case no modifier is given.
   - [REQ-058] The `$qualifier` shall be taken from AST path
     `[i].transitions[j].states[*].arguments[*].qualifier`.
+
 - [REQ-059] `$suffix` shall be the word/phrase after the attribute name.
   - [REQ-060] The `$suffix` shall be taken from AST path
     `[i].transitions[j].states[*].arguments[*].suffix`.
+
 - [REQ-061] `$attribute-name` shall be the name of a state's data attribute,
   present as a column in the `Examples:` table below the step definitions.
   - [REQ-062] The `$attribute-name` shall be taken from AST path
@@ -258,10 +279,14 @@ definition as follows:
   first-encounter order — scanning default preconditions first (in their array
   order), then explicit transition states (in their array order), then the
   trigger, then the result.
+
 - [REQ-065] The table shall add _derived_ columns required by modifiers.
+
 - [REQ-066] The table shall add _derived_ columns required by conditions.
+
 - [REQ-151] Each base attribute name shall appear as a column exactly once, at
   its first-encountered position.
+
 - [REQ-152] Derived columns (`resulting X`, `incremented X`, `different X`,
   etc.) shall be appended after all base columns, in their encounter order.
 
@@ -269,19 +294,24 @@ Derived attribute columns are described in next sections.
 
 - [REQ-067] Row construction shall use `$example-data-values` as starting
   point.
+
 - [REQ-160] Rendered examples table rows shall be unique: any row whose
   displayed values repeat an earlier row in the final `Examples:` block shall be
   removed, keeping the first occurrence. Duplicate rows shall be eliminated after
   filtering and before the final table is emitted.
+
 - [REQ-068] The `$example-data-values` shall be taken from AST path
   `[i].dataExampleValues`. This table may contain both author-defined rows and
   rows synthesised by the `complete` step (REQ-420/REQ-421); both kinds are
   treated identically by the generator.
+
 - [REQ-157] The generator shall raise an error when arguments are referenced
   in a transition (directly or indirectly) but the effective `$example-data-values`
   table across all contributing machines is empty after row merging — i.e. no
   attribute columns exist to drive the `Examples:` block.
+
 - [REQ-069] State/trigger conditions shall be applied as row filters.
+
 - [REQ-070] Modifiers shall be added as additional columns per
   surviving row.
 
@@ -310,8 +340,10 @@ Scenario example table:
 
 - [REQ-073] An empty string (`""`) in `$example-data-values`
   shall represent an undefined/absent value for that attribute.
+
 - [REQ-074] When used in modifier lookups or condition filtering, empty strings
   shall be treated as undefined.
+
 - [REQ-075] Empty strings shall not match any comparison operator except
   `undefined`.
 
@@ -330,9 +362,11 @@ the scenario.
 
 - [REQ-076] Modifiers shall extend the data combination tables (`Examples`) by
   adding columns based on the data attribute values.
+
 - [REQ-136] A modifier on an argument shall be valid only when a base reference
   to the same attribute exists somewhere in the transition. The
   generator shall raise an error when no base reference exists.
+
 - [REQ-137] When an argument carries a modifier, the step placeholder shall
   reference the derived column name (e.g. `<incremented count>`,
   `<different email address>`) rather than the base column name.
@@ -476,9 +510,11 @@ Detailed modifier specifications follow.
 #### Modifier with condition
 
 - [REQ-142] A modifier and a condition may co-exist on the same argument.
+
 - [REQ-143] When both are present, the order of operations shall be:
   derive the modifier column value first, then filter rows where the derived
   value satisfies the condition.
+
 - [REQ-144] The condition applies to the derived (modified) value, not the
   base value.
 
@@ -500,13 +536,55 @@ Examples:
   that match. For `state`-type triggers this is orthogonal to expansion
   candidate matching (REQ-118): expansion determines which source transitions
   apply; the condition then filters the data rows.
+
 - [REQ-161] For expanded state triggers, the effective data table shall be the
-  combination (union of columns, intersection of shared-column rows) of the
-  example data values tables from all machines in the expansion chain.
+  owning state machine's own example data values table, extended with columns
+  for any attribute it does not itself declare, contributed (cross-joined) by
+  other machines in the expansion chain.
+
+  Example: machine `m2` owns the transition being rendered and declares only
+  `a2` (values `3`, `4`); its state trigger expands into machine `m1`, which
+  declares `a1` (values `1`, `2`). `m2` does not declare `a1` itself, so the
+  effective table starts from `m2`'s own rows and is extended with the new
+  `a1` column, cross-joined against `m1`'s values:
+
+  ```gherkin
+  | a1 | a2 |
+  | 1  | 3  |
+  | 2  | 3  |
+  | 1  | 4  |
+  | 2  | 4  |
+  ```
+
+- [REQ-168] The cross-join in REQ-161 only ever adds columns the owning
+  machine does not already declare — it never overrides one. When an
+  attribute name is declared by both the owning machine and another
+  contributing machine, the owning machine's own example values are
+  authoritative for that attribute; a state machine must be sufficiently
+  specified stand-alone, so the two machines' values are never required to
+  match, and the other machine's values for that name are never consulted.
+
+  Example: State machine `m1` owns the transition and declares attribute `a1`
+  with its own value `v1`. Its transition also reaches machine `m2` (via the
+  expansion chain), which independently declares the *same* attribute `a1`
+  with a *different* value, `v2`, plus attribute `a2` (value `v3`) that `m1`
+  doesn't have:
+
+  ```gherkin
+  | a1 | a2 |
+  | v1 | v3 |
+  ```
+
+  `a1` stays `v1` — `m1`'s own value (per REQ-168) — and `a2` is added as a
+  new column (per REQ-161); `m2`'s own `a1` value (`v2`) is discarded, not
+  merged or checked for a match.
+
 - [REQ-162] Conditions from all transitions in an expansion chain shall be
   merged as a conjunction: a row survives only if it satisfies ALL conditions
   from the top-level transition AND all source transitions in the chain.
+
 - [REQ-088] Result conditions shall extend the columns.
+
 - [REQ-089] Result conditions shall be restricted to equality operators only
   (`=`, `as`). The `resulting $attribute-name` column cell value shall be taken
   directly from `condition.value` in the AST. The generator shall raise an error
@@ -521,8 +599,10 @@ Supported operators:
 
 - [REQ-090] The generator shall support numeric comparison operators on
   numerical attributes: `=`, `<>`, `>`, `<`, `>=`, `<=`.
+
 - [REQ-091] The generator shall support set membership operators: `in`,
   `not in`, e.g. `` `a in (1, 4)` ``.
+
 - [REQ-092] The generator shall support range membership operators: `in range`,
   `not in range`, e.g. `` `a in [1, 4]` ``.
   - [REQ-093] Boundary notation shall follow interval convention: `[` and `]`
@@ -532,12 +612,15 @@ Supported operators:
   - [REQ-145] The boundary inclusivity/exclusivity shall be encoded within the
     condition value strings themselves (e.g. the value array contains `"[1"` and
     `"4)"` for `[1, 4)`).
+
 - [REQ-095] The generator shall support text equality forms: `as`, `not as`.
+
 - [REQ-096] The generator shall support the unary absence check `undefined` (no
   value; checks that the attribute is absent/unset).
 
 - [REQ-097] The operator shall be taken from AST path
   `...arguments[*].condition.operator`.
+
 - [REQ-098] The condition value shall be taken from AST path
   `...arguments[*].condition.value`.
 
@@ -545,6 +628,7 @@ Supported operators:
 
 - [REQ-099] Arguments shall result in filtering out certain examples in the
   scenario.
+
 - [REQ-100] If all rows are filtered out, the generator shall raise an error —
   an empty examples table is not valid.
 
@@ -569,15 +653,18 @@ Supported operators:
   by the feature generator: when that state is a precondition (`Given`) state of
   a transition, its implied conditions shall filter the examples table rows in
   the same way as explicit precondition-argument conditions (REQ-099/REQ-100).
+
 - [REQ-165] The implied conditions of a precondition state shall be taken from
   AST path `[i].states[k].impliedConditions[*]`, where `k` is the index of the
   precondition state matched by name against `[i].states[*].name`. This applies
   to every effective `Given` state of the transition — explicit transition
   states, injected default preconditions, and the implied initial state.
+
 - [REQ-166] Each implied condition's `$attribute-name` shall be taken from AST
   path `[i].states[k].impliedConditions[*].attribute` and matched against the
   examples table column of the same name. An implied condition on an attribute
   that is not present in the effective examples table shall impose no filter.
+
 - [REQ-167] Each implied condition's operator and value shall be taken from AST
   path `[i].states[k].impliedConditions[*].condition` and evaluated with the
   same operators as argument conditions (REQ-090 through REQ-096). Implied
@@ -635,20 +722,26 @@ Supported operators:
   assertion.
 
 For each source found:
+
 - [REQ-107] When the source has an event trigger, that trigger name shall become
   the `When` step.
+
 - [REQ-108] When the source has a state trigger, the expansion shall recurse
   further into that source until an event trigger is reached.
+
 - [REQ-155] The generator shall detect circular expansion chains (e.g. machine
   A triggers on state of machine B, machine B triggers on state of machine A)
   and raise an error.
+
 - [REQ-109] For state triggers, an additional `Then expect $trigger-result-state-name`
   step shall be emitted between the `When` step and the final `Then
   expect $result-state-name` step, representing the direct result of the
   resolved event.
+
 - [REQ-110] This additional step shall reflect the causal chain: the event
   produced an intermediate state, which triggered the transition, which produced
   the final result.
+
 - [REQ-146] When expansion recurses (state trigger → state trigger → event
   trigger), intermediate `Then` steps shall be emitted in chronological
   causal order: innermost expansion result first, with the top-level result
@@ -686,14 +779,17 @@ Session's result), and `default user identity available` is the top-level
 result (Identity machine's result).
 
 - [REQ-111] Both trigger types shall only determine the `When` step.
+
 - [REQ-112] The final `Then` step shall always come from the transition result
   of the top level transition.
 
 - [REQ-113] When expansion produces multiple paths (multiple source
   transitions), each path shall generate its own scenario, differentiated by a
   `.1`, `.2`, … suffix on the scenario (transition) ID.
+
 - [REQ-029] For state trigger based transitions with multiple expansion paths, a
   path suffix shall be appended to the id.
+
 - [REQ-030] The `→ $result-state-name` part shall stay the same across paths.
 
   ```
@@ -709,13 +805,16 @@ result (Identity machine's result).
 - [REQ-114] The `Given` precondition steps for an expanded scenario shall
   include states from both the source (expanded) transition and the top-level
   transition.
+
 - [REQ-115] The `Given` precondition steps for an expanded scenario shall be
   merged in effective order: default preconditions first, then the combined
   explicit transition states.
+
 - [REQ-116] Duplicate state references (same name and same arguments) shall be
   de-duplicated, keeping the first occurrence.
   - Note it is invalid for references to share the same state name but carry
     different arguments.
+
 - [REQ-118] A source transition shall only be considered a matching expansion
   candidate if its result state arguments match the trigger state arguments of
   the referring transition (the transition being expanded). I.e., the same
@@ -733,10 +832,12 @@ result (Identity machine's result).
   Source transition result is `user authenticated` (no arguments). The source
   does NOT match because the trigger requires an `email` argument that the
   source doesn't provide.
+
 - [REQ-164] A state trigger is unresolvable when no transition result 
   matches, or when candidate source transitions exist by result state name 
   but none satisfies REQ-118's argument-matching rule. Then the generator shall 
   raise an error.
+
 - [REQ-135] The implied initial state rule (REQ-132/REQ-134) shall also apply
   when resolving each source transition found during expansion: a source
   transition's own owning state machine (not the top-level transition's
@@ -749,22 +850,33 @@ result (Identity machine's result).
 
 - [REQ-119] All generated feature files shall follow standard Gherkin
   indentation conventions:
+
 - [REQ-120] The `Feature:` header shall be indented 0 spaces.
+
 - [REQ-121] The feature description (`$overview`) shall be indented 2 spaces.
+
 - [REQ-122] The `Scenario:` / `Scenario Outline:` shall be indented 2 spaces.
+
 - [REQ-123] The step keywords (`Given`, `And`, `When`, `Then`) shall be indented
   4 spaces.
+
 - [REQ-124] The `# Notes:` comment shall be indented 4 spaces.
+
 - [REQ-125] The `Examples:` keyword shall be indented 4 spaces.
+
 - [REQ-126] The examples table rows shall be indented 6 spaces.
 
 Blank lines:
+
 - [REQ-127] One blank line shall be emitted after the `Feature:` block (header +
   optional description) before the first `Scenario:`.
+
 - [REQ-128] One blank line shall be emitted between consecutive `Scenario` /
   `Scenario Outline` blocks.
+
 - [REQ-129] No blank line shall be emitted between the last `Then` step and the
   `# Notes:` comment.
+
 - [REQ-130] No blank line shall be emitted between `Examples:` and its table.
 
 ---
@@ -774,6 +886,7 @@ Blank lines:
 - [REQ-147] The impossible and irrelevant sections in the AST shall be
   treated as informational only and shall be ignored by the feature generator.
   They shall not produce scenarios or affect scenario generation.
+
 - [REQ-149] Metadata fields (source file path, source line number) in the AST
   shall not be used in feature generation.
 

@@ -1,10 +1,10 @@
-# Results from: modifier-errors.test.ts, TST-045: 'different' modifier with fewer than two distinct values raises an error
+# Results from: modifier-errors.test.ts, TST-107: 'different' modifier with only an undefined value found reports it as `<undefined>`
 # State machines:
 #  - name: m
 #    states:
 #      - name: s
 #    dataExampleValues:
-#      - a: only
+#      - a: ""
 #    transitions:
 #      - states:
 #          - name: s
@@ -24,4 +24,4 @@
 #   modifier contains fewer than two distinct values for the referenced attribute. The parser should
 #   validate this precondition.
 
-# Throws: State machine `m`: Anonymous transition: Invalid modifier `different` for attribute `a` on result `s`: expected at least two distinct values but found 1 (`only`)
+# Throws: State machine `m`: Anonymous transition: Invalid modifier `different` for attribute `a` on result `s`: expected at least two distinct values but found 1 (<undefined>)

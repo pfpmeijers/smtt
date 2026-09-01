@@ -1,18 +1,8 @@
-- If no example values defined for an attribute, then assume the "undefined" as its single example value.
-
-- Infer attribute value combinations, when not given by attribute example value table.
-  See e.g. reservation-form.state-machine.md. I.e. now all combinations need to be specified explicitly.
-  This is guarded by validation requirement [REQ-418], which was introduced because otherwise the
-  filtering on values could result in empty scenario example table.
-  So in case of filtering against explicit value, e.g. transition result indicating condition `a` = `foo`,
-  and the attr examples table does not have the referred value, then add a row for it in the scenarios
-  example table. Take the first value for the other attributes - possibly `undefined` when none
-  specified or referred to in another condition explicitly.
-
-- Remove requirement that referred states of other state machines need to exist explicitly in a separate 
+- Remove requirement that referred states of other state machines need to exist explicitly in a separate
   *.state-machine.md file. Instead, when there is no state machine for a state defined explicitly, 
   then the state machine can be considered anonymous. 
 
 - Add a smtt simplify function that generates a minimized state machine md file, based on an fully 
   completed/normalized AST. The minimize function therefore first rigidly validates the input AST.
-   
+
+- Add to spec that example values can be taken from other state machines.
