@@ -1,6 +1,6 @@
 import type { Argument, DefaultPrecondition, StateMachine, StateRef, Transition, Trigger } from "../parse"
 import { argumentsSignature } from "./arguments"
-import { defaultPreconditionToStateRef, impliedInitialStateRefs } from "./givens"
+import { defaultPreconditionToStateRef, impliedInitialStateRefs, unrepresentedDefaultPreconditions } from "./givens"
 import { ownerOfStateName, type StateOwnershipIndex } from "./ownership"
 import { stateRefText, triggerText } from "./text"
 
@@ -124,7 +124,12 @@ export interface ExpansionPath {
 
 /**
  * The `Given` states contributed by an expansion source: its default preconditions, its own
- * states, and its implied initial state (REQ-114/REQ-115/REQ-135).
+ * states, and its implied initial state (REQ-114/REQ-115/REQ-135). A default precondition is
+ * only contributed when the source's own states don't already pin down a state for the same
+ * owning state machine (REQ-036) — otherwise a default precondition can contradict a state the
+ * source explicitly requires for that same state machine (e.g. a source whose own states require
+ * a machine's initial state while its default precondition names a different state of that same
+ * machine).
  *
  * @param source Expansion source transition.
  * @param ownership State ownership index.
@@ -133,8 +138,9 @@ export interface ExpansionPath {
 function sourceGivenStates(source: TaggedTransition, ownership: StateOwnershipIndex): StateRef[] {
     const sourceStates = source.transition.states ?? []
     const sourceDefaultPreconditions = source.stateMachine.defaultPreconditions ?? []
+    const effectiveDefaultPreconditions = unrepresentedDefaultPreconditions(sourceDefaultPreconditions, sourceStates, ownership)
     return [
-        ...sourceDefaultPreconditions.map(defaultPreconditionToStateRef),
+        ...effectiveDefaultPreconditions.map(defaultPreconditionToStateRef),
         ...sourceStates,
         ...impliedInitialStateRefs(sourceStates, sourceDefaultPreconditions, source.stateMachine, ownership),
     ]
@@ -358,7 +364,7 @@ export function hasUnresolvableStateTrigger(
     if (sources.length === 0) return true
 
     return sources.some((source) => {
-        visited.add(source.transition)
-        return hasUnresolvableStateTrigger(source.transition, taggedTransitions, visited, depth + 1)
+        const branchVisited = new Set(visited).add(source.transition)
+        return hasUnresolvableStateTrigger(source.transition, taggedTransitions, branchVisited, depth + 1)
     })
 }

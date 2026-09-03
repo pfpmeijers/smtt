@@ -108,6 +108,61 @@ export function defaultPreconditionToStateRef(precondition: DefaultPrecondition)
 }
 
 /**
+ * Default preconditions whose owning state machine is not already pinned down by one of
+ * `representedStates` (REQ-036): a default precondition only fills in a state machine that
+ * nothing else already speaks for. Applying this consistently wherever default preconditions are
+ * injected prevents a default from contradicting a state already established for the same state
+ * machine by other means (e.g. an explicit state on a state-trigger expansion source).
+ *
+ * @param defaultPreconditions Default preconditions to filter.
+ * @param representedStates States that already pin down their owning state machines.
+ * @param ownership State ownership index.
+ * @returns The default preconditions not already represented.
+ */
+export function unrepresentedDefaultPreconditions(
+    defaultPreconditions: DefaultPrecondition[],
+    representedStates: StateRef[],
+    ownership: StateOwnershipIndex,
+): DefaultPrecondition[] {
+    const representedStateMachines = new Set<string>()
+    for (const stateRef of representedStates) {
+        const owner = ownerOfStateRef(stateRef, ownership)
+        if (owner) representedStateMachines.add(owner)
+    }
+    return defaultPreconditions.filter((precondition) => {
+        const owner = ownerOfStateName(precondition.state, ownership)
+        return !(owner && representedStateMachines.has(owner))
+    })
+}
+
+/**
+ * Whether a transition's own precondition state names a different state than an expansion
+ * source has already injected for the same owning state machine — e.g. the transition's own
+ * state requires a machine's state directly, while a state-trigger expansion source establishes
+ * that same machine's *initial* state and reaches the required one only as an intermediate
+ * result partway through the chain. Same-name state references (regardless of arguments) are not
+ * a conflict: a more specific reference (e.g. carrying an attribute) alongside a plainer injected
+ * one for the same state is additional detail, not a contradiction.
+ *
+ * @param ownState Transition's own precondition state to check.
+ * @param injectedStates States injected by the expansion path.
+ * @param ownership State ownership index.
+ * @returns Whether `ownState` conflicts with an injected state of the same owning state machine.
+ */
+function conflictsWithInjectedState(
+    ownState: StateRef,
+    injectedStates: StateRef[],
+    ownership: StateOwnershipIndex,
+): boolean {
+    const owner = ownerOfStateRef(ownState, ownership)
+    if (!owner) return false
+    return injectedStates.some((injected) =>
+        ownerOfStateRef(injected, ownership) === owner
+        && injected.name.toLowerCase() !== ownState.name.toLowerCase(),
+    )
+}
+
+/**
  * Ordered list of effective `Given` state references of a transition (REQ-035/REQ-115):
  * injected default preconditions first, then the states injected by expansion sources, then
  * the transition's own explicit states, then the implied initial state.
@@ -115,6 +170,13 @@ export function defaultPreconditionToStateRef(precondition: DefaultPrecondition)
  * A default precondition is only injected when no other effective state belongs to the same
  * owning state machine (REQ-036). Duplicate references are removed, keeping the first
  * occurrence (REQ-116).
+ *
+ * A transition's own explicit state is dropped when it conflicts with a state already injected
+ * by the expansion path for the same owning state machine (REQ-114): the injected state reflects
+ * that machine's actual starting state along the causal chain the scenario walks through, so a
+ * differently named own precondition for the same machine would otherwise assert a contradictory
+ * starting state (e.g. a machine required present while the chain that reaches the trigger starts
+ * from that machine being absent).
  *
  * @param transition Transition to build the `Given` list for.
  * @param defaultPreconditions Default preconditions of the rendering state machine.
@@ -130,21 +192,18 @@ export function buildEffectiveGivens(
     stateMachine: StateMachine,
     injectedStates: StateRef[] = [],
 ): StateRef[] {
-    const transitionStates = transition.states ?? []
-    const impliedStates = impliedInitialStateRefs(transitionStates, defaultPreconditions, stateMachine, ownership)
+    const declaredStates = transition.states ?? []
+    const transitionStates = declaredStates.filter(
+        (stateRef) => !conflictsWithInjectedState(stateRef, injectedStates, ownership),
+    )
+    // The implied-initial-state fallback is decided against the transition's originally declared
+    // states, not the conflict-filtered ones: a declared own precondition dropped above for
+    // conflicting with the expansion path still counts as "already has an own precondition state"
+    // (REQ-132) — otherwise the fallback would blindly re-add that very state by name.
+    const impliedStates = impliedInitialStateRefs(declaredStates, defaultPreconditions, stateMachine, ownership)
     const combinedStates = [...injectedStates, ...transitionStates, ...impliedStates]
 
-    const representedStateMachines = new Set<string>()
-    for (const stateRef of combinedStates) {
-        const owner = ownerOfStateRef(stateRef, ownership)
-        if (owner) representedStateMachines.add(owner)
-    }
-
-    const injectedDefaults = defaultPreconditions
-        .filter((precondition) => {
-            const owner = ownerOfStateName(precondition.state, ownership)
-            return !(owner && representedStateMachines.has(owner))
-        })
+    const injectedDefaults = unrepresentedDefaultPreconditions(defaultPreconditions, combinedStates, ownership)
         .map(defaultPreconditionToStateRef)
 
     return dedupeStateRefs([...injectedDefaults, ...combinedStates])
