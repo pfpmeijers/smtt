@@ -5,7 +5,7 @@
  *   tsx smtt.ts parse [--input-dir <dir>] [--ast-file <file>] [--strict]
  *   tsx smtt.ts infer [--input-dir <dir>] [--ast-file <file>] [--strict]
  *   tsx smtt.ts analyze [--input-dir <dir>] [--output-file <file>] [--max-states <n>] [--strict]
- *   tsx smtt.ts generate [--input-dir <dir>] [--ast-file <file>] [--output-dir <dir>]
+ *   tsx smtt.ts generate [--input-dir <dir>] [--ast-file <file>] [--output-dir <dir>] [--debug]
  *   tsx smtt.ts renumber [--input-dir <dir>]
  *
  * Relative paths are resolved from `process.cwd()`.
@@ -102,9 +102,10 @@ function inferCli(subArgs: string[]): void {
 
 function generateCli(subArgs: string[]): void {
     const { astFile, outputDir } = resolveCliPaths(subArgs, "generate")
+    const debug = subArgs.includes("--debug")
 
     parseCli(subArgs)
-    generate(astFile, outputDir)
+    generate(astFile, outputDir, { debug })
 }
 
 function analyzeCli(subArgs: string[]): void {
@@ -232,7 +233,7 @@ function printAnalyzeHelp(): void {
 }
 
 function printGenerateHelp(): void {
-    console.log("Usage: tsx smtt.ts generate [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--output-dir OUTPUT_DIR]")
+    console.log("Usage: tsx smtt.ts generate [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--output-dir OUTPUT_DIR] [--debug]")
     console.log("")
     console.log("Runs `parse` first, then generates:")
     console.log("  <output-dir>/features/    One `.feature` file per state machine (always overwritten).")
@@ -241,13 +242,15 @@ function printGenerateHelp(): void {
     console.log("`generate` does not require or consume `impossible.inferred` from `infer`.")
     console.log("")
     console.log("Options:")
-    console.log("  --input-dir INPUT_DIR    Directory searched recursively for `*.state-machine.md` files.")
-    console.log("                           Default: `$CWD/state-machines/`.")
-    console.log("  --ast-file AST_FILE      Intermediate AST JSON file written by `parse` and read by `generate`.")
-    console.log("                           Default: `OUTPUT_DIR/state-machines.json`.")
-    console.log("                       Relative paths are resolved from the current directory.")
+    console.log("  --input-dir INPUT_DIR     Directory searched recursively for `*.state-machine.md` files.")
+    console.log("                            Default: `$CWD/state-machines/`.")
+    console.log("  --ast-file AST_FILE       Intermediate AST JSON file written by `parse` and read by `generate`.")
+    console.log("                            Default: `OUTPUT_DIR/state-machines.json`.")
+    console.log("                            Relative paths are resolved from the current directory.")
     console.log("  --output-dir OUTPUT_DIR   Base directory for `features/`, `steps/`, and `fixtures/` output.")
-    console.log("                       Default: current directory.")
+    console.log("                            Default: current directory.")
+    console.log("  --debug                   Write `generate.debug.md` with each processed transition")
+    console.log("                            and its state-trigger expansion tree.")
 }
 
 function printRenumberHelp(): void {
