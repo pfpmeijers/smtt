@@ -154,7 +154,7 @@ StateMachine {
       nl
 
   transitionId
-    = digit+
+    = (~"`" ~pipe ~nl any) (~pipe ~nl any)*
 
   // --- State combinations ---
 

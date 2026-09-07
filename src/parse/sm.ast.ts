@@ -426,8 +426,8 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             }
         },
 
-        transitionId(_chars) {
-            return _chars.sourceString.trim().toLowerCase()
+        transitionId(_firstChar, _remainingChars) {
+            return this.sourceString.trim()
         },
 
         // --- State combinations & references ---

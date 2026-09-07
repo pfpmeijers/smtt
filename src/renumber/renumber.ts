@@ -201,8 +201,7 @@ function renumberFile(stateMachineName: string, sourceFilePath: string, transiti
  * Renumbers all transition rows across all parsed state machine files.
  *
  * Collects all transitions from all state machines, sorts them globally by
- * file path then line number, assigns deterministic IDs (001, 002, etc.),
- * and rewrites each file's transitions with these IDs.
+ * file path then line number, assigns deterministic numeric string identifiers, and rewrites each file's transitions with these IDs.
  *
  * @param inputDir Directory containing state machine files to process.
  */

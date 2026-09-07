@@ -157,8 +157,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[0-9]+$",
-          "description": "Unique numeric identifier for this transition (e.g. '123'). Optional in test fixtures; assigned by the parser or renumber command when missing."
+          "description": "Unique string identifier for this transition (e.g. '001', 'T01a'). Optional in test fixtures; assigned by the parser or renumber command when missing."
         },
         "states": {
           "type": "array",

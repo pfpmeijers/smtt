@@ -209,7 +209,7 @@ export interface Condition1 {
  */
 export interface Transition {
   /**
-   * Unique numeric identifier for this transition (e.g. '123'). Optional in test fixtures; assigned by the parser or renumber command when missing.
+   * Unique string identifier for this transition (e.g. '001', 'T01a'). Optional in test fixtures; assigned by the parser or renumber command when missing.
    */
   id?: string;
   /**

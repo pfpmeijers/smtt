@@ -17,45 +17,13 @@ function sortedByPattern(steps: Step[]): Step[] {
 }
 
 /**
- * Parse the numeric portion of a transition id.
- *
- * @param transitionId Transition id to parse.
- * @returns Numeric id, or `null` when the id is not numbered.
- */
-function parseTransitionIdNumber(transitionId: string): number | null {
-    const match = transitionId.match(/^#(\d+)$/)
-    if (match === null) return null
-    return Number(match[1])
-}
-
-/**
- * Compare transition ids, preferring numeric order when possible.
- *
- * @param leftTransitionId Left transition id.
- * @param rightTransitionId Right transition id.
- * @returns Comparison result for sorting.
- */
-function compareTransitionIds(leftTransitionId: string, rightTransitionId: string): number {
-    const leftNumericId = parseTransitionIdNumber(leftTransitionId)
-    const rightNumericId = parseTransitionIdNumber(rightTransitionId)
-
-    if (leftNumericId !== null && rightNumericId !== null) {
-        return leftNumericId - rightNumericId
-    }
-    if (leftNumericId !== null) return -1
-    if (rightNumericId !== null) return 1
-    return leftTransitionId.localeCompare(rightTransitionId)
-}
-
-/**
  * Remove duplicate transition ids and sort them deterministically.
  *
  * @param transitionIds Transition ids to normalize.
  * @returns Deduplicated and sorted ids.
  */
 function uniqueSortedTransitionIds(transitionIds: string[]): string[] {
-    const uniqueTransitionIds = [...new Set(transitionIds)]
-    return uniqueTransitionIds.sort(compareTransitionIds)
+    return [...new Set(transitionIds)].sort()
 }
 
 /**

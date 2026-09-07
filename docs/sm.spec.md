@@ -235,8 +235,8 @@ unless its `State` cell already mentions any user session state.
 ### Transition rules
 
 - **Format**: Use a Markdown table with columns: 
-  - **#** (optional): An optional unique number (identifier) for the transition 
-    accross all state machines, e.g., `001`.
+  - **#** (optional): An optional unique string identifier for the transition 
+    accross all state machines, e.g., `001`, `T01a`.
   - **States**: The combined state: all precondition states (external 
     state machines) and the state machine's own precondition state, separated 
     by `,`. 
