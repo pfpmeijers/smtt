@@ -14,14 +14,37 @@ import { fileURLToPath } from "url"
 import { grammar, Grammar } from "ohm-js"
 
 import { createSemantics, saveStateMachines } from "./sm.ast"
-import type { StateMachine, Trigger } from "./sm.ast.d"
-import { completeStateMachines } from "./complete"
+import type { Argument, Condition, StateMachine, Trigger } from "./sm.ast.d"
+import { collectUsedAttributeNames, completeStateMachines } from "./complete"
 import { validateStateMachines } from "./validate"
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
+const projectRoot = path.resolve(currentDir, "../..")
 const grammarSource = fs.readFileSync(path.resolve(currentDir, "sm.ohm"), "utf-8")
 const stateMachineGrammar: Grammar = grammar(grammarSource)
 const semantics = createSemantics(stateMachineGrammar)
+
+/**
+ * Converts an absolute or relative file path into a path relative to the
+ * project root, prefixed with the project root's directory name so the
+ * result unambiguously identifies the project (e.g. `smtt/src/...`).
+ *
+ * @param filePath The file path to convert.
+ */
+function toProjectRelativePath(filePath: string): string {
+    const relativePath = path.relative(projectRoot, path.resolve(filePath))
+    return [path.basename(projectRoot), relativePath].join("/").split(path.sep).join("/")
+}
+
+/**
+ * Resolves a project-root-relative path (as produced by `toProjectRelativePath`,
+ * e.g. `smtt/src/...`) back into an absolute filesystem path.
+ *
+ * @param projectRelativePath The project-relative path to resolve.
+ */
+export function resolveProjectRelativePath(projectRelativePath: string): string {
+    return path.resolve(path.dirname(projectRoot), projectRelativePath)
+}
 
 /**
  * Creates a parse error with a formatted message.
@@ -69,6 +92,73 @@ function classifyTriggers(stateMachines: StateMachine[]): void {
         }
         for (const entry of machine.irrelevant ?? []) {
             classifyOne(entry.trigger)
+        }
+    }
+}
+
+/**
+ * Marks `condition.value` as an attribute reference in place when it names another attribute
+ * already registered in `registeredAttributeNames`, mirroring `classifyTriggers`'s event-vs-state
+ * disambiguation: a backticked token is generic until matched against a set of known names.
+ *
+ * Only a single string value is eligible (never an array — `in`/range conditions never reference)
+ * and never an `undefined`/`defined` condition (neither carries a value at all).
+ *
+ * @param condition Condition whose value may be reclassified. Mutated in place.
+ * @param registeredAttributeNames Lower-cased attribute names already known to this machine.
+ */
+function classifyConditionValue(condition: Condition, registeredAttributeNames: ReadonlySet<string>): void {
+    if (typeof condition.value !== "string") return
+    if (registeredAttributeNames.has(condition.value.toLowerCase())) {
+        condition.valueIsReference = true
+    }
+}
+
+/**
+ * Classifies every condition value in every state machine as either a literal or a reference to
+ * another attribute of the same machine, mutating `condition.valueIsReference` in place — the
+ * condition-value analog of `classifyTriggers`'s event-vs-state classification.
+ *
+ * A condition's value is classified as a reference when it case-insensitively matches an attribute
+ * name already registered on its own machine — declared under `## Data` or used anywhere else in
+ * the machine (`collectUsedAttributeNames`) — never a *different* machine's attributes, since
+ * `dataExampleValues` rows (which a reference resolves against at generation time) are always the
+ * owning machine's own.
+ *
+ * Must run after parsing (so every machine's usages are visible) and before `completeStateMachines`
+ * (whose own attribute inference and example-table augmentation must see the classification: a
+ * reference-conditioned result argument is excluded from attribute inference, and a reference value
+ * is excluded from required literal example combinations).
+ *
+ * @param stateMachines Array of parsed state machines to classify. Mutated in place.
+ */
+function classifyConditionValueReferences(stateMachines: StateMachine[]): void {
+    for (const machine of stateMachines) {
+        const registeredAttributeNames = new Set<string>([
+            ...Object.keys(machine.data ?? {}).map((name) => name.toLowerCase()),
+            ...collectUsedAttributeNames(machine),
+        ])
+
+        const classifyArguments = (args: Argument[] | undefined): void => {
+            for (const argument of args ?? []) {
+                if (argument.condition) classifyConditionValue(argument.condition, registeredAttributeNames)
+            }
+        }
+
+        for (const state of machine.states) {
+            for (const implied of state.impliedConditions ?? []) {
+                classifyConditionValue(implied.condition, registeredAttributeNames)
+            }
+        }
+        for (const precondition of machine.defaultPreconditions ?? []) {
+            classifyArguments(precondition.arguments)
+        }
+        for (const transition of machine.transitions ?? []) {
+            for (const stateRef of transition.states ?? []) {
+                classifyArguments(stateRef.arguments)
+            }
+            classifyArguments(transition.trigger.arguments)
+            classifyArguments(transition.result.arguments)
         }
     }
 }
@@ -128,10 +218,11 @@ export function parse(inputDir: string, astFile?: string): StateMachine[] {
     const stateMachines = sourceFiles.map(sourceFile => {
         const source = fs.readFileSync(sourceFile, "utf8")
         const stateMachine = parseSource(source, sourceFile)
-        stateMachine.source = path.resolve(sourceFile)
+        stateMachine.source = toProjectRelativePath(sourceFile)
         return stateMachine
     })
     classifyTriggers(stateMachines)
+    classifyConditionValueReferences(stateMachines)
     // FIXME: Expect a validate-minimal-AST here.
     completeStateMachines(stateMachines)
     validateStateMachines(stateMachines)

@@ -36,12 +36,22 @@ values are only guaranteed once the AST is complete.
 1. Parse markdown → raw AST
 2. Validate raw AST
 3. Classify triggers
-4. Complete AST
+4. Classify condition value references
+5. Complete AST
    a. Infer data attributes from every usage site
    b. Synthesise undefined example rows for attributes with no values
    c. Augment the example table with condition-referenced value combinations
-5. Validate the complete AST
+6. Validate the complete AST
 ```
+
+Step 4 mirrors step 3's disambiguation: a condition value that
+case-insensitively matches an attribute name already registered on its own
+machine (declared under `## Data`, or used anywhere else in the machine) is
+classified as a reference to that attribute (`condition.valueIsReference`)
+rather than a literal — the same "match against known names" approach step 3
+already uses to tell an event trigger apart from a state trigger. It must run
+before step 5, since step 5's own sub-steps (5a, 5c) treat a
+reference-classified condition differently from a literal one.
 
 ## Raw AST validation
 
@@ -83,6 +93,12 @@ unaffected by completion.
 
 - [REQ-416] State-triggers shall not resolve via a cyclic definition.
 
+- [REQ-424] A condition classified as an attribute reference
+  (`condition.valueIsReference`) shall only appear on a result argument's
+  condition. State implied conditions, default-precondition arguments,
+  transition state arguments, and transition trigger arguments reject a
+  reference-classified condition value.
+
 ## Complete AST validation
 
 The following requirements describe the guarantees that hold of the complete
@@ -116,8 +132,11 @@ partially or entirely unspecified.
   names, state implied-condition attribute names, default-precondition
   argument names, and transition state/event-trigger/result argument names.
   State-trigger arguments are excluded because they belong to the triggering
-  machine, not the current one. An attribute declared only through inference
-  carries an empty description.
+  machine, not the current one. A result argument whose condition is an
+  attribute reference (REQ-423/REQ-424) is likewise excluded for that
+  occurrence: its value is never drawn from its own example values, only
+  resolved dynamically from the referenced attribute. An attribute declared
+  only through inference carries an empty description.
 
 - [REQ-420] Every declared data attribute shall have at least one example
   value. When an attribute has no example values, the complete AST shall
@@ -129,4 +148,6 @@ partially or entirely unspecified.
   implied state condition) shall be present among the example values for that
   attribute. When a context (e.g. a single transition) constrains multiple
   attributes at once, each required combination of values across those
-  attributes shall be satisfied by at least one row.
+  attributes shall be satisfied by at least one row. A condition classified as
+  an attribute reference (REQ-423) contributes no required value: it pins no
+  literal, so the referenced attribute name is never mistaken for one.

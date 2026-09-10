@@ -62,6 +62,28 @@ test("[TST-108] → [REQ-169]: Result condition attribute with no other referenc
     assertMatchesReference(stateMachines, feature)
 })
 
+test("[TST-109] → [REQ-423]: Result condition referencing another attribute resolves dynamically per row", () => {
+    const stateMachines: StateMachines = [{
+        name: "m",
+        states: [{name: "s"}],
+        dataExampleValues: [{a: "1"}, {a: "2"}],
+        transitions: [{
+            states: [{name: "s", arguments: [{name: "a"}]}],
+            trigger: {type: "event", name: "e"},
+            result: {name: "s", arguments: [{name: "b", condition: {operator: "=", value: "a", valueIsReference: true}}]},
+            notes: "",
+        }],
+    }]
+    validateStateMachines(stateMachines)
+    const feature = createFeatures(stateMachines)["m"]
+    // `resulting b` tracks each row's own `a` value dynamically, rather than one fixed literal.
+    assertContains(feature,
+        "      | a | resulting b |\n" +
+        "      | 1 | 1           |\n" +
+        "      | 2 | 2           |\n")
+    assertMatchesReference(stateMachines, feature)
+})
+
 test("[TST-086] → [REQ-089]: Result conditions shall be restricted to equality operators only", () => {
     const stateMachines: StateMachines = [{
         name: "m",

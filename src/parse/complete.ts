@@ -25,13 +25,19 @@ import type { Argument, Condition, StateMachine } from "./sm.ast.d"
  * @param condition Condition expression to extract values from.
  * @returns Array of literal string values referenced by the condition.
  *   Returns `[]` for `"undefined"` and `"defined"` operators (neither pins a specific literal
- *   value) nor absent values.
+ *   value) nor absent values. Also returns `[]` when the condition's value is a reference to
+ *   another attribute (`valueIsReference`): a reference doesn't pin a literal value either — its
+ *   value is resolved dynamically at generation time, not drawn from this attribute's own example
+ *   values — so it must not be treated as a required literal combination (REQ-421).
  *   For `"in"` operators, returns all listed values.
  *   For `"in range"` / `"not in range"` operators, returns the two boundary values.
  *   For all other operators, returns a single-element array with the value as a string.
  */
 function extractConditionValues(condition: Condition): string[] {
-    if (condition.operator === "undefined" || condition.operator === "defined" || condition.value === undefined) {
+    if (
+        condition.operator === "undefined" || condition.operator === "defined"
+        || condition.value === undefined || condition.valueIsReference
+    ) {
         return []
     }
     if (Array.isArray(condition.value)) {
@@ -69,10 +75,15 @@ function attributeNamesFromArguments(args: Argument[]): string[] {
  * - `argument.name` from default-precondition arguments, transition state
  *   arguments, trigger arguments, and result arguments.
  *
+ * Also used, before either registered attribute is inferred, as the "registered attribute names"
+ * lookup that `classifyConditionValueReferences` (`parse.ts`) matches condition values against —
+ * safe to call at that point since it never reads condition *values*, only argument/attribute
+ * *names*.
+ *
  * @param stateMachine State machine to scan.
  * @returns Sorted, de-duplicated set of lower-cased attribute names.
  */
-function collectUsedAttributeNames(stateMachine: StateMachine): string[] {
+export function collectUsedAttributeNames(stateMachine: StateMachine): string[] {
     const names = new Set<string>()
 
     // Example-value table column names.
@@ -111,8 +122,13 @@ function collectUsedAttributeNames(stateMachine: StateMachine): string[] {
                 names.add(name)
             }
         }
-        for (const name of attributeNamesFromArguments(transition.result.arguments ?? [])) {
-            names.add(name)
+        // A result argument whose condition is a reference to another attribute is excluded for
+        // the same reason state-trigger arguments are: its value never comes from this attribute's
+        // own example values (it's resolved dynamically from the referenced attribute at
+        // generation time), so this occurrence alone must not force a declaration for it.
+        for (const argument of transition.result.arguments ?? []) {
+            if (argument.condition?.valueIsReference) continue
+            names.add(argument.name.toLowerCase())
         }
     }
 

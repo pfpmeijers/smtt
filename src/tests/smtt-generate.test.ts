@@ -4,7 +4,7 @@ import * as fs from "fs"
 import * as path from "path"
 import { fileURLToPath } from "node:url"
 import { execFileSync } from "child_process"
-import { assertDirectoriesEqual, normalizeSourcePathsInJson } from "./utils/assert"
+import { assertDirectoriesEqual } from "./utils/assert"
 
 // Resolve __dirname for ES modules.
 const __filename = fileURLToPath(import.meta.url)
@@ -23,7 +23,7 @@ describe("SMTT Generate Command", () => {
 	const astFile = path.join(resultsDir, "sm.ast.json")
 	const smttScript = path.resolve(testDir, "../smtt.ts")
 
-	it("generates features, steps, and fixtures from state-machines directory", () => {
+	it("[TST-164]: generates features, steps, and fixtures from state-machines directory", () => {
 		// Ensure results directory exists.
 		if (!fs.existsSync(resultsDir)) {
 			fs.mkdirSync(resultsDir, { recursive: true })
@@ -81,14 +81,7 @@ describe("SMTT Generate Command", () => {
 		const fixtureFiles = fs.readdirSync(fixturesDir).filter(file => file.endsWith(".fixtures.js"))
 		assert.ok(fixtureFiles.length > 0, `Fixture files generated (found ${fixtureFiles.length})`)
 
-		// Normalize absolute `source` paths in AST snapshots before comparison.
-		assertDirectoriesEqual(resultsDir, referencesDir, (relativeFile, content) => {
-			if (relativeFile === "sm.ast.json") {
-				return normalizeSourcePathsInJson(content)
-			}
-
-			return content
-		})
+		assertDirectoriesEqual(resultsDir, referencesDir)
 
 		console.log(`Generated test artifacts: ${featureFiles.length} features, ${stepFiles.length} steps, ${fixtureFiles.length} fixtures`)
 	})

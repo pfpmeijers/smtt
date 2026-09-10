@@ -1,4 +1,4 @@
-import { assertContains, assertNotContains, assertMatchesReference, createFeatures, test, } from "./utils"
+import { assertContains, assertNotContains, assertMatchesReference, assertThrowMatchesReference, createFeatures, test, } from "./utils"
 import { type StateMachines, validateStateMachines } from "../../parse"
 
 test("[TST-069] → [REQ-161]: Expanded state trigger uses the combined data table of the chain", () => {
@@ -69,5 +69,33 @@ test("[TST-070] → [REQ-162]: Conditions across an expansion chain merge as a c
     assertContains(feature, "| 1 |")
     assertNotContains(feature, "| 2 |")
     assertMatchesReference(stateMachines, feature)
+})
+
+test("[TST-110] → [REQ-423]: A reference-valued result condition does not satisfy a state-trigger argument's own condition", () => {
+    const stateMachines: StateMachines = [{
+        name: "m1",
+        states: [{name: "s1"}, {name: "s2"}],
+        dataExampleValues: [{b: "5"}],
+        transitions: [{
+            states: [{name: "s1", arguments: [{name: "b"}]}],
+            trigger: {type: "event", name: "e"},
+            // `a` dynamically tracks `b` — never a fixed literal — so `argumentsMatch` cannot verify
+            // it against the sink's own `a = 5` condition below, and correctly excludes this
+            // candidate (REQ-423) rather than accepting a match it cannot resolve.
+            result: {name: "s2", arguments: [{name: "a", condition: {operator: "=", value: "b", valueIsReference: true}}]},
+        }],
+    }, {
+        name: "m2",
+        states: [{name: "s3"}, {name: "s4"}],
+        transitions: [{
+            states: [{name: "s3"}],
+            trigger: {type: "state", name: "s2", arguments: [{name: "a", condition: {operator: "=", value: "5"}}]},
+            result: {name: "s4"},
+        }],
+    }]
+    assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
+        "State machine `m2`: Anonymous transition has an unresolvable state trigger `s2` — no source transition " +
+        "satisfies the trigger's argument `a` (REQ-118/REQ-164).",
+    )
 })
 

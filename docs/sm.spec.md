@@ -440,6 +440,9 @@ Supported text condition operators:
 - **Empty strings** — Empty backticked strings (`` `` ``) are not allowed.
 - **Text-value character set** — A backticked text value may contain any
   character except a backtick or a line break.
+- **Attribute reference** — A backticked value that matches another declared
+  or inferred data attribute's name is instead an
+  [attribute reference](#attribute-reference-values), not a literal value.
 
 ##### Condition semantics
 
@@ -466,6 +469,45 @@ Examples:
   items.
 - `` `Cart empty`, so `item count` = 0`` — postcondition: the cart is
   empty after the transition.
+
+##### Attribute reference values
+
+A condition's value may name another data attribute of the same state machine
+instead of a literal — the value is then resolved dynamically, from that other
+attribute's own current value, rather than being fixed.
+
+- **Disambiguation** — Exactly as an [event trigger is told apart from a state
+  trigger](#trigger-types): a backticked value is a reference when it matches
+  the name of an attribute already declared under `## Data` or used elsewhere
+  in the same state machine; otherwise it is a literal value.
+- **`Result` cell only** — An attribute reference is only supported on a
+  `Result` cell condition (a postcondition). Using one in a `States` or
+  `Trigger` cell condition is an error: those conditions filter against a
+  fixed value, which a dynamically-resolved reference cannot provide.
+- **Operators** — Only the equality operators (`=`, `as`, and their synonyms)
+  support a reference value, the same restriction already placed on result
+  conditions in general.
+
+Example:
+
+```markdown
+## Data
+
+- `list price`
+- `sale price`
+
+## Transitions
+
+### Rules
+
+| States                              | Trigger         | Result                                           |
+|-------------------------------------|-----------------|--------------------------------------------------|
+| `Painting listed` with `list price` | `Painting sold` | `Painting sold` with `sale price` = `list price` |
+```
+
+After `Painting sold`, `sale price` takes on whatever value `list price`
+currently holds for that scenario — a dynamic postcondition, rather than one
+fixed literal value.
 
 ### Impossible state-trigger combinations
 

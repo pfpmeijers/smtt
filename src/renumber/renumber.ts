@@ -1,6 +1,5 @@
 import * as fs from "fs"
-import * as path from "path"
-import { parse } from "../parse"
+import { parse, resolveProjectRelativePath } from "../parse"
 
 type TransitionTarget = {
     id: string
@@ -216,7 +215,7 @@ export function renumber(inputDir: string): void {
             continue
         }
 
-        const sourceFilePath = path.resolve(stateMachine.source)
+        const sourceFilePath = resolveProjectRelativePath(stateMachine.source)
         const transitions = stateMachine.transitions ?? []
         stateMachineNameByFile.set(sourceFilePath, stateMachine.name)
 

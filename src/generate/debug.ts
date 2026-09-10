@@ -49,12 +49,15 @@ const DETAIL_INDENT = 4
  * Render a value condition as debug text, mirroring the source markdown's own condition syntax
  * (`` `attribute` undefined ``, `` `attribute` = value ``, `` `attribute` as `value` ``, etc.),
  * so a filtered argument's condition is visible in the debug report instead of being silently
- * dropped.
+ * dropped. A reference value (REQ-423) is prefixed with `🔗` so it doesn't read as a literal.
  *
  * @param condition Value condition to render.
  * @returns The rendered condition text, without its surrounding markers.
  */
 function debugConditionText(condition: Condition): string {
+    // REQ-423: render a reference distinctly from a literal, so debug output doesn't read as
+    // though the referenced attribute's *name* were the fixed value.
+    if (condition.valueIsReference) return `${condition.operator} 🔗\`${condition.value}\``
     switch (condition.operator) {
         case "undefined":
             return "undefined"

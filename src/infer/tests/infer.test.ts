@@ -12,7 +12,6 @@ import * as os from "os"
 import * as path from "path"
 import { fileURLToPath } from "url"
 import { parse } from "../../parse"
-import { normalizeSourcePaths } from "../../tests/utils/assert"
 import { infer } from "../infer"
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
@@ -46,7 +45,7 @@ function loadReference(name: string): unknown {
 
 // --- Tests ---
 
-test("inferrer output matches references snapshot for local test state-machines directory", () => {
+test("[TST-162]: inferrer output matches references snapshot for local test state-machines directory", () => {
     const result = runPipeline(TEST_STATE_MACHINES_DIR, "test.state-machines.json")
-    assert.deepStrictEqual(normalizeSourcePaths(result), normalizeSourcePaths(loadReference("test.state-machines.json")))
+    assert.deepStrictEqual(result, loadReference("test.state-machines.json"))
 })

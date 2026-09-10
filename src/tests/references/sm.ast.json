@@ -120,7 +120,7 @@
       },
       "irrelevant": [],
       "initialState": "m1 inactive",
-      "source": "C:\\Users\\pfpme\\WebstormProjects\\smtt\\src\\tests\\state-machines\\m1.state-machine.md"
+      "source": "smtt/src/tests/state-machines/m1.state-machine.md"
     },
     {
       "name": "m2",
@@ -464,7 +464,7 @@
       },
       "irrelevant": [],
       "initialState": "m2 empty",
-      "source": "C:\\Users\\pfpme\\WebstormProjects\\smtt\\src\\tests\\state-machines\\m2.state-machine.md"
+      "source": "smtt/src/tests/state-machines/m2.state-machine.md"
     },
     {
       "name": "m3",
@@ -864,7 +864,7 @@
         }
       ],
       "initialState": "m3 pending",
-      "source": "C:\\Users\\pfpme\\WebstormProjects\\smtt\\src\\tests\\state-machines\\m3.state-machine.md"
+      "source": "smtt/src/tests/state-machines/m3.state-machine.md"
     }
   ]
 }

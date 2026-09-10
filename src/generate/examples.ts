@@ -153,8 +153,16 @@ export interface ExampleColumn {
     sourceContext?: string
     /** Label of the owning transition (e.g. `` transition `019` ``), for error reporting. */
     transitionLabel?: string
-    /** Fixed cell value of a `result-condition` column. */
+    /**
+     * Fixed cell value of a `result-condition` column, or — when `valueIsReference` is set — the
+     * name of the attribute whose row value the cell resolves to dynamically instead.
+     */
     conditionValue?: string
+    /**
+     * Whether `conditionValue` names another attribute to resolve dynamically per row (REQ-423),
+     * rather than being the fixed literal cell value itself.
+     */
+    valueIsReference?: boolean
     /**
      * State machine whose own `dataExampleValues` a `modifier` column resolves against (REQ-168):
      * the machine that declared the modifier argument, which for a state-trigger expansion source
@@ -209,10 +217,11 @@ function argumentGroups(
 }
 
 /**
- * Read the fixed value carried by a result-condition argument.
+ * Read the value carried by a result-condition argument: a fixed literal, or — when the condition
+ * is a reference (REQ-423) — the name of the attribute to resolve dynamically per row instead.
  *
  * @param argument Result argument whose condition value should be extracted.
- * @returns The first condition value, or an empty string when no fixed value is present.
+ * @returns The first condition value, or an empty string when no value is present.
  */
 function resultConditionValue(argument: Argument): string {
     const value = argument.condition?.value
@@ -307,6 +316,7 @@ function buildExampleColumns(groups: ArgumentGroup[]): ExampleColumn[] {
                     name: resultingColumnName(argument.name),
                     sourceName: argument.name,
                     conditionValue: resultConditionValue(argument),
+                    valueIsReference: argument.condition!.valueIsReference,
                 })
             }
         }
@@ -559,7 +569,9 @@ function resolveCellValue(
         case "modifier":
             return resolveModifierValue(stateMachines, stateMachineName, column, row, sourceRowIndex, allRows)
         case "result-condition":
-            return column.conditionValue ?? ""
+            // REQ-423: a reference resolves against this same row's own value for the referenced
+            // attribute, dynamically, rather than the fixed literal carried by a plain condition.
+            return column.valueIsReference ? (row[column.conditionValue ?? ""] ?? "") : (column.conditionValue ?? "")
     }
 }
 

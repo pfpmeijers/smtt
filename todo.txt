@@ -33,16 +33,4 @@
   Tests without requirements:
   Unused test IDs:
 
-- Add "defined" as condition, meaning not undefined.
-
-- Add attr reference as condition value.
-
-  Reuse the existing result-condition mechanism (REQ-088/089, the one that already produces resulting X columns from a literal condition.value), just let condition.value be a reference to another attribute instead of a literal string. No new column kind — resolveCellValue's existing "result-condition" case just needs to resolve dynamically (row[referencedName]) instead of returning the fixed conditionValue.
-
-  Concretely, three changes, not the four I listed before:
-
-  Grammar/AST: a condition value needs to be distinguishable as "reference to attribute X" vs. a literal (e.g. a marker on Condition, or a distinct operator).
-  resolveCellValue (examples.ts:556-557): when the result condition is a reference, return row[referencedName] instead of column.conditionValue.
-  REQ-419 exclusion (complete.ts:113): a result argument whose condition is a reference must be skipped by collectUsedAttributeNames, the same way state-trigger arguments already are — otherwise it's still "declared" by the owning machine and hits the same synthesized-blank trap
-
 - Add validation for duplicate transition ID.

@@ -35,7 +35,7 @@ function copyStateMachines(sourceDir: string, destDir: string): Map<string, stri
 }
 
 describe("renumber", () => {
-    it("adds and rewrites transition IDs in deterministic global order", () => {
+    it("[TST-163]: adds and rewrites transition IDs in deterministic global order", () => {
         const copiedPaths = copyStateMachines(STATE_MACHINES_DIR, RESULTS_DIR)
 
         renumber(RESULTS_DIR)

@@ -2,8 +2,6 @@ import { strict as assert } from "node:assert"
 import * as fs from "fs"
 import * as path from "path"
 
-type ContentNormalizer = (relativeFile: string, content: Buffer) => Buffer
-
 function collectFiles(rootDir: string, currentDir = rootDir, files: string[] = []): string[] {
     for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
         const fullPath = path.join(currentDir, entry.name)
@@ -17,60 +15,12 @@ function collectFiles(rootDir: string, currentDir = rootDir, files: string[] = [
 }
 
 /**
- * Recursively normalize values of `source` properties so snapshots remain stable
- * across different absolute checkout paths.
- *
- * @param value Arbitrary JSON-like value.
- * @returns A structurally equal value with normalized `source` strings.
- */
-export function normalizeSourcePaths<T>(value: T): T {
-    if (Array.isArray(value)) {
-        return value.map(item => normalizeSourcePaths(item)) as T
-    }
-
-    if (value && typeof value === "object") {
-        const entries = Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
-            if (key === "source" && typeof entry === "string") {
-                const normalized = entry
-                    .replace(/^[A-Za-z]:[\\/].*?[\\/]src[\\/]/, "src/")
-                    .replace(/\\/g, "/")
-                return [key, normalized]
-            }
-
-            return [key, normalizeSourcePaths(entry)]
-        })
-
-        return Object.fromEntries(entries) as T
-    }
-
-    return value
-}
-
-/**
- * Normalize serialized JSON by rewriting absolute `source` paths into stable,
- * repository-relative values.
- *
- * @param content File content that should contain valid JSON.
- * @returns Normalized JSON string as UTF-8 `Buffer`.
- */
-export function normalizeSourcePathsInJson(content: Buffer): Buffer {
-    const parsed = JSON.parse(content.toString("utf8"))
-    const normalized = normalizeSourcePaths(parsed)
-    return Buffer.from(`${JSON.stringify(normalized, null, 2)}\n`, "utf8")
-}
-
-/**
  * Assert that two directory trees have identical files and file content.
  *
  * @param actualDir Directory containing generated output.
  * @param expectedDir Directory containing reference output.
- * @param normalizeContent Optional normalizer used before byte comparison.
  */
-export function assertDirectoriesEqual(
-    actualDir: string,
-    expectedDir: string,
-    normalizeContent?: ContentNormalizer,
-): void {
+export function assertDirectoriesEqual(actualDir: string, expectedDir: string): void {
     const actualFiles = collectFiles(actualDir)
     const expectedFiles = collectFiles(expectedDir)
 
@@ -83,14 +33,8 @@ export function assertDirectoriesEqual(
     for (const relativeFile of actualFiles) {
         const rawActualContent = fs.readFileSync(path.join(actualDir, relativeFile))
         const rawExpectedContent = fs.readFileSync(path.join(expectedDir, relativeFile))
-        const actualContent = normalizeContent
-            ? normalizeContent(relativeFile, rawActualContent)
-            : rawActualContent
-        const expectedContent = normalizeContent
-            ? normalizeContent(relativeFile, rawExpectedContent)
-            : rawExpectedContent
-        const normalizedActual = Buffer.from(actualContent.toString("utf8").replace(/\r\n/g, "\n"), "utf8")
-        const normalizedExpected = Buffer.from(expectedContent.toString("utf8").replace(/\r\n/g, "\n"), "utf8")
+        const normalizedActual = Buffer.from(rawActualContent.toString("utf8").replace(/\r\n/g, "\n"), "utf8")
+        const normalizedExpected = Buffer.from(rawExpectedContent.toString("utf8").replace(/\r\n/g, "\n"), "utf8")
         assert.ok(
             normalizedActual.equals(normalizedExpected),
             `File content differs for \`${relativeFile}\` between \`${actualDir}\` and \`${expectedDir}\``,

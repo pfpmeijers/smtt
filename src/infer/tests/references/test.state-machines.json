@@ -101,7 +101,7 @@
       },
       "irrelevant": [],
       "initialState": "device ready",
-      "source": "C:\\Users\\pfpme\\WebstormProjects\\Malerien\\tests\\smtt\\src\\infer\\tests\\state-machines\\device.state-machine.md"
+      "source": "smtt/src/infer/tests/state-machines/device.state-machine.md"
     },
     {
       "name": "mode",
@@ -174,7 +174,7 @@
       },
       "irrelevant": [],
       "initialState": "mode inactive",
-      "source": "C:\\Users\\pfpme\\WebstormProjects\\Malerien\\tests\\smtt\\src\\infer\\tests\\state-machines\\mode.state-machine.md"
+      "source": "smtt/src/infer/tests/state-machines/mode.state-machine.md"
     }
   ]
 }

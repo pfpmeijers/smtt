@@ -16,7 +16,7 @@ import { infer } from "../../infer"
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
 const INFER_TEST_DIR = path.resolve(currentDir, "../../infer/tests/state-machines")
 
-test("analyze: throws error when both astFile and infer options are provided", () => {
+test("[TST-158]: analyze: throws error when both astFile and infer options are provided", () => {
     assert.throws(
         () => {
             analyze(INFER_TEST_DIR, {
@@ -31,7 +31,7 @@ test("analyze: throws error when both astFile and infer options are provided", (
     )
 })
 
-test("analyze without infer: sets defined-only mode and includes warning note in report", () => {
+test("[TST-159]: analyze without infer: sets defined-only mode and includes warning note in report", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "smtt-analyze-test-"))
     const mdOut = path.join(tmpDir, "report-no-infer.md")
 
@@ -54,7 +54,7 @@ test("analyze without infer: sets defined-only mode and includes warning note in
     }
 })
 
-test("analyze with infer: computes inferred impossibilities and suppresses unhandled triggers", () => {
+test("[TST-160]: analyze with infer: computes inferred impossibilities and suppresses unhandled triggers", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "smtt-analyze-test-"))
     const mdOutNoInfer = path.join(tmpDir, "report-no-infer.md")
     const mdOutWithInfer = path.join(tmpDir, "report-infer.md")
@@ -86,7 +86,7 @@ test("analyze with infer: computes inferred impossibilities and suppresses unhan
     }
 })
 
-test("analyze with ast-file: loads pre-inferred impossibilities from AST JSON", () => {
+test("[TST-161]: analyze with ast-file: loads pre-inferred impossibilities from AST JSON", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "smtt-analyze-test-"))
     const astFile = path.join(tmpDir, "state-machines.json")
     const mdOut = path.join(tmpDir, "report-ast.md")

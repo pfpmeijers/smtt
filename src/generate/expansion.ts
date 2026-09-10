@@ -89,6 +89,13 @@ function argumentsMatch(source: Transition, triggerArgs: Argument[] | undefined)
         if (!triggerArg.condition || !resultArg.condition) return true
         if (resultArg.condition.operator === "undefined") return triggerArg.condition.operator === "undefined"
         if (resultArg.condition.operator === "defined") return triggerArg.condition.operator === "defined"
+        // REQ-423: a reference-valued result condition has no row to resolve against yet at this
+        // structural matching stage; `resultArg.condition.value` is then the *referenced attribute's
+        // name*, not a value. Comparing that name against the trigger's own condition (as any other
+        // value would be) is a deliberately conservative choice: it only "matches" in the unlikely
+        // case the name itself happens to satisfy the condition, so a source that cannot be verified
+        // compatible is correctly excluded rather than accepted and left to fail confusingly later
+        // (row-level filtering never resolves a reference — it isn't evaluated for result conditions).
         const value = Array.isArray(resultArg.condition.value) ? resultArg.condition.value[0] : resultArg.condition.value
         return evaluateCondition(value, triggerArg.condition)
     })

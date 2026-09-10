@@ -38,14 +38,14 @@ function buildValidStateMachines(): StateMachine[] {
 }
 
 describe("validateStateMachines business rules", () => {
-    it("accepts a valid AST", () => {
+    it("[TST-111]: accepts a valid AST", () => {
         const stateMachines = buildValidStateMachines()
         stateMachines[0].data = { a1: "", a2: "" }
         stateMachines[1].data = { a1: "", a2: "" }
         assert.doesNotThrow(() => validateStateMachines(stateMachines))
     })
 
-    it("REQ-402: rejects duplicate state names across machines", () => {
+    it("[TST-112] → [REQ-402]: rejects duplicate state names across machines", () => {
         const stateMachines = buildValidStateMachines()
         stateMachines[1].states.push({ name: "s1" })
 
@@ -55,7 +55,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("REQ-403: rejects unknown precondition state references", () => {
+    it("[TST-113] → [REQ-403]: rejects unknown precondition state references", () => {
         const stateMachines = buildValidStateMachines()
         stateMachines[0].transitions?.[0].states?.push({ name: "s9" })
 
@@ -65,7 +65,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("REQ-404: rejects unknown state triggers", () => {
+    it("[TST-114] → [REQ-404]: rejects unknown state triggers", () => {
         const stateMachines = buildValidStateMachines()
         stateMachines[0].transitions = [
             {
@@ -81,7 +81,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("REQ-405: rejects result states that are not owned by the transition machine", () => {
+    it("[TST-115] → [REQ-405]: rejects result states that are not owned by the transition machine", () => {
         const stateMachines = buildValidStateMachines()
         if (stateMachines[0].transitions?.[0]) {
             stateMachines[0].transitions[0].result.name = "s3"
@@ -93,7 +93,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("REQ-406: rejects state triggers that reference own-machine states", () => {
+    it("[TST-116] → [REQ-406]: rejects state triggers that reference own-machine states", () => {
         const stateMachines = buildValidStateMachines()
         stateMachines[0].transitions = [
             {
@@ -109,7 +109,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("REQ-407: rejects duplicate precondition names in one transition", () => {
+    it("[TST-117] → [REQ-407]: rejects duplicate precondition names in one transition", () => {
         const stateMachines = buildValidStateMachines()
         stateMachines[0].transitions = [
             {
@@ -126,7 +126,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("REQ-408: rejects two preconditions from the same owning machine", () => {
+    it("[TST-118] → [REQ-408]: rejects two preconditions from the same owning machine", () => {
         const stateMachines = buildValidStateMachines()
         stateMachines[0].transitions = [
             {
@@ -143,7 +143,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("REQ-412: rejects modifiers without a base reference in the same transition", () => {
+    it("[TST-119] → [REQ-412]: rejects modifiers without a base reference in the same transition", () => {
         const stateMachines = buildValidStateMachines()
         stateMachines[0].transitions = [
             {
@@ -160,7 +160,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("REQ-413: rejects not-like modifiers when value pool has fewer than 2 distinct values", () => {
+    it("[TST-120] → [REQ-413]: rejects not-like modifiers when value pool has fewer than 2 distinct values", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].dataExampleValues = [{ a1: "v1" }]
         stateMachines[1].dataExampleValues = [{ a1: "v1" }]
@@ -183,7 +183,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("REQ-414: rejects incremented-like modifiers when value pool contains non-numeric values", () => {
+    it("[TST-121] → [REQ-414]: rejects incremented-like modifiers when value pool contains non-numeric values", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].dataExampleValues = [{ a2: "1" }, { a2: "x" }]
         stateMachines[1].dataExampleValues = []
@@ -206,7 +206,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("REQ-415: rejects non-equality operators on result argument conditions", () => {
+    it("[TST-122] → [REQ-415]: rejects non-equality operators on result argument conditions", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].transitions = [
             {
@@ -224,7 +224,7 @@ describe("validateStateMachines business rules", () => {
             /Result argument `a2` has a non-equality condition operator `>=`/,
         )
     })
-    it("REQ-417: rejects Example values tables missing columns for declared attributes", () => {
+    it("[TST-123] → [REQ-417]: rejects Example values tables missing columns for declared attributes", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].data = { a1: "", a2: "" }
         stateMachines[0].dataExampleValues = [{ a1: "v1" }]
@@ -235,7 +235,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("REQ-418: accepts valid condition values from dataExampleValues, and undefined operator", () => {
+    it("[TST-124] → [REQ-418]: accepts valid condition values from dataExampleValues, and undefined operator", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].states[0].impliedConditions = [
             { attribute: "a1", condition: { operator: "=", value: "v1" } },
@@ -250,6 +250,32 @@ describe("validateStateMachines business rules", () => {
                 result: { name: "s2", arguments: [{ name: "a1", condition: { operator: "=", value: "v2" } }] },
             },
         ]
+
+        assert.doesNotThrow(() => validateStateMachines(stateMachines))
+    })
+
+    it("[TST-125] → [REQ-424]: rejects an attribute-reference condition on a precondition state argument", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].data = { a1: "", a2: "" }
+        stateMachines[1].data = { a1: "", a2: "" }
+        stateMachines[0].transitions![0].states = [
+            { name: "s3", arguments: [{ name: "a2", condition: { operator: "=", value: "a1", valueIsReference: true } }] },
+        ]
+
+        assert.throws(
+            () => validateStateMachines(stateMachines),
+            /Argument `a2` references attribute `a1`, but attribute references are only supported in transition result argument conditions \(REQ-424\)/,
+        )
+    })
+
+    it("[TST-126] → [REQ-424]: accepts an attribute-reference condition on a result argument", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].data = { a1: "", a2: "" }
+        stateMachines[1].data = { a1: "", a2: "" }
+        stateMachines[0].transitions![0].result = {
+            name: "s2",
+            arguments: [{ name: "a2", condition: { operator: "=", value: "a1", valueIsReference: true } }],
+        }
 
         assert.doesNotThrow(() => validateStateMachines(stateMachines))
     })

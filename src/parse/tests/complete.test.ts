@@ -46,14 +46,14 @@ function makeWithData(): StateMachine {
 // --- Attribute inference ---
 
 describe("completeStateMachines — Step A: attribute inference", () => {
-    it("leaves an empty machine unchanged (no data attributes, no rows)", () => {
+    it("[TST-127]: leaves an empty machine unchanged (no data attributes, no rows)", () => {
         const stateMachines = [makeMinimal()]
         completeStateMachines(stateMachines)
         assert.deepEqual(stateMachines[0].data, {})
         assert.deepEqual(stateMachines[0].dataExampleValues ?? [], [])
     })
 
-    it("infers attributes from dataExampleValues column names", () => {
+    it("[TST-128]: infers attributes from dataExampleValues column names", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -67,7 +67,7 @@ describe("completeStateMachines — Step A: attribute inference", () => {
         assert.ok("a2" in (stateMachines[0].data ?? {}), "`a2` (lowercased) should be inferred")
     })
 
-    it("infers attributes from state implied conditions", () => {
+    it("[TST-129]: infers attributes from state implied conditions", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -85,7 +85,7 @@ describe("completeStateMachines — Step A: attribute inference", () => {
         assert.strictEqual(stateMachines[0].data!["a1"], "", "description should be empty string")
     })
 
-    it("infers attributes from default precondition arguments", () => {
+    it("[TST-130]: infers attributes from default precondition arguments", () => {
         const m2: StateMachine = { name: "m2", states: [{ name: "s3" }], transitions: [] }
         const m1: StateMachine = {
             name: "m1",
@@ -97,7 +97,7 @@ describe("completeStateMachines — Step A: attribute inference", () => {
         assert.ok("a1" in (m1.data ?? {}), "`a1` should be inferred from default precondition argument")
     })
 
-    it("infers attributes from transition state arguments", () => {
+    it("[TST-131]: infers attributes from transition state arguments", () => {
         const m2: StateMachine = { name: "m2", states: [{ name: "s3" }], transitions: [] }
         const m1: StateMachine = {
             name: "m1",
@@ -114,7 +114,7 @@ describe("completeStateMachines — Step A: attribute inference", () => {
         assert.ok("a1" in (m1.data ?? {}), "`a1` should be inferred from transition state argument")
     })
 
-    it("infers attributes from trigger arguments", () => {
+    it("[TST-132]: infers attributes from trigger arguments", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -131,7 +131,7 @@ describe("completeStateMachines — Step A: attribute inference", () => {
         assert.ok("a1" in (stateMachines[0].data ?? {}), "`a1` should be inferred from trigger argument")
     })
 
-    it("infers attributes from result arguments", () => {
+    it("[TST-133]: infers attributes from result arguments", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -148,7 +148,7 @@ describe("completeStateMachines — Step A: attribute inference", () => {
         assert.ok("a1" in (stateMachines[0].data ?? {}), "`a1` should be inferred from result argument")
     })
 
-    it("does not overwrite existing data entries", () => {
+    it("[TST-134]: does not overwrite existing data entries", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -166,7 +166,7 @@ describe("completeStateMachines — Step A: attribute inference", () => {
         assert.strictEqual(stateMachines[0].data!["a1"], "...", "existing description must be preserved")
     })
 
-    it("infers attributes from multiple sources and deduplicates", () => {
+    it("[TST-135]: infers attributes from multiple sources and deduplicates", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -195,7 +195,7 @@ describe("completeStateMachines — Step A: attribute inference", () => {
 // --- Undefined row synthesis ---
 
 describe("completeStateMachines — Step B: undefined row synthesis", () => {
-    it("synthesizes a single all-empty row when the example table is absent", () => {
+    it("[TST-136]: synthesizes a single all-empty row when the example table is absent", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -209,7 +209,7 @@ describe("completeStateMachines — Step B: undefined row synthesis", () => {
         assert.deepEqual(stateMachines[0].dataExampleValues![0], { a1: "", a2: "" })
     })
 
-    it("synthesizes a single all-empty row when dataExampleValues is an empty array", () => {
+    it("[TST-137]: synthesizes a single all-empty row when dataExampleValues is an empty array", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -224,13 +224,13 @@ describe("completeStateMachines — Step B: undefined row synthesis", () => {
         assert.deepEqual(stateMachines[0].dataExampleValues![0], { a1: "" })
     })
 
-    it("does not add a row for a machine that has no data attributes", () => {
+    it("[TST-138]: does not add a row for a machine that has no data attributes", () => {
         const stateMachines = [makeMinimal()]
         completeStateMachines(stateMachines)
         assert.deepEqual(stateMachines[0].dataExampleValues ?? [], [])
     })
 
-    it("back-fills missing attribute columns into existing rows", () => {
+    it("[TST-139]: back-fills missing attribute columns into existing rows", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -244,7 +244,7 @@ describe("completeStateMachines — Step B: undefined row synthesis", () => {
         assert.strictEqual(stateMachines[0].dataExampleValues?.[0].a3, "", "`a3` should be back-filled with \"\"")
     })
 
-    it("infers attributes and then synthesizes the undefined row in one pass", () => {
+    it("[TST-140]: infers attributes and then synthesizes the undefined row in one pass", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -267,7 +267,7 @@ describe("completeStateMachines — Step B: undefined row synthesis", () => {
 // --- Condition-value row augmentation ---
 
 describe("completeStateMachines — Step C: condition-value augmentation", () => {
-    it("REQ-421: synthesizes a row for a missing condition value in a transition state arg", () => {
+    it("[TST-141] → [REQ-421]: synthesizes a row for a missing condition value in a transition state arg", () => {
         const stateMachines = [
             clone(makeWithData()),
         ]
@@ -288,7 +288,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         assert.ok(pool.includes("unknown_val"), "synthesized row must contain the condition value")
     })
 
-    it("REQ-421: synthesizes a row for a missing condition value in a trigger argument", () => {
+    it("[TST-142] → [REQ-421]: synthesizes a row for a missing condition value in a trigger argument", () => {
         const stateMachines = [clone(makeWithData())]
         stateMachines[0].transitions = [
             {
@@ -301,7 +301,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         assert.ok(pool.includes("v1"), "synthesized row must contain the trigger condition value")
     })
 
-    it("REQ-421: synthesizes a row for a missing condition value in a result argument", () => {
+    it("[TST-143] → [REQ-421]: synthesizes a row for a missing condition value in a result argument", () => {
         const stateMachines = [clone(makeWithData())]
         stateMachines[0].transitions = [
             {
@@ -314,7 +314,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         assert.ok(pool.includes("v1"), "synthesized row must contain the result condition value")
     })
 
-    it("REQ-421: synthesizes a row for a missing condition value in a state implied condition", () => {
+    it("[TST-144] → [REQ-421]: synthesizes a row for a missing condition value in a state implied condition", () => {
         const stateMachines = [clone(makeWithData())]
         stateMachines[0].states[0].impliedConditions = [
             { attribute: "a1", condition: { operator: "=", value: "v1" } },
@@ -324,7 +324,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         assert.ok(pool.includes("v1"), "synthesized row must contain the implied condition value")
     })
 
-    it("REQ-421: synthesizes a row for a missing condition value in a default precondition", () => {
+    it("[TST-145] → [REQ-421]: synthesizes a row for a missing condition value in a default precondition", () => {
         const m2: StateMachine = {
             name: "m2",
             states: [{ name: "s3" }],
@@ -347,7 +347,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         assert.ok(m1Pool.includes("v3"), "`m1` synthesized row must contain the default precondition value")
     })
 
-    it("combines multiple conditions in one transition into a single synthesized row", () => {
+    it("[TST-146]: combines multiple conditions in one transition into a single synthesized row", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -378,7 +378,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         assert.ok(original, "original rows must be preserved")
     })
 
-    it("does not add duplicate rows when condition value already exists", () => {
+    it("[TST-147]: does not add duplicate rows when condition value already exists", () => {
         const stateMachines = [clone(makeWithData())]
         stateMachines[0].transitions = [
             {
@@ -399,7 +399,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         )
     })
 
-    it("handles 'in' conditions: synthesizes a row for each missing value", () => {
+    it("[TST-148]: handles 'in' conditions: synthesizes a row for each missing value", () => {
         const stateMachines = [clone(makeWithData())]
         stateMachines[0].transitions = [
             {
@@ -419,7 +419,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         assert.ok(pool.includes("v3"), "v3 must be synthesized")
     })
 
-    it("handles 'in range' conditions: synthesizes rows for both boundary values when missing", () => {
+    it("[TST-149]: handles 'in range' conditions: synthesizes rows for both boundary values when missing", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -444,7 +444,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         assert.ok(pool.includes("99"), "upper boundary 99 must be synthesized")
     })
 
-    it("fills other-attribute columns using first existing row value when synthesising", () => {
+    it("[TST-150]: fills other-attribute columns using first existing row value when synthesising", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -469,7 +469,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         assert.strictEqual(synthesized!["a2"], "v2", "unconstrained attribute `a2` should use first available value")
     })
 
-    it("interaction: empty table + condition value → row with condition value and '' for other attrs", () => {
+    it("[TST-151]: interaction: empty table + condition value → row with condition value and '' for other attrs", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -496,7 +496,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         assert.strictEqual(match!["a2"], "", "`a2` should be '' when the original row has no `a2` value")
     })
 
-    it("interaction: no data section + condition value → attribute is inferred and row is synthesized", () => {
+    it("[TST-152]: interaction: no data section + condition value → attribute is inferred and row is synthesized", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -519,7 +519,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         assert.ok(pool.includes("v1"), "`v1` must be synthesized")
     })
 
-    it("keeps the example table in deterministic order after augmentation", () => {
+    it("[TST-153]: keeps the example table in deterministic order after augmentation", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -542,6 +542,77 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         const values = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
         const sorted = [...values].sort((a, b) => a.localeCompare(b))
         assert.deepEqual(values, sorted, "rows should be sorted alphabetically by attribute value")
+    })
+})
+
+// --- Attribute-reference condition values ---
+
+describe("completeStateMachines — attribute-reference condition values", () => {
+    it("[TST-154] → [REQ-419]: does not register a result argument whose condition references another attribute", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [{ name: "s1" }, { name: "s2" }],
+                data: { a1: "" },
+                dataExampleValues: [{ a1: "v1" }],
+                transitions: [
+                    {
+                        trigger: { type: "event", name: "e1" },
+                        result: {
+                            name: "s2",
+                            arguments: [{ name: "a2", condition: { operator: "=", value: "a1", valueIsReference: true } }],
+                        },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.ok(!("a2" in (stateMachines[0].data ?? {})), "`a2` must not be registered from a reference-only occurrence")
+    })
+
+    it("[TST-155] → [REQ-419]: still registers a reference-conditioned result attribute when it's genuinely used elsewhere", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [{ name: "s1" }, { name: "s2" }],
+                data: { a1: "" },
+                dataExampleValues: [{ a1: "v1" }],
+                transitions: [
+                    {
+                        trigger: { type: "event", name: "e1", arguments: [{ name: "a2" }] },
+                        result: {
+                            name: "s2",
+                            arguments: [{ name: "a2", condition: { operator: "=", value: "a1", valueIsReference: true } }],
+                        },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.ok("a2" in (stateMachines[0].data ?? {}), "`a2` must still be registered via its own trigger-argument usage")
+    })
+
+    it("[TST-156] → [REQ-421]: does not synthesize a row treating the referenced attribute's name as a literal value", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [{ name: "s1" }, { name: "s2" }],
+                data: { a1: "" },
+                dataExampleValues: [{ a1: "v1" }],
+                transitions: [
+                    {
+                        trigger: { type: "event", name: "e1" },
+                        result: {
+                            name: "s2",
+                            arguments: [{ name: "a2", condition: { operator: "=", value: "a1", valueIsReference: true } }],
+                        },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        const pool = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
+        assert.deepEqual(pool, ["v1"], "no row synthesized for a reference's target attribute name")
     })
 })
 

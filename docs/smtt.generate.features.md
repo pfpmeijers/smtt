@@ -761,6 +761,36 @@ Supported operators:
         | 2           |
   ```
 
+- [REQ-423] A result condition's `condition.value` may instead be classified
+  as a reference to another attribute of the same machine
+  (`condition.valueIsReference`, set by the parser's post-parse classification
+  step the same way an event trigger is told apart from a state trigger). The
+  `resulting $attribute-name` column's cell value is then taken from that
+  *row's own value* for the referenced attribute, dynamically, instead of the
+  fixed literal REQ-089 otherwise takes it from.
+
+- Data example table in state machine spec:
+  ```markdown
+    | p  |
+    |----|
+    | 10 |
+    | 20 |
+  ```
+- With `` `x` with `p` `` as the precondition state and `` `q` = `p` `` on the
+  result argument, <br/> (trigger `e`, results in `` x with `q` = `p` ``)<br/>
+  then scenario steps and examples table — each row's `resulting q` tracks
+  that same row's own `p`, not one shared literal:
+  ```gherkin
+    Scenario Outline: [REQ-001] x "<p>" â†’ x "<resulting q>"; when e
+      Given initially x "<p>"
+      When e
+      Then expect x "<resulting q>"
+      Examples:
+        | p  | resulting q |
+        | 10 | 10          |
+        | 20 | 20          |
+  ```
+
 ---
 
 ## State Trigger Expansion

@@ -166,6 +166,7 @@ export function validateStateMachines(data: unknown): void {
     validateModifierBaseReferences(stateMachines)
     validateModifierValuePoolSize(stateMachines)
     validateResultConditionOperators(stateMachines)
+    validateConditionReferenceScope(stateMachines)
 
     // [REQ-163] Business-rule check performed after schema validation
     // succeeds, since it relies on `data` actually conforming to the
@@ -594,6 +595,56 @@ export function validateResultConditionOperators(stateMachines: StateMachine[]):
                     `\`${operator}\`. Only \`=\`, \`as\`, and \`undefined\` are allowed on result arguments.`,
                 )
             }
+        }
+    }
+}
+
+/**
+ * [REQ-424] Restricts attribute-reference condition values (`condition.valueIsReference`) to
+ * result-argument conditions: every other condition site (state implied conditions,
+ * default-precondition arguments, transition state arguments, transition trigger arguments) can
+ * only filter rows against a fixed literal, never resolve dynamically against another attribute's
+ * row value.
+ *
+ * @param stateMachines Parsed state-machine AST nodes.
+ * @returns Nothing. Validation succeeds by not throwing.
+ * @throws Error When a reference-valued condition appears outside a result argument.
+ */
+export function validateConditionReferenceScope(stateMachines: StateMachine[]): void {
+    const rejectReference = (context: string, attributeName: string, condition: Condition | undefined): void => {
+        if (!condition?.valueIsReference) return
+        throw new Error(
+            `${context}: Argument \`${attributeName}\` references attribute \`${condition.value}\`, but attribute ` +
+            `references are only supported in transition result argument conditions (REQ-424).`,
+        )
+    }
+    const rejectReferenceInArguments = (context: string, args: Argument[] | undefined): void => {
+        for (const argument of args ?? []) rejectReference(context, argument.name, argument.condition)
+    }
+
+    for (const stateMachine of stateMachines) {
+        const machineContext = `State machine \`${stateMachine.name}\``
+
+        for (const state of stateMachine.states) {
+            for (const implied of state.impliedConditions ?? []) {
+                rejectReference(
+                    `${machineContext}: State \`${state.name}\` implied condition`, implied.attribute, implied.condition,
+                )
+            }
+        }
+
+        for (const precondition of stateMachine.defaultPreconditions ?? []) {
+            rejectReferenceInArguments(
+                `${machineContext}: Default precondition \`${precondition.state}\``, precondition.arguments,
+            )
+        }
+
+        for (const transition of stateMachine.transitions ?? []) {
+            const transitionContext = formatTransitionContext(stateMachine.name, transition)
+            for (const stateRef of transition.states ?? []) {
+                rejectReferenceInArguments(transitionContext, stateRef.arguments)
+            }
+            rejectReferenceInArguments(transitionContext, transition.trigger.arguments)
         }
     }
 }

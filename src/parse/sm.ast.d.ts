@@ -35,7 +35,7 @@ export interface StateMachine {
    */
   overview?: string | null;
   /**
-   * The absolute path to the source markdown file.
+   * The path to the source markdown file, relative to the project root's parent directory.
    */
   source?: string | null;
   /**
@@ -131,6 +131,10 @@ export interface Condition {
    * The literal value or array of values for the condition. Absent when operator is 'undefined'.
    */
   value?: string | string[];
+  /**
+   * When true, `value` names another data attribute of the same machine whose row value is substituted dynamically at generation time, instead of being a literal. Classified post-parse by matching `value` against the machine's registered attribute names, the same way event vs. state triggers are classified. Only meaningful — and only permitted — on a result argument's condition; every other condition site rejects it (validation).
+   */
+  valueIsReference?: boolean;
 }
 /**
  * A single default precondition state entry, used in the 'Default preconditions:' block of a Transitions section.
@@ -205,6 +209,10 @@ export interface Condition1 {
    * The literal value or array of values for the condition. Absent when operator is 'undefined'.
    */
   value?: string | string[];
+  /**
+   * When true, `value` names another data attribute of the same machine whose row value is substituted dynamically at generation time, instead of being a literal. Classified post-parse by matching `value` against the machine's registered attribute names, the same way event vs. state triggers are classified. Only meaningful — and only permitted — on a result argument's condition; every other condition site rejects it (validation).
+   */
+  valueIsReference?: boolean;
 }
 /**
  * A single transition definition describing how the machine moves between states.

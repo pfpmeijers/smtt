@@ -317,7 +317,7 @@
     defined: []
   irrelevant: []
   initialState: phase one
-  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\smtt\src\parse\tests\state-machines\argument-variations.state-machine.md
+  source: smtt/src/parse/tests/state-machines/argument-variations.state-machine.md
 - name: comments machine
   states:
     - name: idling
@@ -351,7 +351,55 @@
     defined: []
   irrelevant: []
   initialState: idling
-  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\smtt\src\parse\tests\state-machines\comments.state-machine.md
+  source: smtt/src/parse/tests/state-machines/comments.state-machine.md
+- name: condition reference
+  overview: "Exercises attribute-reference condition values on a result argument:
+    a value that matches another registered attribute name is classified as a
+    reference to that attribute, dynamically resolved per row, instead of a
+    literal."
+  states:
+    - name: painting listed
+      description: The painting has a list price but no sale price yet.
+    - name: painting sold
+      description: The painting has been sold.
+  data:
+    list price: The painting's asking price.
+    note: Free-text annotation, unrelated to any attribute name.
+  dataExampleValues:
+    - list price: "10"
+      note: default
+    - list price: "20"
+      note: default
+    - list price: "10"
+      note: archived
+  defaultPreconditions: []
+  transitions:
+    - states:
+        - name: painting listed
+          arguments:
+            - qualifier: with
+              name: list price
+      trigger:
+        name: sale confirmed
+        type: event
+      result:
+        name: painting sold
+        arguments:
+          - qualifier: with
+            name: sale price
+            condition:
+              operator: =
+              value: list price
+              valueIsReference: true
+          - name: note
+            condition:
+              operator: as
+              value: archived
+  impossible:
+    defined: []
+  irrelevant: []
+  initialState: painting listed
+  source: smtt/src/parse/tests/state-machines/condition-reference.state-machine.md
 - name: minimal machine
   states:
     - name: idle
@@ -370,7 +418,7 @@
   impossible:
     defined: []
   irrelevant: []
-  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\smtt\src\parse\tests\state-machines\minimal.state-machine.md
+  source: smtt/src/parse/tests/state-machines/minimal.state-machine.md
 - name: note variations machine
   overview: This state machine validates layout-oriented combinations. It includes
     notes subsections and plain trailing notes. Dependencies are intentionally
@@ -416,7 +464,7 @@
     defined: []
   irrelevant: []
   initialState: to be started
-  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\smtt\src\parse\tests\state-machines\note-variations.state-machine.md
+  source: smtt/src/parse/tests/state-machines/note-variations.state-machine.md
 - name: rich sections machine
   overview: This state machine validates dependency entries, data examples, and
     table-based transition constraints.
@@ -567,7 +615,7 @@
         name: check status
         type: event
   initialState: awaiting payment
-  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\smtt\src\parse\tests\state-machines\rich-sections.state-machine.md
+  source: smtt/src/parse/tests/state-machines/rich-sections.state-machine.md
 - name: session
   states:
     - name: session active
@@ -593,4 +641,4 @@
   impossible:
     defined: []
   irrelevant: []
-  source: C:\Users\pfpme\WebstormProjects\Malerien\tests\smtt\src\parse\tests\state-machines\session.state-machine.md
+  source: smtt/src/parse/tests/state-machines/session.state-machine.md

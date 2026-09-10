@@ -7,7 +7,12 @@
  * The grammar performs NO semantic classification: it does not distinguish
  * a machine's own state from a dependency state, a text attribute from a
  * numeric one, or which values belong to which attribute. That alignment is
- * the responsibility of a later post-parse step.
+ * the responsibility of a later post-parse step. This also covers condition
+ * values: a backticked condition value (`attributeValue`'s `string`
+ * alternative) is syntactically identical whether it denotes a literal text
+ * value or a reference to another attribute — post-parse classification
+ * decides which, by matching it against the machine's registered attribute
+ * names, the same way an event trigger is told apart from a state trigger.
  */
 
 StateMachine {
@@ -210,6 +215,9 @@ StateMachine {
   // A condition: an attribute identifier followed by an operator and value(s).
   // Both the attribute and the comparison value(s) are generic tokens; whether
   // the operator/value are valid for the attribute is checked post-parse.
+  // A scalar backticked value may later be classified as a reference to
+  // another attribute rather than a literal (see the header comment); the
+  // grammar itself makes no such distinction.
   conditionalAttributeExpression
     = identifier rangeOperator literal<"["> attributeValue literal<","> attributeValue literal<"]"> -- range
     | identifier setCompare literal<"("> attributeValue (comma attributeValue)* literal<")">        -- set
