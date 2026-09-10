@@ -4,9 +4,11 @@ import type { DefaultPrecondition, StateMachine, StateRef, Transition } from "..
 import {
     collectChainFilterConditions,
     collectImpliedFilterConditions,
+    describeFilterCondition,
     type FilterCondition,
 } from "./conditions"
 import {
+    applyAttributeAliases,
     buildTaggedTransitions,
     collectContributingStateMachineNames,
     expandStateTrigger,
@@ -15,7 +17,7 @@ import {
     type TaggedTransition,
 } from "./expansion"
 import {
-    collectExampleColumns,
+    collectPathExampleColumns,
     describeEmptyExampleValues,
     filterRows,
     formatExamplesTable,
@@ -76,22 +78,32 @@ interface RenderContext {
 /**
  * Build the `Examples:` block of a transition (REQ-063).
  *
+ * Scoped to a single expansion path (REQ-170/REQ-171): the contributing state machines and row
+ * filters are drawn only from `path`'s own `sourceChain`, not from every sibling path's resolved
+ * source — a condition that only holds for one alternative causal explanation of the trigger (e.g.
+ * one candidate source requiring an attribute to be undefined) must not empty out the table for a
+ * sibling scenario that resolved through a different, unrelated source.
+ *
  * @param context Rendering context for the owning state machine.
  * @param transition Transition being rendered.
  * @param columns Examples columns for the transition.
+ * @param path Expansion path the table is being built for.
  * @returns The rendered table, or `null` when the transition's state trigger is unresolvable.
  *   The dedicated REQ-164 error is then raised while rendering the scenario itself, instead of
  *   a possibly unrelated missing-example-values error here.
  * @throws Error When the contributing state machines define no example values (REQ-157/REQ-163), or
  *   when all rows are filtered out (REQ-100).
  */
-function buildExamplesTable(context: RenderContext, transition: Transition, columns: ExampleColumn[]): string | null {
+function buildExamplesTable(
+    context: RenderContext,
+    transition: Transition,
+    columns: ExampleColumn[],
+    path: ExpansionPath,
+): string | null {
     const { stateMachine, defaultPreconditions, ownership, taggedTransitions, stateMachines, impliedIndex } = context
-    if (hasUnresolvableStateTrigger(transition, taggedTransitions)) return null
+    if (hasUnresolvableStateTrigger(transition, taggedTransitions, ownership)) return null
 
-    const contributingStateMachines = collectContributingStateMachineNames(
-        stateMachine, transition, defaultPreconditions, ownership, taggedTransitions,
-    )
+    const contributingStateMachines = collectContributingStateMachineNames(stateMachine, path.sourceChain)
     const exampleValues = mergeExampleValues(stateMachines, contributingStateMachines)
     if (exampleValues.length === 0) {
         throw new Error(
@@ -103,16 +115,31 @@ function buildExamplesTable(context: RenderContext, transition: Transition, colu
 
     const availableAttributes = new Set(Object.keys(exampleValues[0]))
     const filters: FilterCondition[] = [
-        ...collectChainFilterConditions(stateMachine.name, transition, taggedTransitions),
+        ...collectChainFilterConditions(stateMachine.name, transition, path.sourceChain),
         ...collectImpliedFilterConditions(
             stateMachine, transition, defaultPreconditions, ownership, impliedIndex, availableAttributes,
+            path.injectedGivenStates,
         ),
     ]
     const rows = filterRows(stateMachines, stateMachine.name, exampleValues, exampleValues, filters)
     if (rows.length === 0) {
+        const chainSuffix = path.sourceChain.length === 0 ? "" : ` (resolved via ${
+            [`\`${stateMachine.name}\`#${transition.id ?? "?"}`, ...[...path.sourceChain].reverse().map(
+                (step) => `\`${step.stateMachineName}\`#${step.transition.id ?? "?"}`,
+            )].join(" ← ")
+        })`
+        const sampleRows = exampleValues.slice(0, 3).map((row) =>
+            `{ ${Object.entries(row).map(([key, value]) => `${key}=${value === "" ? "<empty>" : value}`).join(", ")} }`,
+        ).join(", ")
+        const moreRowsSuffix = exampleValues.length > 3 ? `, … (${exampleValues.length} total)` : ""
+        const filterDescriptions = filters.length === 0
+            ? "  (no filters — every candidate row was still empty)"
+            : filters.map((filter) => `  - ${describeFilterCondition(filter)}`).join("\n")
         throw new Error(
-            `State machine \`${stateMachine.name}\`: ` +
-            `Empty examples table for ${transitionDescription(transition).toLowerCase()}`,
+            `State machine \`${stateMachine.name}\`: Empty examples table for ` +
+            `${transitionDescription(transition).toLowerCase()}${chainSuffix}.\n` +
+            `${exampleValues.length} candidate row(s) available: ${sampleRows}${moreRowsSuffix}.\n` +
+            `No row satisfied every filter:\n${filterDescriptions}`,
         )
     }
     return formatExamplesTable(stateMachines, stateMachine.name, columns, rows, exampleValues)
@@ -137,6 +164,8 @@ function resolveExpansionPaths(context: RenderContext, transition: Transition): 
         intermediateThenTexts: [],
         intermediateThenOwners: [],
         injectedGivenStates: [],
+        sourceChain: [],
+        callerAliases: new Map(),
     }]
 }
 
@@ -201,27 +230,33 @@ function buildScenarioSteps(
 }
 
 /**
- * Render all scenarios of a transition: one per expansion path (REQ-113).
+ * Render all scenarios of a transition: one per expansion path (REQ-113), each with its own
+ * `Examples:` table scoped to that path's own chain of expansion sources (REQ-170/REQ-171) — a
+ * sibling path's source argument never leaks a column into a scenario that doesn't reference it.
+ * The transition's own trigger/result arguments are rewritten per the path's `callerAliases`
+ * (REQ-422) before rendering, so a plain trigger matched against a modified source result (or vice
+ * versa) renders and resolves under one consistent designation instead of the transition's own
+ * declared (and possibly stale) modifier.
  *
  * @param context Rendering context for the owning state machine.
  * @param transition Transition being rendered.
- * @param examplesTable Rendered `Examples:` block, or `null` for a plain scenario.
- * @param isOutline Whether the transition references arguments (REQ-047).
  * @returns One rendered scenario block per expansion path.
  */
-function renderScenarios(
-    context: RenderContext,
-    transition: Transition,
-    examplesTable: string | null,
-    isOutline: boolean,
-): string[] {
+function renderScenarios(context: RenderContext, transition: Transition): string[] {
     const { stateMachine, defaultPreconditions, ownership } = context
     const expansionPaths = resolveExpansionPaths(context, transition)
-    const keyword = isOutline ? "Scenario Outline" : "Scenario"
 
     return expansionPaths.map((path, pathIndex) => {
+        const aliasedTransition = applyAttributeAliases(transition, path.callerAliases)
+        const columns = collectPathExampleColumns(
+            stateMachine.name, defaultPreconditions, aliasedTransition, path.sourceChain,
+        )
+        const isOutline = columns.length > 0
+        const examplesTable = isOutline ? buildExamplesTable(context, aliasedTransition, columns, path) : null
+        const keyword = isOutline ? "Scenario Outline" : "Scenario"
+
         const effectiveGivens = buildEffectiveGivens(
-            transition, defaultPreconditions, ownership, stateMachine, path.injectedGivenStates,
+            aliasedTransition, defaultPreconditions, ownership, stateMachine, path.injectedGivenStates,
         )
         const ownGiven = effectiveGivens.find(
             (stateRef) => ownerOfStateRef(stateRef, ownership) === stateMachine.name,
@@ -230,10 +265,10 @@ function renderScenarios(
         const idSuffix = expansionPaths.length > 1 ? `.${pathIndex + 1}` : ""
 
         const lines = [
-            buildScenarioLabel(stateMachine.name, transition, keyword, ownGiven, contextGivens, idSuffix),
-            ...buildScenarioSteps(stateMachine.name, transition, path, effectiveGivens),
+            buildScenarioLabel(stateMachine.name, aliasedTransition, keyword, ownGiven, contextGivens, idSuffix),
+            ...buildScenarioSteps(stateMachine.name, aliasedTransition, path, effectiveGivens),
         ]
-        if (transition.notes) lines.push(`    # Notes: ${transition.notes}`)
+        if (aliasedTransition.notes) lines.push(`    # Notes: ${aliasedTransition.notes}`)
         if (examplesTable) lines.push(examplesTable)
         return lines.join("\n")
     })
@@ -309,7 +344,6 @@ function collectTransitionSteps(
     taggedTransitions: ReturnType<typeof buildTaggedTransitions>,
     stateMachineData: Map<string, Step[]>,
 ): void {
-    const exampleColumns = collectExampleColumns(stateMachine.name, defaultPreconditions, transition)
     const expansionPaths = transition.trigger.type === "state"
         ? expandStateTrigger(transition.trigger, ownership, taggedTransitions, transition)
         : [{
@@ -318,9 +352,16 @@ function collectTransitionSteps(
             intermediateThenTexts: [],
             intermediateThenOwners: [],
             injectedGivenStates: [],
+            sourceChain: [],
         }]
 
     for (const expansionPath of expansionPaths) {
+        // Columns are specific to this one path's own chain (REQ-170/REQ-171): a modifier or
+        // base attribute declared only on a sibling path's source must not leak a param into
+        // this path's steps.
+        const exampleColumns = collectPathExampleColumns(
+            stateMachine.name, defaultPreconditions, transition, expansionPath.sourceChain,
+        )
         const effectiveGivens = buildEffectiveGivens(
             transition,
             defaultPreconditions,
@@ -399,10 +440,7 @@ function renderFeatureHeader(stateMachine: StateMachine): string {
 function renderFeatureFile(context: RenderContext): string {
     const scenarioBlocks: string[] = []
     for (const transition of context.stateMachine.transitions ?? []) {
-        const columns = collectExampleColumns(context.stateMachine.name, context.defaultPreconditions, transition)
-        const isOutline = columns.length > 0
-        const examplesTable = isOutline ? buildExamplesTable(context, transition, columns) : null
-        scenarioBlocks.push(...renderScenarios(context, transition, examplesTable, isOutline))
+        scenarioBlocks.push(...renderScenarios(context, transition))
     }
 
     const parts = [renderFeatureHeader(context.stateMachine), ""]

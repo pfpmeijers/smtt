@@ -1,6 +1,7 @@
 import type { Argument, DefaultPrecondition, StateMachine, Transition } from "../parse"
 import { canonicalModifier, DIFFERENT_MODIFIER, modifierColumnName, resultingColumnName } from "./arguments"
 import { type FilterCondition, evaluateCondition, validateResultCondition } from "./conditions"
+import { isAliasedArgument, type ExpansionSourceStep } from "./expansion"
 
 /** One row of example attribute values, keyed by attribute name. */
 export type ExampleRow = Record<string, string>
@@ -154,31 +155,56 @@ export interface ExampleColumn {
     transitionLabel?: string
     /** Fixed cell value of a `result-condition` column. */
     conditionValue?: string
+    /**
+     * State machine whose own `dataExampleValues` a `modifier` column resolves against (REQ-168):
+     * the machine that declared the modifier argument, which for a state-trigger expansion source
+     * (REQ-161) is that source's own machine, not necessarily the transition being rendered.
+     * Falls back to the rendering machine when absent.
+     */
+    poolStateMachineName?: string
+}
+
+/** One argument group scanned for example columns, tagged with its declaring context. */
+interface ArgumentGroup {
+    args: Argument[]
+    isResult: boolean
+    /** Human-readable label (e.g. `` state `X` ``) for use in error messages. */
+    source: string
+    /** State machine that declared this group's arguments — the modifier pool machine (REQ-168). */
+    poolStateMachineName: string
+    /** Transition that declared this group's arguments, for error-message context. */
+    sourceTransition: Transition
 }
 
 /**
- * Collect the argument groups of a transition in the order they are scanned for example columns.
- * Each group carries a human-readable `source` label (e.g. `` state `X` `` or `` result `X` ``)
- * identifying which precondition, trigger, or result the group's arguments were declared on, for
- * use in error messages.
+ * Collect the argument groups of a single transition (not following any state-trigger
+ * expansion) in the order they are scanned for example columns. Each group carries a
+ * human-readable `source` label (e.g. `` state `X` `` or `` result `X` ``) identifying which
+ * precondition, trigger, or result the group's arguments were declared on, for use in error
+ * messages, and is tagged with `stateMachineName` as both the declaring machine (for modifier
+ * pool resolution, REQ-168) and `transition` as the declaring transition (for error context).
  *
+ * @param stateMachineName State machine that declares `transition` and `defaultPreconditions`.
  * @param transition Transition being inspected.
  * @param defaultPreconditions Default preconditions attached to the owning state machine.
  * @returns Argument groups in scan order, including result arguments flagged for result processing.
  */
 function argumentGroups(
+    stateMachineName: string,
     transition: Transition,
     defaultPreconditions: DefaultPrecondition[],
-): Array<{ args: Argument[]; isResult: boolean; source: string }> {
+): ArgumentGroup[] {
+    const tag = { poolStateMachineName: stateMachineName, sourceTransition: transition }
     return [
         ...defaultPreconditions.map((precondition) => ({
-            args: precondition.arguments ?? [], isResult: false, source: `default precondition \`${precondition.state}\``,
+            args: precondition.arguments ?? [], isResult: false,
+            source: `default precondition \`${precondition.state}\``, ...tag,
         })),
         ...(transition.states ?? []).map((stateRef) => ({
-            args: stateRef.arguments ?? [], isResult: false, source: `state \`${stateRef.name}\``,
+            args: stateRef.arguments ?? [], isResult: false, source: `state \`${stateRef.name}\``, ...tag,
         })),
-        { args: transition.trigger.arguments ?? [], isResult: false, source: `trigger \`${transition.trigger.name}\`` },
-        { args: transition.result.arguments ?? [], isResult: true, source: `result \`${transition.result.name}\`` },
+        { args: transition.trigger.arguments ?? [], isResult: false, source: `trigger \`${transition.trigger.name}\``, ...tag },
+        { args: transition.result.arguments ?? [], isResult: true, source: `result \`${transition.result.name}\``, ...tag },
     ]
 }
 
@@ -196,25 +222,24 @@ function resultConditionValue(argument: Argument): string {
 /**
  * Derived column of a modifier argument (REQ-076).
  *
- * @param stateMachineName Name of the state machine owning the transition, for error context.
+ * @param group Argument group the modifier argument belongs to (supplies the pool state machine
+ *   and declaring transition for error context, REQ-168).
  * @param argument Modifier argument to turn into a derived column.
- * @param source Human-readable label of the precondition/trigger/result the argument was declared on.
- * @param transition Transition the argument belongs to, for error context.
- * @param baseReferenceNames Base attribute names referenced anywhere in the transition.
+ * @param baseReferenceNames Base attribute names referenced anywhere in the transition (or, for a
+ *   chain-merged column set, anywhere across the whole expansion chain).
  * @returns The derived modifier column.
  * @throws Error When the transition holds no base references for the modified attribute (REQ-136).
  */
 function modifierColumn(
-    stateMachineName: string,
+    group: ArgumentGroup,
     argument: Argument,
-    source: string,
-    transition: Transition,
     baseReferenceNames: ReadonlySet<string>,
 ): ExampleColumn {
-    const transitionLabel = transitionDescription(transition)
+    const { poolStateMachineName, sourceTransition, source } = group
+    const transitionLabel = transitionDescription(sourceTransition)
     if (!baseReferenceNames.has(argument.name)) {
         throw new Error(
-            `State machine \`${stateMachineName}\`: ${transitionLabel}: Invalid modifier \`${argument.modifier}\` ` +
+            `State machine \`${poolStateMachineName}\`: ${transitionLabel}: Invalid modifier \`${argument.modifier}\` ` +
                 `for attribute \`${argument.name}\` on ${source}: no base reference found in the transition`,
         )
     }
@@ -226,28 +251,23 @@ function modifierColumn(
         sourceModifier: argument.modifier,
         sourceContext: source,
         transitionLabel,
+        poolStateMachineName,
     }
 }
 
 /**
- * Columns of the examples table of a transition: every referenced base attribute in
- * first-encounter order, followed by the derived modifier and result condition columns in
- * their encounter order (REQ-064/REQ-065/REQ-066/REQ-151/REQ-152).
+ * Columns derived from a set of already-collected argument groups: every referenced base
+ * attribute in first-encounter order, followed by the derived modifier and result condition
+ * columns in their encounter order (REQ-064/REQ-065/REQ-066/REQ-151/REQ-152).
  *
- * @param stateMachineName Name of the state machine owning the transition, for error context.
- * @param defaultPreconditions Default preconditions of the owning state machine.
- * @param transition Transition whose examples columns are being collected.
- * @returns The ordered columns; empty when the transition references no arguments at all,
- *   in which case a plain `Scenario` is rendered instead of a `Scenario Outline` (REQ-047).
- * @throws Error When a modifier argument has no base references in the transition (REQ-136),
- *   or when a result condition uses a non-equality operator (REQ-089).
+ * @param groups Argument groups in scan order (REQ-064), e.g. from `argumentGroups` for a single
+ *   transition or `collectChainArgumentGroups` for a whole expansion chain (REQ-161).
+ * @returns The ordered columns; empty when no group references any argument at all, in which
+ *   case a plain `Scenario` is rendered instead of a `Scenario Outline` (REQ-047).
+ * @throws Error When a modifier argument has no base references among `groups` (REQ-136), or
+ *   when a result condition uses a non-equality operator (REQ-089).
  */
-export function collectExampleColumns(
-    stateMachineName: string,
-    defaultPreconditions: DefaultPrecondition[],
-    transition: Transition,
-): ExampleColumn[] {
-    const groups = argumentGroups(transition, defaultPreconditions)
+function buildExampleColumns(groups: ArgumentGroup[]): ExampleColumn[] {
     const baseReferenceNames = new Set(
         groups.flatMap(({ args }) => args.filter((argument) => !argument.modifier).map((argument) => argument.name)),
     )
@@ -264,18 +284,24 @@ export function collectExampleColumns(
         if (!isKnown) derivedColumns.push(column)
     }
 
-    for (const { args, isResult, source } of groups) {
+    for (const group of groups) {
+        const { args, isResult, poolStateMachineName } = group
         for (const argument of args) {
+            // A rendering-only alias (REQ-422) contributes no column of its own: the transition
+            // that genuinely declared this modifier, elsewhere in the same resolved path, already
+            // does — an aliased copy would redefine the same column against its own (unrelated,
+            // possibly too-small) value pool instead of the genuine declaration's.
+            if (isAliasedArgument(argument)) continue
             // A result argument with a condition renders as `<resulting X>`, never `<X>`
             // (see `attributePlaceholderName`), so it contributes no base column of its own.
             const isResultCondition = isResult && argument.condition
             if (argument.modifier) {
-                addDerived(modifierColumn(stateMachineName, argument, source, transition, baseReferenceNames))
+                addDerived(modifierColumn(group, argument, baseReferenceNames))
             } else if (!isResultCondition) {
                 addBase(argument.name)
             }
             if (isResultCondition) {
-                validateResultCondition(stateMachineName, argument.name, argument.condition)
+                validateResultCondition(poolStateMachineName, argument.name, argument.condition)
                 addDerived({
                     kind: "result-condition",
                     name: resultingColumnName(argument.name),
@@ -286,6 +312,65 @@ export function collectExampleColumns(
         }
     }
     return [...baseColumns, ...derivedColumns]
+}
+
+/**
+ * Columns of the examples table of a single transition, not following any state-trigger
+ * expansion (REQ-064/REQ-065/REQ-066/REQ-151/REQ-152).
+ *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
+ * @param defaultPreconditions Default preconditions of the owning state machine.
+ * @param transition Transition whose examples columns are being collected.
+ * @returns The ordered columns; empty when the transition references no arguments at all,
+ *   in which case a plain `Scenario` is rendered instead of a `Scenario Outline` (REQ-047).
+ * @throws Error When a modifier argument has no base references in the transition (REQ-136),
+ *   or when a result condition uses a non-equality operator (REQ-089).
+ */
+export function collectExampleColumns(
+    stateMachineName: string,
+    defaultPreconditions: DefaultPrecondition[],
+    transition: Transition,
+): ExampleColumn[] {
+    return buildExampleColumns(argumentGroups(stateMachineName, transition, defaultPreconditions))
+}
+
+/**
+ * Columns of the examples table of one resolved expansion path of a transition (REQ-170/REQ-171):
+ * the top-level transition's own columns, plus any base or modifier
+ * columns declared only on *this path's own* chain of expansion sources' precondition states,
+ * trigger, or result — e.g. a `not`/`different` modifier declared on a source's own state, which
+ * only shows up as an injected `Given` step (REQ-114/REQ-115) on this specific path and would
+ * otherwise have no column to resolve its placeholder against.
+ *
+ * Only `sourceChain` — the specific sources *this* path resolved through — contributes columns,
+ * not every resolvable source of the transition's trigger: a sibling path's own argument (e.g.
+ * another source's modifier) must not leak a column, with values, into a scenario whose rendered
+ * steps never reference it.
+ *
+ * @param stateMachineName Name of the state machine owning the transition, for error context.
+ * @param defaultPreconditions Default preconditions of the owning state machine.
+ * @param transition Transition whose examples columns are being collected.
+ * @param sourceChain The one expansion path's own chain of sources (REQ-114/REQ-115), innermost
+ *   first — e.g. an `ExpansionPath.sourceChain` from `expandStateTrigger`, or `[]` for a plain
+ *   event-triggered transition.
+ * @returns The ordered columns; empty when neither the transition nor this path's chain
+ *   references any argument, in which case a plain `Scenario` is rendered (REQ-047).
+ * @throws Error When a modifier argument has no base reference anywhere in the transition or this
+ *   path's chain (REQ-136), or when a result condition uses a non-equality operator (REQ-089).
+ */
+export function collectPathExampleColumns(
+    stateMachineName: string,
+    defaultPreconditions: DefaultPrecondition[],
+    transition: Transition,
+    sourceChain: ExpansionSourceStep[],
+): ExampleColumn[] {
+    const groups = [
+        ...argumentGroups(stateMachineName, transition, defaultPreconditions),
+        ...sourceChain.flatMap((step) =>
+            argumentGroups(step.stateMachineName, step.transition, step.defaultPreconditions),
+        ),
+    ]
+    return buildExampleColumns(groups)
 }
 
 
@@ -383,17 +468,21 @@ function differentValue(
 
 /**
  * Resolve the value of a modifier column for one row. Modifiers are resolved against the
- * owning state machine's own example values table only, not the cross-machine joined table used
- * for base columns — a state machine must be sufficiently specified stand-alone.
+ * declaring state machine's own example values table only — the column's `poolStateMachineName`
+ * when set (REQ-168: for a state-trigger expansion source, that source's own machine, not
+ * necessarily the transition being rendered), falling back to the rendering machine otherwise —
+ * never the cross-machine joined table used for base columns, since a state machine must be
+ * sufficiently specified stand-alone.
  *
- * @param stateMachines All state machines, to look up the owning state machine's own example values.
- * @param stateMachineName Name of the state machine owning the transition, for error context.
+ * @param stateMachines All state machines, to look up the declaring state machine's own example values.
+ * @param stateMachineName Name of the state machine owning the transition being rendered, used as
+ *   the pool machine only when `column.poolStateMachineName` is absent.
  * @param column Modifier column to evaluate.
  * @param row Row containing the source value.
  * @param sourceRowIndex Index of the row in the original, joined value table (fallback only).
  * @param allRows Original, unfiltered, cross-machine joined example rows (unused by modifiers themselves).
  * @returns The derived cell value, or an empty string for unknown modifiers.
- * @throws Error When the owning state machine defines no example values, or when the modifier
+ * @throws Error When the declaring state machine defines no example values, or when the modifier
  *   cannot otherwise be derived from the available values.
  */
 function resolveModifierValue(
@@ -406,13 +495,14 @@ function resolveModifierValue(
 ): string {
     const attributeName = column.sourceName
     const sourceValue = row[attributeName]
+    const poolStateMachineName = column.poolStateMachineName ?? stateMachineName
 
-    // Modifiers resolve against the owning state machine's own example values only (a state
+    // Modifiers resolve against the declaring state machine's own example values only (a state
     // machine must be sufficiently specified stand-alone).
-    const pool = stateMachines.find((stateMachine) => stateMachine.name === stateMachineName)?.dataExampleValues ?? []
+    const pool = stateMachines.find((stateMachine) => stateMachine.name === poolStateMachineName)?.dataExampleValues ?? []
     if (pool.length === 0) {
         throw new Error(
-            `State machine \`${stateMachineName}\`: ${column.transitionLabel ?? "Anonymous transition"}: ` +
+            `State machine \`${poolStateMachineName}\`: ${column.transitionLabel ?? "Anonymous transition"}: ` +
                 `Invalid modifier \`${column.sourceModifier ?? column.modifier}\` for attribute \`${attributeName}\` ` +
                 `on ${column.sourceContext ?? "unknown source"}: state machine defines no example values of its own`,
         )
@@ -424,7 +514,7 @@ function resolveModifierValue(
         case "incremented":
         case "decremented":
             return steppedValue(
-                stateMachineName, sourceValue, column.modifier, attributeName, column.sourceContext, column.transitionLabel,
+                poolStateMachineName, sourceValue, column.modifier, attributeName, column.sourceContext, column.transitionLabel,
             )
         case "first":
             return pool[0]?.[attributeName] ?? ""
@@ -436,7 +526,7 @@ function resolveModifierValue(
             return shiftedValue(attributeName, effectiveRowIndex, -1, pool)
         case DIFFERENT_MODIFIER:
             return differentValue(
-                stateMachineName, attributeName, sourceValue ?? "", pool,
+                poolStateMachineName, attributeName, sourceValue ?? "", pool,
                 column.sourceModifier, column.sourceContext, column.transitionLabel,
             )
         default:

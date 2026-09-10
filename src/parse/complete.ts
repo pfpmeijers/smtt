@@ -24,13 +24,14 @@ import type { Argument, Condition, StateMachine } from "./sm.ast.d"
  *
  * @param condition Condition expression to extract values from.
  * @returns Array of literal string values referenced by the condition.
- *   Returns `[]` for `"undefined"` operators or absent values.
+ *   Returns `[]` for `"undefined"` and `"defined"` operators (neither pins a specific literal
+ *   value) nor absent values.
  *   For `"in"` operators, returns all listed values.
  *   For `"in range"` / `"not in range"` operators, returns the two boundary values.
  *   For all other operators, returns a single-element array with the value as a string.
  */
 function extractConditionValues(condition: Condition): string[] {
-    if (condition.operator === "undefined" || condition.value === undefined) {
+    if (condition.operator === "undefined" || condition.operator === "defined" || condition.value === undefined) {
         return []
     }
     if (Array.isArray(condition.value)) {

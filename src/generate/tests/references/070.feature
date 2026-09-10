@@ -55,8 +55,8 @@
 Feature: m2
 
   Scenario Outline: [] s3 → s4 as "<a>"; when s2 as "<a>"; given s1
-    Given initially s1
-    And initially s3
+    Given initially s3
+    And initially s1
     When e with "<a>"
     Then expect s2 as "<a>"
     And expect s4 as "<a>"

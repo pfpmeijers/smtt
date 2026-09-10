@@ -95,3 +95,23 @@ export function argumentsSignature(args: Argument[] | undefined): string {
     return JSON.stringify(args ?? [])
 }
 
+/**
+ * Semantic signature of an argument list, used to de-duplicate state references (REQ-116).
+ * Captures only the substantive parts of each argument — name, canonical modifier (REQ-085), and
+ * condition — and excludes the purely textual rendering fields (`qualifier`, `preQualifier`,
+ * `postQualifier`, `suffix`, per REQ-051 through REQ-062): two state references naming the same
+ * attribute with the same modifier/condition are the same reference regardless of which wording
+ * variant authored each occurrence (e.g. a default precondition worded `of` and an explicit
+ * transition state worded `under` for the same attribute).
+ *
+ * @param args Argument list to serialize.
+ * @returns A stable signature capturing only the semantic content of the argument list.
+ */
+export function semanticArgumentsSignature(args: Argument[] | undefined): string {
+    return JSON.stringify((args ?? []).map((argument) => ({
+        name: argument.name,
+        modifier: canonicalModifier(argument),
+        condition: argument.condition,
+    })))
+}
+

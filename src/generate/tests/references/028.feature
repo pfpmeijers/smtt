@@ -23,7 +23,7 @@
 Feature: m2
 
   Scenario: [] s3 → s3; when e2; given s1
-    Given initially s1
-    And initially s3
+    Given initially s3
+    And initially s1
     When e2
     Then expect s3

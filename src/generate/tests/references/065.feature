@@ -28,10 +28,10 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s "<different a>" from; when e
+  Scenario Outline: [] s "<a>" → s from "<different a>"; when e
     Given initially s "<a>"
     When e
-    Then expect s "<different a>" from
+    Then expect s from "<different a>"
     Examples:
       | a | different a |
       | 1 | 2           |

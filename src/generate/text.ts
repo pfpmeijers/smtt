@@ -34,8 +34,8 @@ function renderArgument(stateMachineName: string, argument: Argument, isFirst: b
     const parts: string[] = []
     if (argument.qualifier) parts.push(argument.qualifier)
     if (argument.preQualifier) parts.push(argument.preQualifier)
-    parts.push(`"<${attributePlaceholderName(argument, isResult)}>"`)
     if (argument.postQualifier) parts.push(argument.postQualifier)
+    parts.push(`"<${attributePlaceholderName(argument, isResult)}>"`)
     if (argument.suffix) parts.push(argument.suffix)
 
     return (isFirst ? " " : ", ") + parts.join(" ")

@@ -49,8 +49,8 @@
 Feature: m2
 
   Scenario: [] s2 → s2; when s1; given s1
-    Given initially s1
-    And initially s2
+    Given initially s2
+    And initially s1
     When e
     Then expect s1
     And expect s2

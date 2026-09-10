@@ -249,7 +249,7 @@ function printGenerateHelp(): void {
     console.log("                            Relative paths are resolved from the current directory.")
     console.log("  --output-dir OUTPUT_DIR   Base directory for `features/`, `steps/`, and `fixtures/` output.")
     console.log("                            Default: current directory.")
-    console.log("  --debug                   Write `generate.debug.md` with each processed transition")
+    console.log("  --debug                   Write `generate.debug.txt` with each processed transition")
     console.log("                            and its state-trigger expansion tree.")
 }
 

@@ -176,10 +176,10 @@ the attribute list.
    Example values:
 
    | `email address`     | `associated user name` |
-   | ------------------- | ---------------------- |
+   |---------------------|------------------------|
    | `info@domain.com`   | `John Doe`             |
    | `other@example.com` |                        |
-   ```
+  ```
 
    An empty cell represents an undefined value for that attribute.
    Empty-string literals (`` `` ``) are not allowed.
@@ -429,6 +429,8 @@ Supported text condition operators:
 | `` `attribute` not in (`v1`, `v2`, ...)`` | Attribute is none of the listed values (set)      |
 | `` `attribute` undefined``                | Attribute has no value                            |
 | `` `attribute` is undefined``             | Attribute has no value (alias of `undefined`)     |
+| `` `attribute` defined``                  | Attribute has a value                             |
+| `` `attribute` is defined``               | Attribute has a value (alias of `defined`)        |
 
 ##### Values
 
@@ -489,9 +491,9 @@ Example:
 ```markdown
 ### Impossible
 
-| States                | Trigger                     |
-| --------------------- | --------------------------- |
-| `User session absent` | `Signed in with email adress` |
+| States                | Trigger                          |
+|-----------------------|----------------------------------|
+| `User session absent` | `Signed in` with `email address` |
 ```
 
 This states that "Signed in with email address" cannot occur when there is no
@@ -517,10 +519,10 @@ Example:
 ```markdown
 ### Irrelevant
 
-| States               | Trigger                     |
-| -------------------- | --------------------------- |
-| `Painting archived`  | `Signed in` with `email adress` |
-| `Painting available` | `Signed in` with `email adress` |
+| States               | Trigger                          |
+|----------------------|----------------------------------|
+| `Painting archived`  | `Signed in` with `email address` |
+| `Painting available` | `Signed in` with `email address` |
 ```
 
 This states that signing in has the same authenticated result no matter what

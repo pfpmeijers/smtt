@@ -16,7 +16,12 @@
 #      - name: s2
 # Covers requirements:
 # - [REQ-036] A default precondition state shall only be used when the transition does not already
-#   mention a state from the same owning state machine.
+#   mention a state from the same owning state machine. This lets a transition's own explicit states
+#   override (and reposition) what a default precondition or the implied initial state would
+#   otherwise have supplied: restating that machine's state explicitly, anywhere in the transition's
+#   own `states` array, both substitutes for the default/implied value and places it among the
+#   transition's own explicit states (REQ-035's second group) instead of at the front with the other
+#   defaults — letting a single transition force a custom precondition order for itself.
 
 Feature: m
 

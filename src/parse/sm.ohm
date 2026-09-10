@@ -216,9 +216,13 @@ StateMachine {
     | identifier numericOperator attributeValue                                                     -- numericComparison
     | identifier textCompare attributeValue                                                         -- textComparison
     | identifier undefinedCompare                                                                   -- undefined
+    | identifier definedCompare                                                                     -- defined
 
   undefinedCompare
     = literal<"undefined"> | literal<"is undefined">
+
+  definedCompare
+    = literal<"defined"> | literal<"is defined">
 
   numericOperator
     = literal<">="> | literal<"<="> | literal<"<>"> | literal<">"> | literal<"<"> | literal<"=">

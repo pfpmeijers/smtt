@@ -23,4 +23,7 @@
 # - [REQ-100] If all rows are filtered out, the generator shall raise an error — an empty examples
 #   table is not valid.
 
-# Throws: State machine `m`: Empty examples table for anonymous transition
+# Throws: State machine `m`: Empty examples table for anonymous transition.
+1 candidate row(s) available: { a=0 }.
+No row satisfied every filter:
+  - `a` > 5 (declared on `m`#?)

@@ -1,6 +1,6 @@
-import type { Condition, DefaultPrecondition, StateMachine, Transition } from "../parse"
+import type { Condition, DefaultPrecondition, StateMachine, StateRef, Transition } from "../parse"
 import { canonicalModifier } from "./arguments"
-import { findExpansionSources, MAX_EXPANSION_DEPTH, type TaggedTransition } from "./expansion"
+import type { ExpansionSourceStep } from "./expansion"
 import { buildEffectiveGivens } from "./givens"
 import type { ImpliedConditionsIndex, StateOwnershipIndex } from "./ownership"
 
@@ -12,6 +12,42 @@ export interface FilterCondition {
     /** When set, derive this modifier on `sourceName` before evaluating the condition (REQ-143/REQ-144). */
     modifier?: string
     condition: Condition
+    /** Human-readable label of the transition that declared this filter, e.g. `` `m`#039 ``, for diagnostics. */
+    declaredBy?: string
+}
+
+/**
+ * Render a filter condition as a short, human-readable clause for diagnostics, e.g.
+ * `` `email address` undefined (declared on `painting status`#039) ``.
+ *
+ * @param filter Filter condition to describe.
+ * @returns The rendered description.
+ */
+export function describeFilterCondition(filter: FilterCondition): string {
+    const attr = filter.modifier ? `${filter.modifier} \`${filter.sourceName}\`` : `\`${filter.sourceName}\``
+    const clause = ((): string => {
+        switch (filter.condition.operator) {
+            case "undefined":
+                return `${attr} undefined`
+            case "defined":
+                return `${attr} defined`
+            case "in range":
+                return `${attr} in ${filter.condition.value}`
+            case "not in range":
+                return `${attr} not in ${filter.condition.value}`
+            case "in":
+            case "not in": {
+                const values = Array.isArray(filter.condition.value) ? filter.condition.value : [filter.condition.value ?? ""]
+                return `${attr} ${filter.condition.operator} (${values.join(", ")})`
+            }
+            case "as":
+            case "not as":
+                return `${attr} ${filter.condition.operator} \`${filter.condition.value}\``
+            default:
+                return `${attr} ${filter.condition.operator} ${filter.condition.value}`
+        }
+    })()
+    return filter.declaredBy ? `${clause} (declared on ${filter.declaredBy})` : clause
 }
 
 // --- Validation ---
@@ -28,7 +64,7 @@ export interface FilterCondition {
  * @throws Error When a non-`undefined` operator is combined with an empty value.
  */
 export function validateCondition(stateMachineName: string, attributeName: string, condition: Condition): void {
-    if (condition.operator === "undefined") return
+    if (condition.operator === "undefined" || condition.operator === "defined") return
     const value = condition.value
     const isEmpty = value === "" || (Array.isArray(value) && value.every((entry) => entry === ""))
     if (isEmpty) {
@@ -108,9 +144,9 @@ function evaluateRangeMembership(value: string, conditionValue: Condition["value
 
 /**
  * Evaluate a condition against a single example value (REQ-090 through REQ-096).
- * An empty or missing value counts as absent: it only satisfies the `undefined` operator and
- * never satisfies any comparison (REQ-074/REQ-075). Unsupported or malformed conditions do not
- * match.
+ * An empty or missing value counts as absent: it only satisfies the `undefined` operator (and
+ * fails the `defined` operator) and never satisfies any comparison (REQ-074/REQ-075). Unsupported
+ * or malformed conditions do not match.
  *
  * @param rawValue Row value to evaluate.
  * @param condition Condition to evaluate.
@@ -119,6 +155,7 @@ function evaluateRangeMembership(value: string, conditionValue: Condition["value
 export function evaluateCondition(rawValue: string | undefined, condition: Condition): boolean {
     const isAbsent = rawValue == null || rawValue === ""
     if (condition.operator === "undefined") return isAbsent
+    if (condition.operator === "defined") return !isAbsent
     if (isAbsent) return false
 
     const value = rawValue as string
@@ -162,48 +199,44 @@ function collectOwnFilterConditions(stateMachineName: string, transition: Transi
         ...(transition.trigger.arguments ?? []),
     ]
 
+    const declaredBy = `\`${stateMachineName}\`#${transition.id ?? "?"}`
     const filters: FilterCondition[] = []
     for (const argument of args) {
         const condition = argument.condition
         if (!condition) continue
         validateCondition(stateMachineName, argument.name, condition)
         const modifier = canonicalModifier(argument)
-        filters.push({ sourceName: argument.name, sourceModifier: argument.modifier, ...(modifier ? { modifier } : {}), condition })
+        filters.push({
+            sourceName: argument.name, sourceModifier: argument.modifier,
+            ...(modifier ? { modifier } : {}), condition, declaredBy,
+        })
     }
     return filters
 }
 
 /**
- * Row filters of a transition and of every source transition in its state trigger expansion
- * chain. Conditions across the chain combine as a conjunction: a row survives only when it
+ * Row filters of a transition and of every source transition along one specific expansion path's
+ * source chain. Conditions across the chain combine as a conjunction: a row survives only when it
  * satisfies all of them (REQ-162).
+ *
+ * Scoped to a single path's `sourceChain` (REQ-170/REQ-171): a sibling expansion path's own
+ * condition — e.g. one candidate source requiring an attribute to be undefined — must not filter
+ * out rows for a path that never resolved through that source.
  *
  * @param stateMachineName Name of the state machine owning `transition`, for error context.
  * @param transition Transition to start the chain at.
- * @param taggedTransitions All transitions of all state machines.
- * @param visited Source transitions already accounted for, preventing repeated traversal.
- * @param depth Current recursion depth.
+ * @param sourceChain The resolved expansion path's own chain of source transitions.
  * @returns The chain-conjoined row filters.
  */
 export function collectChainFilterConditions(
     stateMachineName: string,
     transition: Transition,
-    taggedTransitions: TaggedTransition[],
-    visited: Set<Transition> = new Set(),
-    depth = 0,
+    sourceChain: ExpansionSourceStep[],
 ): FilterCondition[] {
-    const ownFilters = collectOwnFilterConditions(stateMachineName, transition)
-    if (transition.trigger.type !== "state" || depth > MAX_EXPANSION_DEPTH) return ownFilters
-
-    const excluded = new Set(visited).add(transition)
-    const chainedFilters: FilterCondition[] = []
-    for (const source of findExpansionSources(transition.trigger, taggedTransitions, excluded)) {
-        visited.add(source.transition)
-        chainedFilters.push(
-            ...collectChainFilterConditions(source.stateMachineName, source.transition, taggedTransitions, visited, depth + 1),
-        )
-    }
-    return [...ownFilters, ...chainedFilters]
+    return [
+        ...collectOwnFilterConditions(stateMachineName, transition),
+        ...sourceChain.flatMap((step) => collectOwnFilterConditions(step.stateMachineName, step.transition)),
+    ]
 }
 
 /**
@@ -218,6 +251,8 @@ export function collectChainFilterConditions(
  * @param impliedIndex Implied conditions declared per state.
  * @param availableAttributes Attribute names present in the effective examples table; implied
  *   conditions on any other attribute impose no filter (REQ-166).
+ * @param injectedGivenStates States injected by the transition's own expansion path, if any —
+ *   included so a path's expansion-contributed state also contributes its implied conditions.
  * @returns Filter conditions contributed by implied state conditions.
  */
 export function collectImpliedFilterConditions(
@@ -227,14 +262,41 @@ export function collectImpliedFilterConditions(
     ownership: StateOwnershipIndex,
     impliedIndex: ImpliedConditionsIndex,
     availableAttributes: ReadonlySet<string>,
+    injectedGivenStates: StateRef[] = [],
 ): FilterCondition[] {
-    const givens = buildEffectiveGivens(transition, defaultPreconditions, ownership, stateMachine)
+    const givens = buildEffectiveGivens(transition, defaultPreconditions, ownership, stateMachine, injectedGivenStates)
+    return collectImpliedFilterConditionsForGivens(stateMachine.name, givens, impliedIndex, availableAttributes)
+}
+
+/**
+ * Row filters contributed by the implied conditions of an already-computed set of `Given` states
+ * (REQ-148/REQ-165/REQ-167) — the part of {@link collectImpliedFilterConditions} that doesn't
+ * depend on re-deriving the effective givens itself, split out so a caller that already has its
+ * own equivalent given-state list (e.g. the `generate --debug` report, which walks the expansion
+ * chain independently) can reuse the exact same filter logic instead of re-implementing it.
+ *
+ * @param stateMachineName Name of the state machine owning the given states, for error context.
+ * @param givens Effective `Given` states to collect implied conditions for.
+ * @param impliedIndex Implied conditions declared per state.
+ * @param availableAttributes Attribute names present in the effective examples table; implied
+ *   conditions on any other attribute impose no filter (REQ-166).
+ * @returns Filter conditions contributed by implied state conditions.
+ */
+export function collectImpliedFilterConditionsForGivens(
+    stateMachineName: string,
+    givens: StateRef[],
+    impliedIndex: ImpliedConditionsIndex,
+    availableAttributes: ReadonlySet<string>,
+): FilterCondition[] {
     const filters: FilterCondition[] = []
     for (const stateRef of givens) {
         for (const implied of impliedIndex[stateRef.name.toLowerCase()] ?? []) {
             if (!availableAttributes.has(implied.attribute)) continue
-            validateCondition(stateMachine.name, implied.attribute, implied.condition)
-            filters.push({ sourceName: implied.attribute, condition: implied.condition })
+            validateCondition(stateMachineName, implied.attribute, implied.condition)
+            filters.push({
+                sourceName: implied.attribute, condition: implied.condition,
+                declaredBy: `\`${stateRef.name}\` (implied)`,
+            })
         }
     }
     return filters

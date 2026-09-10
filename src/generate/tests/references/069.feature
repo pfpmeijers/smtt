@@ -39,8 +39,8 @@
 Feature: m2
 
   Scenario Outline: [] s3 → s3 "<a2>"; when s2 "<a1>"; given s1
-    Given initially s1
-    And initially s3
+    Given initially s3
+    And initially s1
     When e "<a1>"
     Then expect s2
     And expect s3 "<a2>"

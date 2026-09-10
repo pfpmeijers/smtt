@@ -30,7 +30,10 @@
 #          name: s2
 # Covers requirements:
 # - [REQ-116] Duplicate state references (same name and same arguments) shall be de-duplicated,
-#   keeping the first occurrence.
+#   keeping the first occurrence — so a later-listed state (e.g. one injected by expansion) that
+#   repeats a name already present among the earlier groups (default preconditions, then the
+#   transition's own explicit states, per REQ-035/REQ-115) is dropped, leaving the earlier reference
+#   in place.
 
 Feature: m2
 

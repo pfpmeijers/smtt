@@ -542,6 +542,13 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             } satisfies ImpliedCondition
         },
 
+        conditionalAttributeExpression_defined(attributeNode, _kw) {
+            return {
+                attribute: attributeNode.toAST() as string,
+                condition: { operator: "defined" }
+            } satisfies ImpliedCondition
+        },
+
         rangeOperator_in(_kw) {
             return "in range"
         },

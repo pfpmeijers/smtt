@@ -3,7 +3,6 @@ import { strict as assert } from "node:assert"
 import {
     assertContains,
     assertMatchesReference,
-    assertNotContains,
     assertThrowMatchesReference,
     createFeatures,
     test,
@@ -174,7 +173,7 @@ test("[TST-076] → [REQ-114/115]: Expanded scenario merges Given steps from bot
     const feature = features["m2"]
     const stepsStart = feature.indexOf("Given ")
     const stepsRegion = feature.slice(stepsStart)
-    const preconditions = ["s3", "s1", "s2"]
+    const preconditions = ["s2", "s3", "s1"]
     const positions = preconditions.map((precondition) => stepsRegion.indexOf("initially " + precondition))
     positions.forEach((position, index) => {
         assert.notEqual(position, -1, `Expected to find "initially ${preconditions[index]}" in the Given steps`)
@@ -207,7 +206,9 @@ test("[TST-077] → [REQ-116]: Expanded scenario deduplicates same state with sa
     const features = createFeatures(stateMachines)
     const feature = features["m2"]
     assertContains(feature, 'Given initially s1 "<a>"')
-    assertNotContains(feature, 'And initially s1 "<a>"')
+    assertContains(feature, "And initially s2")
+    const occurrences = feature.split('initially s1 "<a>"').length - 1
+    assert.strictEqual(occurrences, 1, 'Expected `s1 "<a>"` precondition to appear exactly once')
     assertMatchesReference(stateMachines, feature)
 })
 
@@ -232,7 +233,7 @@ test("[TST-078] → [REQ-118/164]: Source transition not matched when result arg
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        "State machine `m2`: Anonymous transition has an unresolvable state trigger `s1` — no source transition's result arguments satisfy the trigger's argument condition(s) (REQ-118/REQ-164).",
+        "State machine `m2`: Anonymous transition has an unresolvable state trigger `s1` — no source transition satisfies the trigger's argument `a` (REQ-118/REQ-164).",
     )
 })
 

@@ -18,8 +18,11 @@
 #      - name: s2
 # Covers requirements:
 # - [REQ-032] All states shall be translated into precondition steps:
-# - [REQ-035] The precondition steps shall be emitted in effective state array order (injected
-#   default preconditions first, explicit transition states after).
+# - [REQ-035] The precondition steps shall be emitted in effective state array order: the state
+#   machine's default preconditions first (in their declared array order), then the implied initial
+#   state (REQ-132) — a synthetic fallback used only when no state else already represents the
+#   owning state machine, then the transition's own explicit states (in their declared array order),
+#   then any states injected by state-trigger expansion (REQ-114/REQ-115).
 # - [REQ-038] The default precondition states and their names shall be taken from AST path
 #   `[i].defaultPreconditions[*].state`.
 # - [REQ-039] The transition specific states and their names shall be taken from AST path

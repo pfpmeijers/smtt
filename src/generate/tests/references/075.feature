@@ -37,9 +37,9 @@
 Feature: m3
 
   Scenario: [] s3 → s3; when s2; given s1, s2
-    Given initially s1
+    Given initially s3
+    And initially s1
     And initially s2
-    And initially s3
     When e
     Then expect s1
     And expect s2

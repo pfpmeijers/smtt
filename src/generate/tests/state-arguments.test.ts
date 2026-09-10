@@ -51,7 +51,7 @@ test("[TST-065] → [REQ-055/056]: postQualifier rendered after modifier", () =>
     }]
     validateStateMachines(stateMachines)
     const feature = createFeatures(stateMachines)["m"]
-    assertContains(feature, "\"<different a>\" from")
+    assertContains(feature, "from \"<different a>\"")
     assertMatchesReference(stateMachines, feature)
 })
 

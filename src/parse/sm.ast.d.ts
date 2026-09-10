@@ -110,7 +110,7 @@ export interface ImpliedCondition {
  */
 export interface Condition {
   /**
-   * The condition operator. The 'undefined' operator is unary and carries no value.
+   * The condition operator. The 'undefined' operator is unary and carries no value. The 'defined' operator is its unary opposite: it requires a value to be present, without specifying which.
    */
   operator:
     | "="
@@ -125,7 +125,8 @@ export interface Condition {
     | "not in"
     | "in range"
     | "not in range"
-    | "undefined";
+    | "undefined"
+    | "defined";
   /**
    * The literal value or array of values for the condition. Absent when operator is 'undefined'.
    */
@@ -183,7 +184,7 @@ export interface Argument {
  */
 export interface Condition1 {
   /**
-   * The condition operator. The 'undefined' operator is unary and carries no value.
+   * The condition operator. The 'undefined' operator is unary and carries no value. The 'defined' operator is its unary opposite: it requires a value to be present, without specifying which.
    */
   operator:
     | "="
@@ -198,7 +199,8 @@ export interface Condition1 {
     | "not in"
     | "in range"
     | "not in range"
-    | "undefined";
+    | "undefined"
+    | "defined";
   /**
    * The literal value or array of values for the condition. Absent when operator is 'undefined'.
    */

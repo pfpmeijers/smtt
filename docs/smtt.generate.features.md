@@ -131,16 +131,31 @@ The scenario steps shall be generated from the transition information:
     - Each step is formatted as `Given|And initially $state-name [$arguments]`.
 
   - [REQ-035] The precondition steps shall be emitted in effective state array
-    order (injected default preconditions first, explicit transition states
-    after).
+    order: the state machine's default preconditions first (in their declared
+    array order), then the implied initial state (REQ-132) — a synthetic 
+    fallback used only when no state else already represents the owning 
+    state machine, then the transition's own explicit states (in their declared 
+    array order), then any states injected by state-trigger expansion 
+    (REQ-114/REQ-115).
+  
   - [REQ-036] A default precondition state shall only be used when the
     transition does not already mention a state from the same owning
-    state machine.
+    state machine. This lets a transition's own explicit states override
+    (and reposition) what a default precondition or the implied initial
+    state would otherwise have supplied: restating that machine's state
+    explicitly, anywhere in the transition's own `states` array, both
+    substitutes for the default/implied value and places it among the
+    transition's own explicit states (REQ-035's second group) instead of
+    at the front with the other defaults — letting a single transition
+    force a custom precondition order for itself.
+  
   - [REQ-150] The owning state machine of a state name shall be determined by
     finding the machine whose `states` array contains an entry with a matching
     `name`. State names are globally unique across all machines in the AST file.
+  
   - [REQ-038] The default precondition states and their names shall be taken
     from AST path `[i].defaultPreconditions[*].state`.
+  
   - [REQ-156] When a default precondition argument carries a modifier, the
     modifier shall reference the base value of the same attribute as encountered
     in the specific transition it is injected into. If no base reference exists
@@ -279,6 +294,18 @@ definition as follows:
   first-encounter order — scanning default preconditions first (in their array
   order), then explicit transition states (in their array order), then the
   trigger, then the result.
+
+- [REQ-170] For a state-trigger transition, REQ-064's scan extends into that
+  expansion path's own chain of sources (REQ-114/REQ-115): after the
+  top-level transition's own groups, each source in the path's chain
+  contributes its own default preconditions, states, trigger, and result, in
+  that same order, innermost source first.
+
+- [REQ-171] Each expansion path (REQ-113) computes its own columns and
+  `Examples:` table from its own chain only (REQ-170) — never from a sibling
+  path's chain. An argument declared only on one path's source is therefore a
+  column on that path's scenario alone, not on sibling scenarios of the same
+  transition.
 
 - [REQ-065] The table shall add _derived_ columns required by modifiers.
 
@@ -835,39 +862,98 @@ result (Identity machine's result).
 
 - [REQ-031] For expanded paths, `$context-states` in the label shall be the
   merged set of all `Given` precondition states, excluding the own state, listed
-  in effective step order (default preconditions first, then merged transition
-  states).
+  in effective step order (the top-level transition's own default
+  preconditions first, in their declared array order, then the top-level
+  transition's own explicit states, then the states injected by the
+  expansion source(s)).
 
 - [REQ-114] The `Given` precondition steps for an expanded scenario shall
   include states from both the source (expanded) transition and the top-level
   transition.
 
 - [REQ-115] The `Given` precondition steps for an expanded scenario shall be
-  merged in effective order: default preconditions first, then the combined
-  explicit transition states.
+  merged in effective order: the top-level transition's own default
+  preconditions first (in their declared array order), then the top-level
+  transition's own explicit states (in their declared array order), then the
+  states injected by the expansion source(s). A source's own states are
+  contributed in the same recursive order (REQ-135): its own default
+  preconditions first, then its own explicit states.
 
 - [REQ-116] Duplicate state references (same name and same arguments) shall be
-  de-duplicated, keeping the first occurrence.
+  de-duplicated, keeping the first occurrence — so a later-listed state (e.g.
+  one injected by expansion) that repeats a name already present among the
+  earlier groups (default preconditions, then the transition's own explicit
+  states, per REQ-035/REQ-115) is dropped, leaving the earlier reference in
+  place.
   - Note it is invalid for references to share the same state name but carry
     different arguments.
 
 - [REQ-118] A source transition shall only be considered a matching expansion
   candidate if its result state arguments match the trigger state arguments of
   the referring transition (the transition being expanded). I.e., the same
-  attribute names shall be referenced, AND the
-  source's result shall produce a value that satisfies the referring transition's
-  trigger condition. This shall apply recursively when expansion chains through
-  multiple state triggers.
+  attribute names shall be referenced, with the same canonical modifier
+  (REQ-085) on both sides — a bare trigger argument only matches a bare result
+  argument, and a modified trigger argument only matches a result argument
+  carrying the same (canonicalized) modifier — AND the source's result shall
+  produce a value that satisfies the referring transition's trigger condition.
+  This shall apply recursively when expansion chains through multiple state
+  triggers.
+
+  A base-name match with differing canonical modifiers is not a match: the two
+  occurrences denote different roles for the same attribute (e.g. a plain
+  value vs. a `different` one), so the source is disqualified as a candidate
+  for that attribute rather than silently reconciled (see REQ-422 for the one
+  case that is still reconciled: two spellings of the same canonical
+  modifier).
 
   **Matching example**: Trigger condition is `user authenticated as "<email>"`.
   Source transition result is `user authenticated as "<email>"` with condition
   `email = "info@example.com"`. The source matches because it references the
-  same attribute (`email`) and produces a concrete value.
+  same attribute (`email`), carries the same (absent) modifier, and produces a
+  concrete value.
 
   **Non-matching example**: Trigger condition is `user authenticated as "<email>"`.
   Source transition result is `user authenticated` (no arguments). The source
   does NOT match because the trigger requires an `email` argument that the
   source doesn't provide.
+
+  **Non-matching modifier example**: Trigger is `painting reserved under
+  "<email>"` (no modifier). Source transition result is `painting reserved for
+  "<different email>"` (`different` modifier). Both reference the same base
+  attribute (`email`), but the source carries a modifier the trigger doesn't
+  — the source is not a matching candidate for this trigger, even though a
+  looser, name-only comparison would accept it.
+
+- [REQ-422] Two source candidates can each match a trigger argument's
+  canonical modifier (REQ-118) while still spelling that modifier
+  differently — e.g. a trigger argument modified `other` matched against a
+  result argument modified `not` (both canonically `different`, REQ-085).
+  When this happens, the transition on the side with no modifier for that
+  attribute — the two sides never differ in whether they carry a modifier,
+  per REQ-118, so this can only apply when both sides have one, in different
+  spellings, and picks the trigger side's declared spelling as the aliased side
+  by convention — is treated as a parameterized function: every one of its own
+  occurrences of that attribute (its own precondition states, trigger, and
+  result — which already share one value by name, REQ-063) is rewritten to
+  carry the other side's spelling, for this resolved path only. This applies
+  at every level of an expansion chain, so the rewrite composes across
+  multiple hops.
+
+  Rationale: without this, a chain matches candidates by canonical modifier
+  (REQ-118) but renders each transition's own declared spelling, so one
+  produced quantity could silently render under two different column headers
+  (e.g. `different a` and `other a`) in one composed scenario instead of one
+  consistent label.
+
+  Example: state machine `m1` triggers on state `S2` produced with modifier
+  `other` on attribute `a` (`S2 as other a`). The only source transition whose
+  result reaches `S2` is owned by `m2` and produces `S2 as not a`; that same
+  rule's own precondition and trigger also reference `not a`. REQ-118 matches
+  them (same base name `a`, both canonically `different`). Per REQ-422,
+  `m2`'s own occurrences of `a` are rewritten to `other a` for this path — its
+  precondition renders `"<other a>"`, not `"<not a>"` — so the whole scenario
+  consistently reflects one derived value under one spelling instead of mixing
+  `not a` and `other a` for what is really the same produced quantity.
 
 - [REQ-164] A state trigger is unresolvable when no transition result 
   matches, or when candidate source transitions exist by result state name 
