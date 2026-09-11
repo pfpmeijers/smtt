@@ -1,3 +1,5 @@
+- Attribute references for state and trigger conditions
+
 - Remove requirement that referred states of other state machines need to exist explicitly in a separate
   *.state-machine.md file. Instead, when there is no state machine for a state defined explicitly, 
   then the state machine can be considered anonymous. 
@@ -63,3 +65,24 @@
     | 042      | `User session present`,                         | `Painting removed from cart`                       | `Painting available`                                            | Removing painting from cart.                                                |
     |          | `User authenticated`,                           |                                                    |                                                                 |                                                                             |
     |          | `Painting in cart`                              |                                                    |
+
+- Define values per attribute and generate examples from all combinations.
+
+  ## Data
+  - attr1: Attribute 1. Examples: "value1", "value2"
+  - attr2: Attribute 2. Examples: "value3", "value4"
+  ### Example combinations
+  All combinations  (instead of table)
+
+- Implied states
+    E.g. `user profile unavailable` implies `user unauthenticated`
+         `(un)named profile available` with `profile email address`: `user authenticated` with `user email address` as `profile email address`
+
+- Make attr "name space" prefix optional/intelligent.
+    E.g. instead of implication:
+       `named profile available` with `profile email address`: `user authenticated` with `user email address` as `profile email address`
+    Specify:
+       `named profile available` with its `email address`: `user authenticated` with its `email address` as `profile email address`
+    And then at sm level specify namespace that acts as prefix.
+        # User profile
+        Namespace: profile // To prefix attributes

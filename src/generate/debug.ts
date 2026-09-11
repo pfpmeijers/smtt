@@ -95,7 +95,7 @@ function debugConditionText(condition: Condition): string {
  * @returns The rendered result text, without its surrounding markers.
  */
 function debugResultText(result: Result): string {
-    if (result.valueIsReference) return `set to \`${result.value}\``
+    if (result.valueIsReference === true) return `set to \`${result.value}\``
     if (result.value === undefined) return "set to undefined"
     return `set to "${result.value}"`
 }
@@ -143,8 +143,8 @@ function debugArgumentText(argument: Argument, isFirst: boolean, isResult: boole
     if (argument.preQualifier) parts.push(argument.preQualifier)
     if (argument.postQualifier) parts.push(argument.postQualifier)
     parts.push(debugAttributePlaceholderText(argument, isResult, plain))
-    if (argument.condition) parts.push(debugConditionText(argument.condition))
-    else if (argument.result) parts.push(debugResultText(argument.result))
+    if (argument.result) parts.push(debugResultText(argument.result))
+    else if (argument.condition) parts.push(debugConditionText(argument.condition))
     if (argument.suffix) parts.push(argument.suffix)
     return (isFirst ? " " : ", ") + parts.join(" ")
 }
