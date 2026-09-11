@@ -1,6 +1,6 @@
 import { writeFileSync } from "fs"
 import { join as joinPath } from "path"
-import type { Argument, Condition, Result, StateMachine, StateRef, Transition, Trigger } from "../parse"
+import type { Argument, Condition, StateMachine, StateRef, Transition, Trigger } from "../parse"
 import { attributePlaceholderName, semanticArgumentsSignature } from "./arguments"
 import {
     collectChainFilterConditions,
@@ -144,7 +144,6 @@ function debugArgumentText(argument: Argument, isFirst: boolean, isResult: boole
     if (argument.postQualifier) parts.push(argument.postQualifier)
     parts.push(debugAttributePlaceholderText(argument, isResult, plain))
     if (argument.condition) parts.push(debugConditionText(argument.condition))
-    else if (argument.result) parts.push(debugResultText(argument.result))
     if (argument.suffix) parts.push(argument.suffix)
     return (isFirst ? " " : ", ") + parts.join(" ")
 }
