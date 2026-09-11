@@ -32,10 +32,10 @@ export function modifierColumnName(argument: Argument): string | undefined {
     return modifier ? `${modifier} ${argument.name}` : undefined
 }
 
-// --- Result conditions ---
+// --- Result values ---
 
 /**
- * Derived `Examples:` column name holding the value of a result condition (REQ-101).
+ * Derived `Examples:` column name holding the value of a result (REQ-101).
  *
  * @param attributeName Attribute name the derived column refers to.
  * @returns The rendered derived column name.
@@ -49,7 +49,7 @@ export function resultingColumnName(attributeName: string): string {
 /**
  * Attribute name referenced by an argument's step-text placeholder.
  * A modifier argument references its derived column (REQ-137), a result argument carrying a
- * condition references its `resulting ...` column (REQ-101), any other argument references
+ * result value references its `resulting ...` column (REQ-101), any other argument references
  * the base attribute name.
  *
  * @param argument Argument to render a placeholder for.
@@ -59,7 +59,7 @@ export function resultingColumnName(attributeName: string): string {
 export function attributePlaceholderName(argument: Argument, isResult: boolean): string {
     const modifierName = modifierColumnName(argument)
     if (modifierName) return modifierName
-    if (isResult && argument.condition) return resultingColumnName(argument.name)
+    if (isResult && argument.result) return resultingColumnName(argument.name)
     return argument.name
 }
 

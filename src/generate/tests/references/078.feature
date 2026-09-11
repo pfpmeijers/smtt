@@ -13,8 +13,7 @@
 #          name: s1
 #          arguments:
 #            - name: a
-#              condition:
-#                operator: =
+#              result:
 #                value: "1"
 #  - name: m2
 #    states:

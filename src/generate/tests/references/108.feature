@@ -1,4 +1,4 @@
-# Results from: conditions-result.test.ts, TST-108: Result condition attribute with no other reference drops its base column
+# Results from: conditions-result.test.ts, TST-108: Result value attribute with no other reference drops its base column
 # State machines:
 #  - name: m
 #    states:
@@ -17,16 +17,15 @@
 #          arguments:
 #            - name: a1
 #            - name: a2
-#              condition:
-#                operator: =
+#              result:
 #                value: "2"
 # Covers requirements:
 # - [REQ-169] A base attribute name shall not receive a column when its only occurrence in the
-#   transition is a result argument carrying a condition — such an argument's step placeholder
+#   transition is a result argument carrying a result value — such an argument's step placeholder
 #   always references the derived `resulting $attribute-name` column instead (REQ-101), so the base
 #   column would otherwise go unused in every rendered step. When the same attribute is also
-#   referenced elsewhere in the transition without a result condition (e.g. a precondition, trigger,
-#   or plain result reference), its base column is kept, since that occurrence does render
+#   referenced elsewhere in the transition without a result value (e.g. a precondition, trigger, or
+#   plain result reference), its base column is kept, since that occurrence does render
 #   `"<$attribute-name>"`.
 
 Feature: m

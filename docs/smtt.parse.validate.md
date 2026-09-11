@@ -34,24 +34,25 @@ values are only guaranteed once the AST is complete.
 
 ```
 1. Parse markdown → raw AST
+   - Classify condition/result value references (backtick vs. quote/number)
 2. Validate raw AST
 3. Classify triggers
-4. Classify condition value references
-5. Complete AST
+4. Complete AST
    a. Infer data attributes from every usage site
    b. Synthesise undefined example rows for attributes with no values
-   c. Augment the example table with condition-referenced value combinations
-6. Validate the complete AST
+   c. Augment the example table with condition/result-referenced value
+      combinations
+5. Validate the complete AST
 ```
 
-Step 4 mirrors step 3's disambiguation: a condition value that
-case-insensitively matches an attribute name already registered on its own
-machine (declared under `## Data`, or used anywhere else in the machine) is
-classified as a reference to that attribute (`condition.valueIsReference`)
-rather than a literal — the same "match against known names" approach step 3
-already uses to tell an event trigger apart from a state trigger. It must run
-before step 5, since step 5's own sub-steps (5a, 5c) treat a
-reference-classified condition differently from a literal one.
+Reference classification is not a separate pipeline step: a condition or
+result value's `valueIsReference` is set directly by the grammar while
+parsing (step 1), purely by delimiter — a backticked value is a reference, a
+double-quoted or bare numeric value is a literal — with no name-matching
+involved. This differs from trigger classification (step 3), which *is* a
+genuine post-parse step: it matches each trigger's name against every known
+state name (collected across all parsed machines) to decide `state` vs.
+`event`, which is why it must run after every file has been parsed.
 
 ## Raw AST validation
 
@@ -88,16 +89,17 @@ unaffected by completion.
 - [REQ-412] Any argument using a modifier shall have a base reference to the
   same attribute name somewhere in the same effective transition context.
 
-- [REQ-415] A condition attached to a result argument shall use only an
-  equality-style operator.
+- [REQ-415] A result argument's value shall always be a plain equality
+  assignment (`attribute set to value`) — guaranteed structurally by the
+  schema, since `Result` (unlike `Condition`) carries no `operator` field to
+  choose a non-equality comparison with.
 
 - [REQ-416] State-triggers shall not resolve via a cyclic definition.
 
-- [REQ-424] A condition classified as an attribute reference
-  (`condition.valueIsReference`) shall only appear on a result argument's
-  condition. State implied conditions, default-precondition arguments,
-  transition state arguments, and transition trigger arguments reject a
-  reference-classified condition value.
+- [REQ-424] A value classified as an attribute reference (`valueIsReference`)
+  shall only appear on a result argument's `result`. State implied
+  conditions, default-precondition arguments, transition state arguments, and
+  transition trigger arguments reject a reference-classified condition value.
 
 ## Complete AST validation
 
@@ -111,9 +113,9 @@ partially or entirely unspecified.
 - [REQ-417] Every `dataExampleValues` row in the complete AST shall include a
   column for every attribute present in the machine's `data` map.
 
-- [REQ-418] Every attribute value referenced in a condition (argument
-  condition or implied state condition) shall be present in the example data
-  values table for that attribute.
+- [REQ-418] Every attribute value referenced in a condition or result
+  (argument condition, argument result, or implied state condition) shall be
+  present in the example data values table for that attribute.
 
 - [REQ-411] When a transition references one or more arguments, at least one
   contributing machine in that transition context shall provide one or more
@@ -132,7 +134,7 @@ partially or entirely unspecified.
   names, state implied-condition attribute names, default-precondition
   argument names, and transition state/event-trigger/result argument names.
   State-trigger arguments are excluded because they belong to the triggering
-  machine, not the current one. A result argument whose condition is an
+  machine, not the current one. A result argument whose result is an
   attribute reference (REQ-423/REQ-424) is likewise excluded for that
   occurrence: its value is never drawn from its own example values, only
   resolved dynamically from the referenced attribute. An attribute declared
@@ -144,10 +146,11 @@ partially or entirely unspecified.
   attribute. Every row in the table shall include every declared attribute as
   a column, with `""` standing in for any attribute absent from that row.
 
-- [REQ-421] Every value referenced by a condition (argument condition or
-  implied state condition) shall be present among the example values for that
-  attribute. When a context (e.g. a single transition) constrains multiple
-  attributes at once, each required combination of values across those
-  attributes shall be satisfied by at least one row. A condition classified as
-  an attribute reference (REQ-423) contributes no required value: it pins no
-  literal, so the referenced attribute name is never mistaken for one.
+- [REQ-421] Every value referenced by a condition or result (argument
+  condition, argument result, or implied state condition) shall be present
+  among the example values for that attribute. When a context (e.g. a single
+  transition) constrains multiple attributes at once, each required
+  combination of values across those attributes shall be satisfied by at
+  least one row. A condition or result classified as an attribute reference
+  (REQ-423) contributes no required value: it pins no literal, so the
+  referenced attribute name is never mistaken for one.

@@ -2,7 +2,7 @@ import * as fs from "fs"
 import * as path from "path"
 import { fileURLToPath } from "url"
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv"
-import type { Argument, Condition, DefaultPrecondition, StateMachine, Transition } from "./sm.ast.d"
+import type { Argument, Condition, DefaultPrecondition, Result, StateMachine, Transition } from "./sm.ast.d"
 
 /**
  * JSON Schema validation for the parsed state-machine AST, checked against
@@ -165,9 +165,8 @@ export function validateStateMachines(data: unknown): void {
     validateStructuralRefs(stateMachines)
     validateModifierBaseReferences(stateMachines)
     validateModifierValuePoolSize(stateMachines)
-    validateResultConditionOperators(stateMachines)
     validateConditionReferenceScope(stateMachines)
-    validateConditionReferenceTargets(stateMachines)
+    validateResultReferenceTargets(stateMachines)
 
     // [REQ-163] Business-rule check performed after schema validation
     // succeeds, since it relies on `data` actually conforming to the
@@ -575,34 +574,8 @@ export function validateModifierValuePoolSize(stateMachines: StateMachine[]): vo
 }
 
 /**
- * [REQ-415] Restricts result-argument conditions to equality-style operators only.
- *
- * @param stateMachines Parsed state-machine AST nodes.
- * @returns Nothing. Validation succeeds by not throwing.
- * @throws Error When a result argument uses an unsupported condition operator.
- */
-export function validateResultConditionOperators(stateMachines: StateMachine[]): void {
-    const allowedOperators = new Set(["=", "as", "undefined"])
-
-    for (const stateMachine of stateMachines) {
-        for (const transition of stateMachine.transitions ?? []) {
-            const transitionContext = formatTransitionContext(stateMachine.name, transition)
-            for (const argument of transition.result.arguments ?? []) {
-                const operator = argument.condition?.operator
-                if (!operator || allowedOperators.has(operator)) continue
-
-                throw new Error(
-                    `${transitionContext}: Result argument \`${argument.name}\` has a non-equality condition operator ` +
-                    `\`${operator}\`. Only \`=\`, \`as\`, and \`undefined\` are allowed on result arguments.`,
-                )
-            }
-        }
-    }
-}
-
-/**
- * [REQ-424] Restricts attribute-reference condition values (`condition.valueIsReference`) to
- * result-argument conditions: every other condition site (state implied conditions,
+ * [REQ-424] Restricts attribute-reference values (`valueIsReference`) to transition result
+ * arguments (`Argument.result`): every condition site (state implied conditions,
  * default-precondition arguments, transition state arguments, transition trigger arguments) can
  * only filter rows against a fixed literal, never resolve dynamically against another attribute's
  * row value.
@@ -616,7 +589,7 @@ export function validateConditionReferenceScope(stateMachines: StateMachine[]): 
         if (!condition?.valueIsReference) return
         throw new Error(
             `${context}: Argument \`${attributeName}\` references attribute \`${condition.value}\`, but attribute ` +
-            `references are only supported in transition result argument conditions (REQ-424).`,
+            `references are only supported in transition result arguments' \`result\` (REQ-424).`,
         )
     }
     const rejectReferenceInArguments = (context: string, args: Argument[] | undefined): void => {
@@ -651,18 +624,18 @@ export function validateConditionReferenceScope(stateMachines: StateMachine[]): 
 }
 
 /**
- * [REQ-425] Ensures every attribute-reference condition value (`condition.valueIsReference`) names
+ * [REQ-425] Ensures every attribute-reference result value (`result.valueIsReference`) names
  * a data attribute declared somewhere in the AST — in any state machine, not only the one owning the
- * condition, since a reference is resolved against whichever machine actually declares that name.
+ * result, since a reference is resolved against whichever machine actually declares that name.
  *
  * Runs on the complete AST (after `completeStateMachines`), so every attribute inferred from usage
  * is already present in each machine's `data` map.
  *
  * @param stateMachines Parsed state-machine AST nodes.
  * @returns Nothing. Validation succeeds by not throwing.
- * @throws Error When a reference-valued condition names an attribute declared nowhere in the AST.
+ * @throws Error When a reference-valued result names an attribute declared nowhere in the AST.
  */
-export function validateConditionReferenceTargets(stateMachines: StateMachine[]): void {
+export function validateResultReferenceTargets(stateMachines: StateMachine[]): void {
     const allAttributeNames = new Set<string>()
     for (const stateMachine of stateMachines) {
         for (const attributeName of Object.keys(stateMachine.data ?? {})) {
@@ -675,17 +648,17 @@ export function validateConditionReferenceTargets(stateMachines: StateMachine[])
         }
     }
 
-    const checkReference = (context: string, attributeName: string, condition: Condition | undefined): void => {
-        if (!condition?.valueIsReference) return
-        const referencedName = typeof condition.value === "string" ? condition.value : ""
+    const checkReference = (context: string, attributeName: string, result: Result | undefined): void => {
+        if (!result?.valueIsReference) return
+        const referencedName = typeof result.value === "string" ? result.value : ""
         if (allAttributeNames.has(referencedName.toLowerCase())) return
         throw new Error(
-            `${context}: Argument \`${attributeName}\` references attribute \`${condition.value}\`, but no state ` +
-            `machine declares a data attribute by the name \`${condition.value}\` (REQ-425).`,
+            `${context}: Argument \`${attributeName}\` references attribute \`${result.value}\`, but no state ` +
+            `machine declares a data attribute by the name \`${result.value}\` (REQ-425).`,
         )
     }
     const checkReferenceInArguments = (context: string, args: Argument[] | undefined): void => {
-        for (const argument of args ?? []) checkReference(context, argument.name, argument.condition)
+        for (const argument of args ?? []) checkReference(context, argument.name, argument.result)
     }
 
     for (const stateMachine of stateMachines) {

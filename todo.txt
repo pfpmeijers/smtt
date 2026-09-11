@@ -38,3 +38,28 @@
 - Let the ohm grammar already distinguish between numerical and string attr. Strings have "".
 - Use null for undefined (numerical or string) attr. Null is also allowed in json
 - cleanup/compact the sm.spec.md. There is a lot of repetition that makes it very verbose and hard to read.
+- Consider following: Only if result is set for attr that is also used in precond/trigger, then add "resulting" prefix.
+     Otherwise it might look strange/unneeded. But check the real cases where this happens first.
+
+
+- Some comments are much elaborating on what is -not- is (no longer). Remove that. Just describe info about what it is.
+
+- Consider line breaks in state table. Like below.
+    | #        | States                                          | Trigger                                            | Result                                                          | Notes                                                                       |
+    |==========|=================================================|====================================================|=================================================================|=============================================================================|
+    | 038a     | `User session present`,                         | `Painting added to cart`                           | `Painting in cart`                                              | Adding painting to cart, while user not authenticated.                      |
+    |          | `User unauthenticated`,                         |                                                    | with `painting email address` undefined                         |                                                                             |
+    |          | `Painting available`                            |                                                    |                                                                 |                                                                             |
+    | -------  | ----------------------------------------------  | -------------------------------------------------  |-----------------------------------------------------------------| --------------------------------------------------------------------------  |
+    | 038b     | `User session present`,                         | `Painting added to cart`                           | `Painting in cart`                                              | Adding painting to cart.                                                    |
+    |          | `User authenticated` as `user email address`,   | `painting email address` as `user email address`   |                                                                 |                                                                             |                                                                           |
+    |          | `Painting available`                            |                                                    |                                                                 |                                                                             |                                                                           |
+    | -------- | ----------------------------------------------- | -------------------------------------------------- |-----------------------------------------------------------------| --------------------------------------------------------------------------- |
+    | 039a     | `User session present`,                         | `Painting reservation confirmed`                   | `Painting reserved`                                             | Reservation confirmed. User implicitly authenticated by reservation.        |
+    |          | `User unauthenticated`,                         | using `reservation email address`                  | for `reservation email address`                                 |                                                                             |
+    |          | `Painting in cart`                              |                                                    | and `painting email address` set to `reservation email address` |                                                                             |
+    |          | `painting email address` undefined              |                                                    |                                                                 |                                                                             |                                                                          |
+    | -------- | ----------------------------------------------- | -------------------------------------------------- |-----------------------------------------------------------------| --------------------------------------------------------------------------- |
+    | 042      | `User session present`,                         | `Painting removed from cart`                       | `Painting available`                                            | Removing painting from cart.                                                |
+    |          | `User authenticated`,                           |                                                    |                                                                 |                                                                             |
+    |          | `Painting in cart`                              |                                                    |

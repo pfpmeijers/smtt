@@ -5,6 +5,7 @@ import {
     Condition,
     ImpossibleTrigger,
     IrrelevantTrigger,
+    Result,
     StateDefinition,
     StateMachine,
     StateRef,
@@ -43,8 +44,12 @@ type ImpliedCondition = {
     condition: Condition
 }
 
-/** A condition's right-hand side: either a literal `value`, or a `value` naming a reference. */
-type ConditionValue = Pick<Condition, "value" | "valueIsReference">
+/**
+ * A condition or result's right-hand side: either a literal `value`, or a `value` naming a
+ * reference. Mirrors the grammar's `attributeValue` rule, shared between
+ * `conditionalAttributeExpression` and `resultAttributeExpression`.
+ */
+type ValueExpression = Pick<Condition, "value" | "valueIsReference">
 
 type TransitionRow = {
     id?: string
@@ -69,10 +74,13 @@ type TransitionsSection = {
 /**
  * Builds one `Argument` from the parsed qualifier/modifier/qualifier fields,
  * a `ArgumentExpression`, and optional suffix text. Field order mirrors source order.
+ * `condition` (a state/trigger argument) and `result` (a transition result argument) are
+ * mutually exclusive — only one is ever set on a given expression.
  */
 type ArgumentExpression = {
     name: string
     condition?: Condition
+    result?: Result
 }
 
 type BuildArgumentOptions = {
@@ -94,7 +102,7 @@ type BuildArgumentOptions = {
  * @param preQualifier Optional pre-qualifier before the modifier.
  * @param modifier Optional modifier for the argument.
  * @param postQualifier Optional post-qualifier after the modifier.
- * @param expression The argument name and optional condition.
+ * @param expression The argument name and optional condition or result.
  * @param suffix Optional suffix text appended to the argument.
  * @returns An `Argument` object with all provided fields set.
  */
@@ -113,6 +121,7 @@ function buildArgument({
     if (postQualifier) argument.postQualifier = postQualifier
     argument.name = expression.name
     if (expression.condition) argument.condition = expression.condition
+    if (expression.result) argument.result = expression.result
     if (suffix) argument.suffix = suffix
     return argument
 }
@@ -511,7 +520,7 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
                 attribute: attributeNode.toAST() as string,
                 condition: {
                     operator: opNode.sourceString.trim() as Condition["operator"],
-                    ...(valueNode.toAST() as ConditionValue)
+                    ...(valueNode.toAST() as ValueExpression)
                 }
             } satisfies ImpliedCondition
         },
@@ -534,7 +543,7 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             }
             return {
                 attribute: attributeNode.toAST() as string,
-                condition: { operator: operator as Condition["operator"], ...(valueNode.toAST() as ConditionValue) }
+                condition: { operator: operator as Condition["operator"], ...(valueNode.toAST() as ValueExpression) }
             } satisfies ImpliedCondition
         },
 
@@ -574,6 +583,55 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
 
         setCompare_notIn(_op) {
             return "not in"
+        },
+
+        // --- Result reference ---
+
+        result(identifierNode, firstArgOpt, _separatorIter, moreArgsIter) {
+            const firstArg = firstArgOpt.children.length > 0 ? firstArgOpt.children[0].toAST() as Argument : undefined
+            const moreArgs = moreArgsIter.children.map(node => node.toAST() as Argument)
+            const args = [...(firstArg !== undefined ? [firstArg] : []), ...moreArgs]
+            const name = identifierNode.toAST() as string
+            return args.length > 0 ? { name, arguments: args } : { name }
+        },
+
+        resultArgument_withModifier(_leadingSpace, preQualifierOpt, modifierNode, postQualifierOpt, resultArgumentExpression, suffixOpt) {
+            const preQualifier = preQualifierOpt.children[0] ? preQualifierOpt.children[0].sourceString.trim() : undefined
+            const modifier = modifierNode.sourceString.trim()
+            const postQualifier = postQualifierOpt.children[0] ? postQualifierOpt.children[0].sourceString.trim() : undefined
+            const suffix = suffixOpt.children[0]?.toAST() as string | undefined
+            const expression = resultArgumentExpression.toAST() as ArgumentExpression
+            return buildArgument({ preQualifier, modifier, postQualifier, expression, suffix })
+        },
+
+        resultArgument_noModifier(_leadingSpace, qualifierOpt, resultArgumentExpression, suffixOpt) {
+            const qualifier = qualifierOpt.children[0] ? qualifierOpt.children[0].sourceString.trim() : undefined
+            const suffix = suffixOpt.children[0]?.toAST() as string | undefined
+            const expression = resultArgumentExpression.toAST() as ArgumentExpression
+            return buildArgument({ qualifier, expression, suffix })
+        },
+
+        resultArgumentExpression_conditional(expressionNode) {
+            const { attribute, result } = expressionNode.toAST() as { attribute: string; result: Result }
+            return { name: attribute, result }
+        },
+
+        resultArgumentExpression_bare(nameNode) {
+            return { name: nameNode.toAST() as string }
+        },
+
+        resultAttributeExpression_value(attributeNode, _kw, valueNode) {
+            return {
+                attribute: attributeNode.toAST() as string,
+                result: { ...(valueNode.toAST() as ValueExpression) },
+            }
+        },
+
+        resultAttributeExpression_undefined(attributeNode, _kw, _undefinedKw) {
+            return {
+                attribute: attributeNode.toAST() as string,
+                result: {},
+            }
         },
 
         // --- Impossible / Irrelevant ---
@@ -629,12 +687,12 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             return chars.sourceString
         },
 
-        conditionValue_literal(valueNode) {
-            return { value: String(valueNode.toAST()) } satisfies ConditionValue
+        attributeValue_literal(valueNode) {
+            return { value: String(valueNode.toAST()) } satisfies ValueExpression
         },
 
-        conditionValue_reference(identifierNode) {
-            return { value: identifierNode.toAST() as string, valueIsReference: true } satisfies ConditionValue
+        attributeValue_reference(identifierNode) {
+            return { value: identifierNode.toAST() as string, valueIsReference: true } satisfies ValueExpression
         },
 
         number(_signOpt, _intOrDot, _fracOrDigits, _exponentOpt) {

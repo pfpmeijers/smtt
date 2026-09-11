@@ -13,7 +13,7 @@
  *    combination is satisfied by at least one row.
  */
 
-import type { Argument, Condition, StateMachine } from "./sm.ast.d"
+import type { Argument, Condition, Result, StateMachine } from "./sm.ast.d"
 
 // --- Shared helpers ---
 
@@ -53,6 +53,22 @@ function extractConditionValues(condition: Condition): string[] {
         return [condition.value]
     }
     return [String(condition.value)]
+}
+
+/**
+ * Extracts the literal value referenced by a result expression. A result is always a plain
+ * equality assignment (`attribute set to value`), never a range or set, so unlike
+ * `extractConditionValues` there is at most one value to extract.
+ *
+ * @param result Result expression to extract the value from.
+ * @returns A single-element array with the result's literal value, or `[]` when the result sets
+ *   the attribute to undefined (REQ-421), or when its value is a reference to another attribute
+ *   (`valueIsReference`) — a reference doesn't pin a literal value either, since it resolves
+ *   dynamically at generation time, not from this attribute's own example values.
+ */
+function extractResultValues(result: Result): string[] {
+    if (result.value === undefined || result.valueIsReference) return []
+    return [result.value]
 }
 
 /**
@@ -122,12 +138,12 @@ export function collectUsedAttributeNames(stateMachine: StateMachine): string[] 
                 names.add(name)
             }
         }
-        // A result argument whose condition is a reference to another attribute is excluded for
+        // A result argument whose result is a reference to another attribute is excluded for
         // the same reason state-trigger arguments are: its value never comes from this attribute's
         // own example values (it's resolved dynamically from the referenced attribute at
         // generation time), so this occurrence alone must not force a declaration for it.
         for (const argument of transition.result.arguments ?? []) {
-            if (argument.condition?.valueIsReference) continue
+            if (argument.result?.valueIsReference) continue
             names.add(argument.name.toLowerCase())
         }
     }
@@ -252,9 +268,11 @@ function rowSatisfiesCombination(
 }
 
 /**
- * Accumulates condition values from a flat argument list into `byAttribute`.
+ * Accumulates condition/result values from a flat argument list into `byAttribute`. Each argument
+ * carries either `condition` (a state or trigger argument) or `result` (a transition result
+ * argument), never both — whichever is present is the value/reference expression to scan.
  *
- * @param args Arguments whose conditions should be scanned.
+ * @param args Arguments whose condition/result should be scanned.
  * @param byAttribute Accumulator map (mutated in place).
  */
 function accumulateArgumentConditions(
@@ -262,8 +280,11 @@ function accumulateArgumentConditions(
     byAttribute: Map<string, string[]>,
 ): void {
     for (const arg of args) {
-        if (!arg.condition) continue
-        const values = extractConditionValues(arg.condition as Condition)
+        const values = arg.condition
+            ? extractConditionValues(arg.condition)
+            : arg.result
+                ? extractResultValues(arg.result)
+                : []
         if (values.length === 0) continue
         const key = arg.name.toLowerCase()
         const existing = byAttribute.get(key) ?? []

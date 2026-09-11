@@ -281,8 +281,7 @@
               {
                 "qualifier": "with",
                 "name": "a2",
-                "condition": {
-                  "operator": "=",
+                "result": {
                   "value": "3"
                 }
               }
@@ -349,8 +348,7 @@
               {
                 "qualifier": "with",
                 "name": "a2",
-                "condition": {
-                  "operator": "=",
+                "result": {
                   "value": "0"
                 }
               }
@@ -569,8 +567,7 @@
               },
               {
                 "name": "a4",
-                "condition": {
-                  "operator": "=",
+                "result": {
                   "value": "10"
                 }
               }
@@ -628,8 +625,7 @@
               {
                 "qualifier": "with",
                 "name": "a4",
-                "condition": {
-                  "operator": "=",
+                "result": {
                   "value": "20"
                 }
               }
@@ -657,8 +653,7 @@
               {
                 "qualifier": "with",
                 "name": "a4",
-                "condition": {
-                  "operator": "=",
+                "result": {
                   "value": "0"
                 }
               }
@@ -683,8 +678,7 @@
               {
                 "qualifier": "with",
                 "name": "a4",
-                "condition": {
-                  "operator": "=",
+                "result": {
                   "value": "0"
                 }
               }

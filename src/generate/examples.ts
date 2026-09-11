@@ -1,6 +1,6 @@
 import type { Argument, DefaultPrecondition, StateMachine, Transition } from "../parse"
 import { canonicalModifier, DIFFERENT_MODIFIER, modifierColumnName, resultingColumnName } from "./arguments"
-import { type FilterCondition, evaluateCondition, validateResultCondition } from "./conditions"
+import { type FilterCondition, evaluateCondition } from "./conditions"
 import { isAliasedArgument, type ExpansionSourceStep } from "./expansion"
 
 /** One row of example attribute values, keyed by attribute name. */
@@ -136,7 +136,7 @@ export function describeEmptyExampleValues(stateMachineNames: Iterable<string>):
 // --- Columns ---
 
 /** Column kinds of an examples table: a plain attribute, a modifier derivation, a result value. */
-type ColumnKind = "base" | "modifier" | "result-condition"
+type ColumnKind = "base" | "modifier" | "result"
 
 /** One column of the examples table, carrying how its cell values are derived. */
 export interface ExampleColumn {
@@ -154,12 +154,12 @@ export interface ExampleColumn {
     /** Label of the owning transition (e.g. `` transition `019` ``), for error reporting. */
     transitionLabel?: string
     /**
-     * Fixed cell value of a `result-condition` column, or — when `valueIsReference` is set — the
+     * Fixed cell value of a `result` column, or — when `valueIsReference` is set — the
      * name of the attribute whose row value the cell resolves to dynamically instead.
      */
-    conditionValue?: string
+    resultValue?: string
     /**
-     * Whether `conditionValue` names another attribute to resolve dynamically per row (REQ-423),
+     * Whether `resultValue` names another attribute to resolve dynamically per row (REQ-423),
      * rather than being the fixed literal cell value itself.
      */
     valueIsReference?: boolean
@@ -217,15 +217,15 @@ function argumentGroups(
 }
 
 /**
- * Read the value carried by a result-condition argument: a fixed literal, or — when the condition
+ * Read the value carried by a result argument: a fixed literal, or — when the result
  * is a reference (REQ-423) — the name of the attribute to resolve dynamically per row instead.
  *
- * @param argument Result argument whose condition value should be extracted.
- * @returns The first condition value, or an empty string when no value is present.
+ * @param argument Result argument whose result value should be extracted.
+ * @returns The result's value, or an empty string when no value is present (the attribute is set
+ *   to undefined).
  */
-function resultConditionValue(argument: Argument): string {
-    const value = argument.condition?.value
-    return (Array.isArray(value) ? value[0] : value) ?? ""
+function resultValue(argument: Argument): string {
+    return argument.result?.value ?? ""
 }
 
 /**
@@ -266,15 +266,14 @@ function modifierColumn(
 
 /**
  * Columns derived from a set of already-collected argument groups: every referenced base
- * attribute in first-encounter order, followed by the derived modifier and result condition
+ * attribute in first-encounter order, followed by the derived modifier and result value
  * columns in their encounter order (REQ-064/REQ-065/REQ-066/REQ-151/REQ-152).
  *
  * @param groups Argument groups in scan order (REQ-064), e.g. from `argumentGroups` for a single
  *   transition or `collectChainArgumentGroups` for a whole expansion chain (REQ-161).
  * @returns The ordered columns; empty when no group references any argument at all, in which
  *   case a plain `Scenario` is rendered instead of a `Scenario Outline` (REQ-047).
- * @throws Error When a modifier argument has no base references among `groups` (REQ-136), or
- *   when a result condition uses a non-equality operator (REQ-089).
+ * @throws Error When a modifier argument has no base references among `groups` (REQ-136).
  */
 function buildExampleColumns(groups: ArgumentGroup[]): ExampleColumn[] {
     const baseReferenceNames = new Set(
@@ -294,29 +293,28 @@ function buildExampleColumns(groups: ArgumentGroup[]): ExampleColumn[] {
     }
 
     for (const group of groups) {
-        const { args, isResult, poolStateMachineName } = group
+        const { args, isResult } = group
         for (const argument of args) {
             // A rendering-only alias (REQ-422) contributes no column of its own: the transition
             // that genuinely declared this modifier, elsewhere in the same resolved path, already
             // does — an aliased copy would redefine the same column against its own (unrelated,
             // possibly too-small) value pool instead of the genuine declaration's.
             if (isAliasedArgument(argument)) continue
-            // A result argument with a condition renders as `<resulting X>`, never `<X>`
+            // A result argument set to a value renders as `<resulting X>`, never `<X>`
             // (see `attributePlaceholderName`), so it contributes no base column of its own.
-            const isResultCondition = isResult && argument.condition
+            const hasResultValue = isResult && argument.result
             if (argument.modifier) {
                 addDerived(modifierColumn(group, argument, baseReferenceNames))
-            } else if (!isResultCondition) {
+            } else if (!hasResultValue) {
                 addBase(argument.name)
             }
-            if (isResultCondition) {
-                validateResultCondition(poolStateMachineName, argument.name, argument.condition)
+            if (hasResultValue) {
                 addDerived({
-                    kind: "result-condition",
+                    kind: "result",
                     name: resultingColumnName(argument.name),
                     sourceName: argument.name,
-                    conditionValue: resultConditionValue(argument),
-                    valueIsReference: argument.condition!.valueIsReference,
+                    resultValue: resultValue(argument),
+                    valueIsReference: argument.result!.valueIsReference,
                 })
             }
         }
@@ -333,8 +331,7 @@ function buildExampleColumns(groups: ArgumentGroup[]): ExampleColumn[] {
  * @param transition Transition whose examples columns are being collected.
  * @returns The ordered columns; empty when the transition references no arguments at all,
  *   in which case a plain `Scenario` is rendered instead of a `Scenario Outline` (REQ-047).
- * @throws Error When a modifier argument has no base references in the transition (REQ-136),
- *   or when a result condition uses a non-equality operator (REQ-089).
+ * @throws Error When a modifier argument has no base references in the transition (REQ-136).
  */
 export function collectExampleColumns(
     stateMachineName: string,
@@ -366,7 +363,7 @@ export function collectExampleColumns(
  * @returns The ordered columns; empty when neither the transition nor this path's chain
  *   references any argument, in which case a plain `Scenario` is rendered (REQ-047).
  * @throws Error When a modifier argument has no base reference anywhere in the transition or this
- *   path's chain (REQ-136), or when a result condition uses a non-equality operator (REQ-089).
+ *   path's chain (REQ-136).
  */
 export function collectPathExampleColumns(
     stateMachineName: string,
@@ -568,10 +565,10 @@ function resolveCellValue(
             return row[column.sourceName] ?? ""
         case "modifier":
             return resolveModifierValue(stateMachines, stateMachineName, column, row, sourceRowIndex, allRows)
-        case "result-condition":
+        case "result":
             // REQ-423: a reference resolves against this same row's own value for the referenced
-            // attribute, dynamically, rather than the fixed literal carried by a plain condition.
-            return column.valueIsReference ? (row[column.conditionValue ?? ""] ?? "") : (column.conditionValue ?? "")
+            // attribute, dynamically, rather than the fixed literal the result was set to.
+            return column.valueIsReference ? (row[column.resultValue ?? ""] ?? "") : (column.resultValue ?? "")
     }
 }
 

@@ -1,6 +1,6 @@
 # Condition reference
 
-Exercises attribute-reference condition values on a result argument: a
+Exercises attribute-reference result values on a result argument: a
 backticked value names another attribute, dynamically resolved per row,
 instead of being a quoted literal.
 
@@ -29,4 +29,4 @@ Example values:
 
 | States                              | Trigger          | Result                                                                    |
 |-------------------------------------|------------------|---------------------------------------------------------------------------|
-| `Painting listed` with `list price` | `Sale confirmed` | `Painting sold` with `sale price` = `list price` and `note` as "archived" |
+| `Painting listed` with `list price` | `Sale confirmed` | `Painting sold` with `sale price` set to `list price` and `note` set to "archived" |

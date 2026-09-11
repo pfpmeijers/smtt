@@ -309,7 +309,7 @@ definition as follows:
 
 - [REQ-065] The table shall add _derived_ columns required by modifiers.
 
-- [REQ-066] The table shall add _derived_ columns required by conditions.
+- [REQ-066] The table shall add _derived_ columns required by result values.
 
 - [REQ-151] Each base attribute name shall appear as a column exactly once, at
   its first-encountered position.
@@ -318,11 +318,11 @@ definition as follows:
   etc.) shall be appended after all base columns, in their encounter order.
 
 - [REQ-169] A base attribute name shall not receive a column when its only
-  occurrence in the transition is a result argument carrying a condition — such
-  an argument's step placeholder always references the derived
+  occurrence in the transition is a result argument carrying a result value —
+  such an argument's step placeholder always references the derived
   `resulting $attribute-name` column instead (REQ-101), so the base column
   would otherwise go unused in every rendered step. When the same attribute is
-  also referenced elsewhere in the transition without a result condition (e.g.
+  also referenced elsewhere in the transition without a result value (e.g.
   a precondition, trigger, or plain result reference), its base column is kept,
   since that occurrence does render `"<$attribute-name>"`.
   - Dropping the base column may leave rows that are identical in every
@@ -622,16 +622,16 @@ Examples:
   merged as a conjunction: a row survives only if it satisfies ALL conditions
   from the top-level transition AND all source transitions in the chain.
 
-- [REQ-088] Result conditions shall extend the columns.
+- [REQ-088] Result values shall extend the columns.
 
-- [REQ-089] Result conditions shall be restricted to equality operators only
-  (`=`, `as`). The `resulting $attribute-name` column cell value shall be taken
-  directly from `condition.value` in the AST. The generator shall raise an error
-  when a result condition uses a non-equality operator.
+- [REQ-089] A result argument's value shall always be a plain equality
+  assignment — the Result column's `attribute set to value` syntax has no
+  other operator to choose between. The `resulting $attribute-name` column
+  cell value shall be taken directly from `result.value` in the AST.
 
 E.g.
-- Result argument `` `count = 2` `` → `resulting count` column with value `2`.
-- Result argument `` `status` as `active` `` → `resulting status` column with
+- Result argument `` `count` set to 2 `` → `resulting count` column with value `2`.
+- Result argument `` `status` set to "active" `` → `resulting status` column with
   value `active`.
 
 Supported operators:
@@ -710,11 +710,11 @@ Supported operators:
   conditions only filter rows; they neither add columns nor turn a plain
   `Scenario` into a `Scenario Outline`.
 
-#### Result conditions
+#### Result values
 
-- [REQ-101] Conditions in result arguments shall potentially add additional
-  columns in the examples table, under the column name 
-  `resulting $attribute-name`, and result argument step placeholders shall 
+- [REQ-101] Result values on result arguments shall potentially add
+  additional columns in the examples table, under the column name
+  `resulting $attribute-name`, and result argument step placeholders shall
   reference `"<resulting $attribute-name>"`.
 - Data example table in state machine spec:
   ```markdown
@@ -724,9 +724,10 @@ Supported operators:
     | 1 |
     | 2 |
   ```
-- With `` `a = 1` `` on a precondition state argument and `` `a = 2` `` on the
-  result argument, <br/> (``state x with `a = 1` ``, and trigger `...`, results
-  in ``state x with `a = 2` ``)<br/> then scenario steps and examples table:
+- With `` `a = 1` `` on a precondition state argument and `` `a` set to 2 ``
+  on the result argument, <br/> (``state x with `a = 1` ``, and trigger `...`,
+  results in ``state x with `a` set to 2 ``)<br/> then scenario steps and
+  examples table:
   ```gherkin
     Scenario Outline: [REQ-001] x "<a>" â†’ x "<resulting a>"; when e
       Given initially x "<a>"
@@ -738,7 +739,7 @@ Supported operators:
   ```
 
 - When `a` is *not* otherwise referenced in the transition — no precondition,
-  trigger, or plain result argument for it, only the result condition — its
+  trigger, or plain result argument for it, only the result value — its
   base column is dropped (REQ-169) and rows that then differ only by the
   discarded `a` value collapse into one:
   ```markdown
@@ -748,9 +749,9 @@ Supported operators:
     | 1 |
     | 2 |
   ```
-  With just `` `a = 2` `` on the result argument (no precondition on `a`),
-  <br/> (state `x`, trigger `e`, results in `` x with `a = 2` ``)<br/> then
-  scenario steps and examples table:
+  With just `` `a` set to 2 `` on the result argument (no precondition on
+  `a`), <br/> (state `x`, trigger `e`, results in `` x with `a` set to 2 ``)
+  <br/> then scenario steps and examples table:
   ```gherkin
     Scenario Outline: [REQ-001] x â†’ x "<resulting a>"; when e
       Given initially x
@@ -761,13 +762,15 @@ Supported operators:
         | 2           |
   ```
 
-- [REQ-423] A result condition's `condition.value` may instead be classified
-  as a reference to another attribute of the same machine
-  (`condition.valueIsReference`, set by the parser's post-parse classification
-  step the same way an event trigger is told apart from a state trigger). The
-  `resulting $attribute-name` column's cell value is then taken from that
-  *row's own value* for the referenced attribute, dynamically, instead of the
-  fixed literal REQ-089 otherwise takes it from.
+- [REQ-423] A result's `result.value` may instead name a reference to another
+  attribute of the same machine (`result.valueIsReference`), set directly by
+  the grammar at parse time — a backticked value is a reference, a
+  double-quoted or bare numeric value is a literal — purely by delimiter, with
+  no name-matching or post-parse classification involved (unlike trigger
+  classification, which does match the trigger name against known state
+  names post-parse). The `resulting $attribute-name` column's cell value is
+  then taken from that *row's own value* for the referenced attribute,
+  dynamically, instead of the fixed literal REQ-089 otherwise takes it from.
 
 - Data example table in state machine spec:
   ```markdown
@@ -776,10 +779,11 @@ Supported operators:
     | 10 |
     | 20 |
   ```
-- With `` `x` with `p` `` as the precondition state and `` `q` = `p` `` on the
-  result argument, <br/> (trigger `e`, results in `` x with `q` = `p` ``)<br/>
-  then scenario steps and examples table — each row's `resulting q` tracks
-  that same row's own `p`, not one shared literal:
+- With `` `x` with `p` `` as the precondition state and `` `q` set to `p` ``
+  on the result argument, <br/> (trigger `e`, results in
+  `` x with `q` set to `p` ``)<br/> then scenario steps and examples table —
+  each row's `resulting q` tracks that same row's own `p`, not one shared
+  literal:
   ```gherkin
     Scenario Outline: [REQ-001] x "<p>" â†’ x "<resulting q>"; when e
       Given initially x "<p>"

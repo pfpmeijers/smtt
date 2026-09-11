@@ -301,17 +301,17 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         assert.ok(pool.includes("v1"), "synthesized row must contain the trigger condition value")
     })
 
-    it("[TST-143] → [REQ-421]: synthesizes a row for a missing condition value in a result argument", () => {
+    it("[TST-143] → [REQ-421]: synthesizes a row for a missing result value in a result argument", () => {
         const stateMachines = [clone(makeWithData())]
         stateMachines[0].transitions = [
             {
                 trigger: { type: "event", name: "e1" },
-                result: { name: "s2", arguments: [{ name: "a1", condition: { operator: "=", value: "v1" } }] },
+                result: { name: "s2", arguments: [{ name: "a1", result: { value: "v1" } }] },
             },
         ]
         completeStateMachines(stateMachines)
         const pool = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
-        assert.ok(pool.includes("v1"), "synthesized row must contain the result condition value")
+        assert.ok(pool.includes("v1"), "synthesized row must contain the result value")
     })
 
     it("[TST-144] → [REQ-421]: synthesizes a row for a missing condition value in a state implied condition", () => {
@@ -545,10 +545,10 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
     })
 })
 
-// --- Attribute-reference condition values ---
+// --- Attribute-reference result values ---
 
-describe("completeStateMachines — attribute-reference condition values", () => {
-    it("[TST-154] → [REQ-419]: does not register a result argument whose condition references another attribute", () => {
+describe("completeStateMachines — attribute-reference result values", () => {
+    it("[TST-154] → [REQ-419]: does not register a result argument whose result references another attribute", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -560,7 +560,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
                         trigger: { type: "event", name: "e1" },
                         result: {
                             name: "s2",
-                            arguments: [{ name: "a2", condition: { operator: "=", value: "a1", valueIsReference: true } }],
+                            arguments: [{ name: "a2", result: { value: "a1", valueIsReference: true } }],
                         },
                     },
                 ],
@@ -570,7 +570,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
         assert.ok(!("a2" in (stateMachines[0].data ?? {})), "`a2` must not be registered from a reference-only occurrence")
     })
 
-    it("[TST-155] → [REQ-419]: still registers a reference-conditioned result attribute when it's genuinely used elsewhere", () => {
+    it("[TST-155] → [REQ-419]: still registers a reference-valued result attribute when it's genuinely used elsewhere", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
@@ -582,7 +582,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
                         trigger: { type: "event", name: "e1", arguments: [{ name: "a2" }] },
                         result: {
                             name: "s2",
-                            arguments: [{ name: "a2", condition: { operator: "=", value: "a1", valueIsReference: true } }],
+                            arguments: [{ name: "a2", result: { value: "a1", valueIsReference: true } }],
                         },
                     },
                 ],
@@ -604,7 +604,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
                         trigger: { type: "event", name: "e1" },
                         result: {
                             name: "s2",
-                            arguments: [{ name: "a2", condition: { operator: "=", value: "a1", valueIsReference: true } }],
+                            arguments: [{ name: "a2", result: { value: "a1", valueIsReference: true } }],
                         },
                     },
                 ],

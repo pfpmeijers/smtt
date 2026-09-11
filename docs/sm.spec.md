@@ -9,11 +9,6 @@ This document defines the formalism for specifying state machines in
 > quotes; everything else reads as ordinary prose. A reader unfamiliar with the
 > notation should grasp the meaning of every sentence.
 
-## TODO:
-- For result argument conditions, only operators allowed that lead to an 
-  unambiguous value to be filled in `resulting <attribute` column is ambiguous.
-  This mean only the "=" or "as" (and its aliases) (?)
-
 ## File structure
 
 Each state machine file should follow this general structure:
@@ -246,13 +241,14 @@ unless its `State` cell already mentions any user session state.
   - **Result**: The resulting state after the transition.                     
   - **Notes** (optional): Additional context or side effects.                
 
-- **Condition-value auto-inference**: When a condition in a state definition, 
-  default precondition or transition references a value 
-  (e.g. `` `attr` = "foo" ``) that is not already present
-  in the example values table, that value is part of the implied example
-  combinations. For multiple conditions on the same transition
-  (e.g. `` `a` = "foo" and `b` = "bar" ``), a single combined row is implied
-  with all required values; all other attributes in that row
+- **Condition/result-value auto-inference**: When a condition in a state
+  definition, default precondition or transition (or a transition's Result
+  cell [result value](#result-values)) references a value
+  (e.g. `` `attr` = "foo" `` or `` `attr` set to "foo" ``) that is not already
+  present in the example values table, that value is part of the implied
+  example combinations. For multiple conditions/result values on the same
+  transition (e.g. `` `a` = "foo" and `b` = "bar" ``), a single combined row
+  is implied with all required values; all other attributes in that row
   take the first available value from the existing table, or an empty
   (undefined) value if the table has no prior rows.
 
@@ -403,6 +399,9 @@ Examples:
 
 A **value condition** constrains the argument to a specific subset of its
 possible values. Write the condition expression after the attribute name.
+Value conditions apply to `States` cell and `Trigger` cell arguments (and to
+state implied conditions and default preconditions); a `Result` cell argument
+instead uses [result values](#result-values), a separate `set to` syntax.
 
 Supported numerical condition operators:
 
@@ -445,12 +444,15 @@ Supported text condition operators:
 - **Attribute reference** — A *backticked* value (not quoted) is not a literal
   at all — it names another data attribute and is instead an
   [attribute reference](#attribute-reference-values). The backtick delimiter
-  makes this distinction syntactic: no name-matching is involved.
+  makes this distinction syntactic: no name-matching is involved. A condition
+  value never resolves to a reference in practice — only a
+  [result value](#result-values) does — but the same backtick-vs-quote
+  disambiguation applies to both.
 
 ##### Condition semantics
 
 Depending on the column the condition is used in, it represents a
-precondition, trigger constraint or postcondition.
+precondition or a trigger constraint.
 
 - **`States` cell** — a condition is a precondition: the transition only
   applies when the attribute currently holds a value satisfying the condition.
@@ -461,38 +463,51 @@ precondition, trigger constraint or postcondition.
   data value. The transition fires only when the triggering event carries a
   value that satisfies the condition.
 
-- **`Result` cell** — a condition is a postcondition: after the transition the
-  attribute will hold a value satisfying the condition. Where multiple result
-  values are possible the condition narrows them down; where a single value is
-  implied by context the condition makes that explicit.
-
-Examples:
+Example:
 
 - `` `Cart filled` with `item count` > 1`` — precondition: the cart has multiple
   items.
-- `` `Cart empty`, so `item count` = 0`` — postcondition: the cart is
+
+#### Result values
+
+A **result value** sets the value an argument in the `Result` cell takes on
+after the transition — a postcondition. Unlike a value condition, it is
+always a plain equality assignment, so there is no operator to choose between:
+write `set to` after the attribute name, followed by a value, an attribute
+reference, or `undefined`.
+
+| Syntax                                  | Meaning                                                                                                      |
+|-----------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| `` `attribute` set to value ``          | Attribute is set to numerical `value`                                                                        |
+| `` `attribute` set to "value" ``        | Attribute is set to string `"value"`                                                                         |
+| `` `attribute` set to `other attr` ``   | Attribute is set to `other attr`'s own value (see [attribute reference values](#attribute-reference-values)) |
+| `` `attribute` set to undefined ``      | Attribute is set to undefined (absent)                                                                       |
+
+Values follow the same [Values](#values) rules as a value condition — numbers
+plain, text quoted, empty quoted strings not allowed.
+
+Example:
+
+- `` `Cart empty`, so `item count` set to 0`` — postcondition: the cart is
   empty after the transition.
 
 ##### Attribute reference values
 
-A condition's value may name a data attribute instead of a literal — the value
-is then resolved dynamically, from that other attribute's own current value,
+A result value may name a data attribute instead of a literal — the value is
+then resolved dynamically, from that other attribute's own current value,
 rather than being fixed.
 
-- **Disambiguation** — Syntactic, by delimiter: a backticked condition value is
+- **Disambiguation** — Syntactic, by delimiter: a backticked result value is
   always a reference; a double-quoted (or bare numeric) value is always a
   literal. No name-matching is involved.
 - **Target** — The referenced name must be a data attribute declared (or
   inferred from usage) in *some* state machine in the project — not
-  necessarily the one owning the condition. Naming an attribute that exists
-  nowhere is an error.
+  necessarily the one owning the result value. Naming an attribute that
+  exists nowhere is an error.
 - **`Result` cell only** — An attribute reference is only supported on a
-  `Result` cell condition (a postcondition). Using one in a `States` or
+  `Result` cell's result value (a postcondition). Using one in a `States` or
   `Trigger` cell condition is an error: those conditions filter against a
   fixed value, which a dynamically-resolved reference cannot provide.
-- **Operators** — Only the equality operators (`=`, `as`, and their synonyms)
-  support a reference value, the same restriction already placed on result
-  conditions in general.
 
 Example:
 
@@ -506,9 +521,9 @@ Example:
 
 ### Rules
 
-| States                              | Trigger         | Result                                           |
-|-------------------------------------|-----------------|--------------------------------------------------|
-| `Painting listed` with `list price` | `Painting sold` | `Painting sold` with `sale price` = `list price` |
+| States                              | Trigger         | Result                                                 |
+|-------------------------------------|-----------------|---------------------------------------------------------|
+| `Painting listed` with `list price` | `Painting sold` | `Painting sold` with `sale price` set to `list price`  |
 ```
 
 After `Painting sold`, `sale price` takes on whatever value `list price`
@@ -583,7 +598,7 @@ for user authentication and these combinations need not be specified separately.
 
 Backticks and double quotes delimit tokens for parser disambiguation, and the
 choice of delimiter is meaningful: a backticked token always *names* something
-(a state machine, state, trigger, or attribute — or, as a condition value, an
+(a state machine, state, trigger, or attribute — or, as a result value, an
 [attribute reference](#attribute-reference-values)); a double-quoted token is
 always a literal text value.
 

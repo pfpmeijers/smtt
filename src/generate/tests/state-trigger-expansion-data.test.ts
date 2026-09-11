@@ -71,7 +71,7 @@ test("[TST-070] → [REQ-162]: Conditions across an expansion chain merge as a c
     assertMatchesReference(stateMachines, feature)
 })
 
-test("[TST-110] → [REQ-423]: A reference-valued result condition does not satisfy a state-trigger argument's own condition", () => {
+test("[TST-110] → [REQ-423]: A reference-valued result does not satisfy a state-trigger argument's own condition", () => {
     const stateMachines: StateMachines = [{
         name: "m1",
         states: [{name: "s1"}, {name: "s2"}],
@@ -82,7 +82,7 @@ test("[TST-110] → [REQ-423]: A reference-valued result condition does not sati
             // `a` dynamically tracks `b` — never a fixed literal — so `argumentsMatch` cannot verify
             // it against the sink's own `a = 5` condition below, and correctly excludes this
             // candidate (REQ-423) rather than accepting a match it cannot resolve.
-            result: {name: "s2", arguments: [{name: "a", condition: {operator: "=", value: "b", valueIsReference: true}}]},
+            result: {name: "s2", arguments: [{name: "a", result: {value: "b", valueIsReference: true}}]},
         }],
     }, {
         name: "m2",

@@ -132,7 +132,7 @@ export interface Condition {
    */
   value?: string | string[];
   /**
-   * When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only meaningful — and only permitted — on a result argument's condition; every other condition site rejects it (validation).
+   * When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only permitted on a transition result argument's `result` (see the `Result` definition); a state or trigger argument's `condition` rejects it (validation) since only a result can resolve dynamically.
    */
   valueIsReference?: boolean;
 }
@@ -154,7 +154,7 @@ export interface DefaultPrecondition {
   description?: string;
 }
 /**
- * A data attribute reference, mapped from backticks in the text, with optional qualifiers, modifiers, or conditions. The `qualifier` property and the `modifier` property are mutually exclusive: an argument uses either `qualifier` alone (simple form) or `modifier` with optional `preQualifier`/`postQualifier` (modified form), never both.
+ * A data attribute reference, mapped from backticks in the text, with optional qualifiers, modifiers, a condition, or a result. The `qualifier` property and the `modifier` property are mutually exclusive: an argument uses either `qualifier` alone (simple form) or `modifier` with optional `preQualifier`/`postQualifier` (modified form), never both. The `condition` property and the `result` property are likewise mutually exclusive: a state or trigger argument uses `condition` (a precondition or trigger-constraint filter); a transition result argument uses `result` (the postcondition value or reference it sets) instead.
  */
 export interface Argument {
   /**
@@ -178,13 +178,14 @@ export interface Argument {
    */
   name: string;
   condition?: Condition1;
+  result?: Result;
   /**
    * Plain words following the backtick argument span (after any post-qualifier), used for human-readable sentence continuations such as 'prefilled' or 'only'.
    */
   suffix?: string;
 }
 /**
- * A value condition constraining the attribute to a specific subset of its possible values.
+ * A precondition or trigger-constraint value condition constraining the attribute to a specific subset of its possible values. Used on state and trigger arguments; a transition result argument uses `result` instead.
  */
 export interface Condition1 {
   /**
@@ -210,7 +211,20 @@ export interface Condition1 {
    */
   value?: string | string[];
   /**
-   * When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only meaningful — and only permitted — on a result argument's condition; every other condition site rejects it (validation).
+   * When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only permitted on a transition result argument's `result` (see the `Result` definition); a state or trigger argument's `condition` rejects it (validation) since only a result can resolve dynamically.
+   */
+  valueIsReference?: boolean;
+}
+/**
+ * The postcondition value or attribute reference a transition result argument sets on the resulting state's attribute, written `attribute set to value` (or `set to undefined`) in the Result column. Used only on a transition's `result` arguments; a state or trigger argument uses `condition` instead.
+ */
+export interface Result {
+  /**
+   * The literal value, or the name of the referenced attribute (when `valueIsReference` is true), the result sets the attribute to. Absent when the result sets the attribute to undefined.
+   */
+  value?: string;
+  /**
+   * When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked result value is a reference, a quoted or numeric one is a literal. A result is the only condition/result site allowed to carry a reference (REQ-424).
    */
   valueIsReference?: boolean;
 }

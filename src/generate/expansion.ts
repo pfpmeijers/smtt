@@ -63,9 +63,9 @@ function invalidTransitionPrefix(
  * — a bare trigger only matches a bare result, and a modified trigger only matches a result
  * carrying the same (canonicalized) modifier, so two occurrences that merely share a base
  * attribute name but denote different roles (e.g. a plain value vs. a `different` one) are never
- * silently treated as the same value. Beyond that, an equality condition on the result side (its
- * concrete value, per REQ-089) must satisfy the trigger argument's own condition, if any — a side
- * with no condition imposes no further constraint (REQ-118's matching example). A trigger
+ * silently treated as the same value. Beyond that, the result side's own value (REQ-089, always a
+ * plain equality assignment) must satisfy the trigger argument's own condition, if any — a side
+ * with no condition/result imposes no further constraint (REQ-118's matching example). A trigger
  * argument naming an attribute the source's result doesn't declare falls back to checking whether
  * the source references that attribute at all, through its own precondition states or its own
  * trigger (REQ-161: the effective data table is extended with columns contributed by the chain,
@@ -86,18 +86,16 @@ function argumentsMatch(source: Transition, triggerArgs: Argument[] | undefined)
         const resultArg = resultArgsByName.get(triggerArg.name)
         if (resultArg === undefined) return otherwiseReferencedNames.has(triggerArg.name)
         if (canonicalModifier(triggerArg) !== canonicalModifier(resultArg)) return false
-        if (!triggerArg.condition || !resultArg.condition) return true
-        if (resultArg.condition.operator === "undefined") return triggerArg.condition.operator === "undefined"
-        if (resultArg.condition.operator === "defined") return triggerArg.condition.operator === "defined"
-        // REQ-423: a reference-valued result condition has no row to resolve against yet at this
-        // structural matching stage; `resultArg.condition.value` is then the *referenced attribute's
-        // name*, not a value. Comparing that name against the trigger's own condition (as any other
-        // value would be) is a deliberately conservative choice: it only "matches" in the unlikely
-        // case the name itself happens to satisfy the condition, so a source that cannot be verified
-        // compatible is correctly excluded rather than accepted and left to fail confusingly later
-        // (row-level filtering never resolves a reference — it isn't evaluated for result conditions).
-        const value = Array.isArray(resultArg.condition.value) ? resultArg.condition.value[0] : resultArg.condition.value
-        return evaluateCondition(value, triggerArg.condition)
+        if (!triggerArg.condition || !resultArg.result) return true
+        if (resultArg.result.value === undefined) return triggerArg.condition.operator === "undefined"
+        // REQ-423: a reference-valued result has no row to resolve against yet at this structural
+        // matching stage; `resultArg.result.value` is then the *referenced attribute's name*, not a
+        // value. Comparing that name against the trigger's own condition (as any other value would
+        // be) is a deliberately conservative choice: it only "matches" in the unlikely case the name
+        // itself happens to satisfy the condition, so a source that cannot be verified compatible is
+        // correctly excluded rather than accepted and left to fail confusingly later (row-level
+        // filtering never resolves a reference — it isn't evaluated for results).
+        return evaluateCondition(resultArg.result.value, triggerArg.condition)
     })
 }
 

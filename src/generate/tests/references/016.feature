@@ -1,4 +1,4 @@
-# Results from: conditions-result.test.ts, TST-016: Result condition adds resulting column
+# Results from: conditions-result.test.ts, TST-016: Result value adds resulting column
 # State machines:
 #  - name: m
 #    states:
@@ -21,14 +21,13 @@
 #          name: s
 #          arguments:
 #            - name: a
-#              condition:
-#                operator: =
+#              result:
 #                value: "2"
 #        notes: ""
 # Covers requirements:
-# - [REQ-066] The table shall add _derived_ columns required by conditions.
-# - [REQ-088] Result conditions shall extend the columns.
-# - [REQ-101] Conditions in result arguments shall potentially add additional columns in the
+# - [REQ-066] The table shall add _derived_ columns required by result values.
+# - [REQ-088] Result values shall extend the columns.
+# - [REQ-101] Result values on result arguments shall potentially add additional columns in the
 #   examples table, under the column name `resulting $attribute-name`, and result argument step
 #   placeholders shall reference `"<resulting $attribute-name>"`.
 

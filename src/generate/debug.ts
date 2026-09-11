@@ -1,6 +1,6 @@
 import { writeFileSync } from "fs"
 import { join as joinPath } from "path"
-import type { Argument, Condition, StateMachine, StateRef, Transition, Trigger } from "../parse"
+import type { Argument, Condition, Result, StateMachine, StateRef, Transition, Trigger } from "../parse"
 import { attributePlaceholderName, semanticArgumentsSignature } from "./arguments"
 import {
     collectChainFilterConditions,
@@ -83,6 +83,24 @@ function debugConditionText(condition: Condition): string {
 }
 
 /**
+ * Render a result value as debug text, mirroring the source markdown's own `set to` syntax
+ * (`` set to "value" ``, `` set to `other attribute` ``, `` set to undefined ``). A reference
+ * value (REQ-423) renders backticked, exactly like the attribute name it points at, distinguishing
+ * it from a quoted literal the same way the source markdown does. Unlike `debugConditionText`, a
+ * result carries no operator to signal whether its literal is numeric or text (REQ-089: a result
+ * is always a plain equality assignment), so a literal always renders quoted here rather than
+ * guessing at the attribute's type from the value's own spelling.
+ *
+ * @param result Result value to render.
+ * @returns The rendered result text, without its surrounding markers.
+ */
+function debugResultText(result: Result): string {
+    if (result.valueIsReference) return `set to \`${result.value}\``
+    if (result.value === undefined) return "set to undefined"
+    return `set to "${result.value}"`
+}
+
+/**
  * Render an argument's attribute placeholder, e.g. `` `email address` ``. When the argument is a
  * rendering-only alias (REQ-422) — its modifier was rewritten from what the transition genuinely
  * declares, to match a source or caller it was reconciled against — the placeholder is suffixed
@@ -126,6 +144,7 @@ function debugArgumentText(argument: Argument, isFirst: boolean, isResult: boole
     if (argument.postQualifier) parts.push(argument.postQualifier)
     parts.push(debugAttributePlaceholderText(argument, isResult, plain))
     if (argument.condition) parts.push(debugConditionText(argument.condition))
+    else if (argument.result) parts.push(debugResultText(argument.result))
     if (argument.suffix) parts.push(argument.suffix)
     return (isFirst ? " " : ", ") + parts.join(" ")
 }

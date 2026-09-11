@@ -90,11 +90,11 @@ StateMachine {
     = pipe (identifier inlineComment? pipe)+ nl
 
   attributeValuesTableRow
-    = pipe (attributeValue? inlineComment? pipe)+ nl
+    = pipe (value? inlineComment? pipe)+ nl
 
   // A value is either a quoted non-empty string token or a bare number.
   // Which values belong to which attribute is resolved post-parse.
-  attributeValue
+  value
     = string | number
 
   // --- Transitions section ---
@@ -144,7 +144,7 @@ StateMachine {
       (transitionId?   inlineComment? pipe)?
       stateCombination inlineComment? pipe
       trigger          inlineComment? pipe
-      stateReference   inlineComment? pipe
+      result           inlineComment? pipe
       (inlineText?     inlineComment? pipe)?
       nl
 
@@ -206,19 +206,20 @@ StateMachine {
   // The attribute is a generic token; whether the operator/value are valid
   // for the attribute is checked post-parse. A range or set condition only
   // ever takes literal values (a reference is never one of several values);
-  // a scalar comparison takes a `conditionValue`, which may be a literal or a
-  // reference to another attribute.
+  // a scalar comparison takes an `attributeValue`, which may be a literal or
+  // a reference to another attribute. Shared with `resultAttributeExpression`
+  // below, since a result's value/reference is the same shape.
   conditionalAttributeExpression
-    = identifier rangeOperator literal<"["> attributeValue literal<","> attributeValue literal<"]"> -- range
-    | identifier setCompare literal<"("> attributeValue (comma attributeValue)* literal<")">        -- set
-    | identifier numericOperator conditionValue                                                     -- numericComparison
-    | identifier textCompare conditionValue                                                         -- textComparison
-    | identifier undefinedCompare                                                                   -- undefined
-    | identifier definedCompare                                                                     -- defined
+    = identifier rangeOperator literal<"["> value literal<","> value literal<"]"> -- range
+    | identifier setCompare literal<"("> value (comma value)* literal<")">        -- set
+    | identifier numericOperator attributeValue                                  -- numericComparison
+    | identifier textCompare attributeValue                                      -- textComparison
+    | identifier undefinedCompare                                                -- undefined
+    | identifier definedCompare                                                  -- defined
 
-  conditionValue
-    = attributeValue -- literal
-    | identifier     -- reference
+  attributeValue
+    = value      -- literal
+    | identifier -- reference
 
   undefinedCompare
     = literal<"undefined"> | literal<"is undefined">
@@ -240,6 +241,21 @@ StateMachine {
   setCompare
     = literal<"in">     -- in
     | literal<"not in"> -- notIn
+
+  // --- Result reference ---
+  result = identifier resultArgument? (argumentSeparator resultArgument)*
+
+  resultArgument
+    = hsp? argumentPreQualifier? argumentModifier argumentPostQualifier? resultArgumentExpression argumentSuffix? -- withModifier
+    | hsp? argumentQualifier? resultArgumentExpression argumentSuffix?                                            -- noModifier
+
+  resultArgumentExpression
+    = resultAttributeExpression -- conditional
+    | identifier                -- bare
+
+  resultAttributeExpression
+    = identifier literal<"set to"> literal<"undefined"> -- undefined
+    | identifier literal<"set to"> attributeValue        -- value
 
   // --- Triggers ---
 

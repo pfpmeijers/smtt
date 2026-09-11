@@ -261,7 +261,7 @@
     },
     "Argument": {
       "type": "object",
-      "description": "A data attribute reference, mapped from backticks in the text, with optional qualifiers, modifiers, or conditions. The `qualifier` property and the `modifier` property are mutually exclusive: an argument uses either `qualifier` alone (simple form) or `modifier` with optional `preQualifier`/`postQualifier` (modified form), never both.",
+      "description": "A data attribute reference, mapped from backticks in the text, with optional qualifiers, modifiers, a condition, or a result. The `qualifier` property and the `modifier` property are mutually exclusive: an argument uses either `qualifier` alone (simple form) or `modifier` with optional `preQualifier`/`postQualifier` (modified form), never both. The `condition` property and the `result` property are likewise mutually exclusive: a state or trigger argument uses `condition` (a precondition or trigger-constraint filter); a transition result argument uses `result` (the postcondition value or reference it sets) instead.",
       "properties": {
         "qualifier": {
           "type": "string",
@@ -284,8 +284,12 @@
           "description": "The name of the data attribute being referenced."
         },
         "condition": {
-          "description": "A value condition constraining the attribute to a specific subset of its possible values.",
+          "description": "A precondition or trigger-constraint value condition constraining the attribute to a specific subset of its possible values. Used on state and trigger arguments; a transition result argument uses `result` instead.",
           "$ref": "#/definitions/Condition"
+        },
+        "result": {
+          "description": "The postcondition value or attribute reference a transition result argument sets on the resulting state's attribute, written `attribute set to value` (or `set to undefined`) in the Result column. Used only on a transition's `result` arguments; a state or trigger argument uses `condition` instead.",
+          "$ref": "#/definitions/Result"
         },
         "suffix": {
           "type": "string",
@@ -295,7 +299,10 @@
       "required": ["name"],
       "additionalProperties": false,
       "not": {
-        "required": ["qualifier", "modifier"]
+        "anyOf": [
+          { "required": ["qualifier", "modifier"] },
+          { "required": ["condition", "result"] }
+        ]
       }
     },
     "Condition": {
@@ -338,10 +345,25 @@
         },
         "valueIsReference": {
           "type": "boolean",
-          "description": "When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only meaningful — and only permitted — on a result argument's condition; every other condition site rejects it (validation)."
+          "description": "When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only permitted on a transition result argument's `result` (see the `Result` definition); a state or trigger argument's `condition` rejects it (validation) since only a result can resolve dynamically."
         }
       },
       "required": ["operator"],
+      "additionalProperties": false
+    },
+    "Result": {
+      "type": "object",
+      "description": "The postcondition value or attribute reference a transition result argument sets on an attribute, written `attribute set to value` (or `set to undefined`) in the Result column (REQ-089). Always an equality assignment — the `set to` phrasing has no other operator, so unlike `Condition`, `Result` carries no `operator` field. An empty object (no `value`) means the attribute is set to undefined.",
+      "properties": {
+        "value": {
+          "type": "string",
+          "description": "The literal value, or the name of the referenced attribute (when `valueIsReference` is true), the result sets the attribute to. Absent when the result sets the attribute to undefined."
+        },
+        "valueIsReference": {
+          "type": "boolean",
+          "description": "When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked result value is a reference, a quoted or numeric one is a literal. A result is the only condition/result site allowed to carry a reference (REQ-424)."
+        }
+      },
       "additionalProperties": false
     },
     "ImpossibleSection": {

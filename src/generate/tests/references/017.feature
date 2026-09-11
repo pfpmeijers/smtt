@@ -1,4 +1,4 @@
-# Results from: conditions-result.test.ts, TST-017: Result conditions with equality operator
+# Results from: conditions-result.test.ts, TST-017: Attribute result values are always used for assignment
 # State machines:
 #  - name: m
 #    states:
@@ -15,14 +15,12 @@
 #          name: s
 #          arguments:
 #            - name: a
-#              condition:
-#                operator: as
+#              result:
 #                value: "2"
 # Covers requirements:
-# - [REQ-089] Result conditions shall be restricted to equality operators only (`=`, `as`). The
-#   `resulting $attribute-name` column cell value shall be taken directly from `condition.value` in
-#   the AST. The generator shall raise an error when a result condition uses a non-equality
-#   operator.
+# - [REQ-089] A result argument's value shall always be a plain equality assignment — the Result
+#   column's `attribute set to value` syntax has no other operator to choose between. The `resulting
+#   $attribute-name` column cell value shall be taken directly from `result.value` in the AST.
 
 Feature: m
 

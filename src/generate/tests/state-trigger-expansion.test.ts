@@ -219,7 +219,7 @@ test("[TST-078] → [REQ-118/164]: Source transition not matched when result arg
         dataExampleValues: [{a: "1"}],
         transitions: [{
                         trigger: {type: "event", name: "e"},
-            result: {name: "s1", arguments: [{name: "a", condition: {operator: "=", value: "1"}}]},
+            result: {name: "s1", arguments: [{name: "a", result: {value: "1"}}]},
         }],
     }, {
         name: "m2",

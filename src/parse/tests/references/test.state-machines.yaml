@@ -353,8 +353,8 @@
   initialState: idling
   source: smtt/src/parse/tests/state-machines/comments.state-machine.md
 - name: condition reference
-  overview: "Exercises attribute-reference condition values on a result argument:
-    a backticked value names another attribute, dynamically resolved per row,
+  overview: "Exercises attribute-reference result values on a result argument: a
+    backticked value names another attribute, dynamically resolved per row,
     instead of being a quoted literal."
   states:
     - name: painting listed
@@ -386,13 +386,11 @@
         arguments:
           - qualifier: with
             name: sale price
-            condition:
-              operator: =
+            result:
               value: list price
               valueIsReference: true
           - name: note
-            condition:
-              operator: as
+            result:
               value: archived
   impossible:
     defined: []

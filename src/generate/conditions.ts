@@ -76,26 +76,6 @@ export function validateCondition(stateMachineName: string, attributeName: strin
     }
 }
 
-/**
- * Validate a condition on a result argument: only equality operators are supported, since a
- * result condition provides the value of its derived column (REQ-089).
- *
- * @param stateMachineName Name of the state machine owning the condition, for error context.
- * @param attributeName Attribute name the result condition applies to.
- * @param condition Condition to validate.
- * @throws Error When the operator is empty-valued or not an equality operator.
- */
-export function validateResultCondition(stateMachineName: string, attributeName: string, condition: Condition): void {
-    validateCondition(stateMachineName, attributeName, condition)
-    if (condition.operator !== "=" && condition.operator !== "as" && condition.operator !== "undefined") {
-        throw new Error(
-            `State machine \`${stateMachineName}\`: Invalid result condition for attribute ` +
-            `\`${attributeName}\`: operator \`${condition.operator}\` is not supported. ` +
-            `Result conditions only allow \`=\`, \`as\`, or \`undefined\` (REQ-089).`,
-        )
-    }
-}
-
 // --- Evaluation ---
 
 /** Compare two values numerically when both are numeric, and textually otherwise. */
@@ -187,7 +167,7 @@ export function evaluateCondition(rawValue: string | undefined, condition: Condi
 
 /**
  * Row filters declared on a transition's own precondition state and trigger arguments
- * (REQ-069/REQ-087). Result argument conditions are excluded: they add columns instead.
+ * (REQ-069/REQ-087). Result arguments are excluded: their result values add columns instead.
  *
  * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param transition Transition whose own filters are being collected.

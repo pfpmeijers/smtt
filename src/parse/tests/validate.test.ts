@@ -1,7 +1,7 @@
 import { describe, it } from "node:test"
 import * as assert from "node:assert/strict"
 
-import type { StateMachine } from "../sm.ast.d"
+import type { Result, StateMachine } from "../sm.ast.d"
 import { validateStateMachines } from "../validate"
 
 function cloneStateMachines(stateMachines: StateMachine[]): StateMachine[] {
@@ -206,7 +206,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("[TST-122] → [REQ-415]: rejects non-equality operators on result argument conditions", () => {
+    it("[TST-122] → [REQ-415]: rejects an operator field on a result argument's value", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].transitions = [
             {
@@ -214,14 +214,16 @@ describe("validateStateMachines business rules", () => {
                 trigger: { type: "event", name: "e1" },
                 result: {
                     name: "s2",
-                    arguments: [{ name: "a2", condition: { operator: ">=", value: "2" } }],
+                    // `Result` has no `operator` field (REQ-089/REQ-415: a result is always a plain
+                    // equality assignment) — the schema rejects it as an unknown property.
+                    arguments: [{ name: "a2", result: { operator: ">=", value: "2" } as unknown as Result }],
                 },
             },
         ]
 
         assert.throws(
             () => validateStateMachines(stateMachines),
-            /Result argument `a2` has a non-equality condition operator `>=`/,
+            /must NOT have additional properties/,
         )
     })
     it("[TST-123] → [REQ-417]: rejects Example values tables missing columns for declared attributes", () => {
@@ -247,7 +249,7 @@ describe("validateStateMachines business rules", () => {
                 id: "001",
                 states: [{ name: "s3", arguments: [{ name: "a1", condition: { operator: "in", value: ["v1", "v2", "v3"] } }] }],
                 trigger: { type: "event", name: "e1", arguments: [{ name: "a2", condition: { operator: "in range", value: "[1, 3]" } }] },
-                result: { name: "s2", arguments: [{ name: "a1", condition: { operator: "=", value: "v2" } }] },
+                result: { name: "s2", arguments: [{ name: "a1", result: { value: "v2" } }] },
             },
         ]
 
@@ -264,29 +266,29 @@ describe("validateStateMachines business rules", () => {
 
         assert.throws(
             () => validateStateMachines(stateMachines),
-            /Argument `a2` references attribute `a1`, but attribute references are only supported in transition result argument conditions \(REQ-424\)/,
+            /Argument `a2` references attribute `a1`, but attribute references are only supported in transition result arguments' `result` \(REQ-424\)/,
         )
     })
 
-    it("[TST-126] → [REQ-424]: accepts an attribute-reference condition on a result argument", () => {
+    it("[TST-126] → [REQ-424]: accepts an attribute-reference result value on a result argument", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].data = { a1: "", a2: "" }
         stateMachines[1].data = { a1: "", a2: "" }
         stateMachines[0].transitions![0].result = {
             name: "s2",
-            arguments: [{ name: "a2", condition: { operator: "=", value: "a1", valueIsReference: true } }],
+            arguments: [{ name: "a2", result: { value: "a1", valueIsReference: true } }],
         }
 
         assert.doesNotThrow(() => validateStateMachines(stateMachines))
     })
 
-    it("[TST-165] → [REQ-425]: rejects an attribute-reference condition naming an unknown attribute", () => {
+    it("[TST-165] → [REQ-425]: rejects an attribute-reference result value naming an unknown attribute", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].data = { a1: "", a2: "" }
         stateMachines[1].data = { a1: "", a2: "" }
         stateMachines[0].transitions![0].result = {
             name: "s2",
-            arguments: [{ name: "a2", condition: { operator: "=", value: "a3", valueIsReference: true } }],
+            arguments: [{ name: "a2", result: { value: "a3", valueIsReference: true } }],
         }
 
         assert.throws(
@@ -295,14 +297,14 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("[TST-166] → [REQ-425]: accepts an attribute-reference condition naming an attribute of another machine", () => {
+    it("[TST-166] → [REQ-425]: accepts an attribute-reference result value naming an attribute of another machine", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].data = { a1: "" }
         stateMachines[1].data = { a3: "" }
         stateMachines[1].dataExampleValues = [{ a3: "v1" }]
         stateMachines[0].transitions![0].result = {
             name: "s2",
-            arguments: [{ name: "a1", condition: { operator: "=", value: "a3", valueIsReference: true } }],
+            arguments: [{ name: "a1", result: { value: "a3", valueIsReference: true } }],
         }
 
         assert.doesNotThrow(() => validateStateMachines(stateMachines))
