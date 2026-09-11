@@ -132,7 +132,7 @@ export interface Condition {
    */
   value?: string | string[];
   /**
-   * When true, `value` names another data attribute of the same machine whose row value is substituted dynamically at generation time, instead of being a literal. Classified post-parse by matching `value` against the machine's registered attribute names, the same way event vs. state triggers are classified. Only meaningful — and only permitted — on a result argument's condition; every other condition site rejects it (validation).
+   * When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only meaningful — and only permitted — on a result argument's condition; every other condition site rejects it (validation).
    */
   valueIsReference?: boolean;
 }
@@ -210,7 +210,7 @@ export interface Condition1 {
    */
   value?: string | string[];
   /**
-   * When true, `value` names another data attribute of the same machine whose row value is substituted dynamically at generation time, instead of being a literal. Classified post-parse by matching `value` against the machine's registered attribute names, the same way event vs. state triggers are classified. Only meaningful — and only permitted — on a result argument's condition; every other condition site rejects it (validation).
+   * When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only meaningful — and only permitted — on a result argument's condition; every other condition site rejects it (validation).
    */
   valueIsReference?: boolean;
 }

@@ -4,9 +4,10 @@ This document defines the formalism for specifying state machines in
 `*.state-machine.md` files.
 
 > **Authoring principle** — state machine files are intended to read as natural,
-> plain English. State names, attribute names, and text values are wrapped in 
-> backticks; everything else reads as ordinary prose. A reader unfamiliar with 
-> the notation should grasp the meaning of every sentence.
+> plain English. State machine names, state names, trigger names, and attribute
+> names are wrapped in backticks; literal text values are wrapped in double
+> quotes; everything else reads as ordinary prose. A reader unfamiliar with the
+> notation should grasp the meaning of every sentence.
 
 ## TODO:
 - For result argument conditions, only operators allowed that lead to an 
@@ -90,7 +91,8 @@ value. Declare these as indented sub-bullets under the state entry.
   (after the description, if any).
   the `## Data` section. 
 - **Attribute name**: Write the full attribute name as declared in
-- **Backticks** — Put attribute names and text values between backticks.
+- **Backticks and quotes** — Put attribute names between backticks and literal
+  text values between double quotes.
 - **Supported operators**: All [value condition operators](#value-conditions) 
   are supported.
 
@@ -102,8 +104,8 @@ Examples:
 - `Cart empty`: The cart contains no paintings.
   - `item count` = 0
 - `Reservation form filled`: All required input is present.
-  - `email address` as `info@domain.com`
-  - `policies` are `accepted`
+  - `email address` as "info@domain.com"
+  - `policies` are "accepted"
 - `Reservation form unfilled`
   - `email address` undefined
 - `Painting sold`
@@ -177,17 +179,17 @@ the attribute list.
 
    | `email address`     | `associated user name` |
    |---------------------|------------------------|
-   | `info@domain.com`   | `John Doe`             |
-   | `other@example.com` |                        |
+   | "info@domain.com"   | "John Doe"             |
+   | "other@example.com" |                        |
   ```
 
    An empty cell represents an undefined value for that attribute.
-   Empty-string literals (`` `` ``) are not allowed.
+   Empty-string literals (`""`) are not allowed.
 
-- **Backticks** — Put text-based attribute values between backticks.
+- **Quotes** — Put text-based attribute values between double quotes.
 - **Numeric versus text attributes** — Numeric attributes only have
-  numerical values, non backticked. Text attributes only have text values,
-  always backticked.
+  numerical values, unquoted. Text attributes only have text values,
+  always double-quoted.
 
 ---
 
@@ -204,8 +206,8 @@ Declare default precondition states per dependent state machine.
   [State reference](#multiple-states-in-the-state-column)), including any
   optional [arguments](#data-linking), [modifiers](#data-modifiers), or
   [value conditions](#value-conditions).
-- **Backticks** — Put the state names and any referenced attribute names or
-  text values between backticks.
+- **Backticks and quotes** — Put the state names and any referenced attribute
+  names between backticks, and any literal text values between double quotes.
 - **Description** (optional):  Use `: some text` format for additional info
   about the precondition, in same way as for other descriptions.
 - **Behavior**: Consider the listed default state (with its arguments, if any)
@@ -246,10 +248,10 @@ unless its `State` cell already mentions any user session state.
 
 - **Condition-value auto-inference**: When a condition in a state definition, 
   default precondition or transition references a value 
-  (e.g. `` `attr` = `foo` ``) that is not already present
+  (e.g. `` `attr` = "foo" ``) that is not already present
   in the example values table, that value is part of the implied example
   combinations. For multiple conditions on the same transition
-  (e.g. `` `a` = `foo` and `b` = `bar` ``), a single combined row is implied
+  (e.g. `` `a` = "foo" and `b` = "bar" ``), a single combined row is implied
   with all required values; all other attributes in that row
   take the first available value from the existing table, or an empty
   (undefined) value if the table has no prior rows.
@@ -261,7 +263,7 @@ unless its `State` cell already mentions any user session state.
 
   - `idle`
   - `active`
-    - `status` = `running`
+    - `status` = "running"
 
   ## Transitions
 
@@ -269,7 +271,7 @@ unless its `State` cell already mentions any user session state.
 
   | States   | Trigger                                             | Result   |
   |----------|-----------------------------------------------------|----------|
-  | `idle`   | `started` with `status` = `running` and `count` = 0 | `active` |
+  | `idle`   | `started` with `status` = "running" and `count` = 0 | `active` |
   ```
 
   This implies the following example value row:
@@ -277,7 +279,7 @@ unless its `State` cell already mentions any user session state.
   ```markdown
   | `status`  | `count` |
   |-----------|---------|
-  | `running` | 0       |
+  | "running" | 0       |
   ```
 
 Example:
@@ -417,32 +419,33 @@ Supported numerical condition operators:
 
 Supported text condition operators:
 
-| Syntax                                    | Meaning                                           |
-|-------------------------------------------|---------------------------------------------------|
-| `` `attribute` as `value` ``              | Attribute equals `` `value` ``                    |
-| `` `attribute` is `value` ``              | Attribute equals `` `value` `` (synonym for `as`) |
-| `` `attributes` are `values` ``           | Attribute equals `` `value` `` (synonym for `as`) |
-| `` `attribute` not as `value` ``          | Attribute is not equal to `` `value` ``           |
-| `` `attribute` is not `value` ``          | Attribute is not equal to `` `value` ``           |
-| `` `attributes` are not `values` ``       | Attribute is not equal to `` `value` ``           |
-| `` `attribute` in (`v1`, `v2`, ...)``     | Attribute is one of the listed values (set)       |
-| `` `attribute` not in (`v1`, `v2`, ...)`` | Attribute is none of the listed values (set)      |
-| `` `attribute` undefined``                | Attribute has no value                            |
-| `` `attribute` is undefined``             | Attribute has no value (alias of `undefined`)     |
-| `` `attribute` defined``                  | Attribute has a value                             |
-| `` `attribute` is defined``               | Attribute has a value (alias of `defined`)        |
+| Syntax                                     | Meaning                                           |
+|--------------------------------------------|----------------------------------------------------|
+| `` `attribute` as "value" ``              | Attribute equals `"value"`                         |
+| `` `attribute` is "value" ``              | Attribute equals `"value"` (synonym for `as`)      |
+| `` `attributes` are "values" ``           | Attribute equals `"value"` (synonym for `as`)      |
+| `` `attribute` not as "value" ``          | Attribute is not equal to `"value"`                |
+| `` `attribute` is not "value" ``          | Attribute is not equal to `"value"`                |
+| `` `attributes` are not "values" ``       | Attribute is not equal to `"value"`                |
+| `` `attribute` in ("v1", "v2", ...)``     | Attribute is one of the listed values (set)        |
+| `` `attribute` not in ("v1", "v2", ...)`` | Attribute is none of the listed values (set)       |
+| `` `attribute` undefined``                | Attribute has no value                             |
+| `` `attribute` is undefined``             | Attribute has no value (alias of `undefined`)      |
+| `` `attribute` defined``                  | Attribute has a value                              |
+| `` `attribute` is defined``               | Attribute has a value (alias of `defined`)         |
 
 ##### Values
 
-- **Name values** — A number (plain) or text value (backticked), taken from the
-  declared example values in the data section.
-- **Backticks** — Put text values between backticks.
-- **Empty strings** — Empty backticked strings (`` `` ``) are not allowed.
-- **Text-value character set** — A backticked text value may contain any
-  character except a backtick or a line break.
-- **Attribute reference** — A backticked value that matches another declared
-  or inferred data attribute's name is instead an
-  [attribute reference](#attribute-reference-values), not a literal value.
+- **Name values** — A number (plain) or text value (double-quoted), taken from
+  the declared example values in the data section.
+- **Quotes** — Put literal text values between double quotes.
+- **Empty strings** — Empty quoted strings (`""`) are not allowed.
+- **Text-value character set** — A quoted text value may contain any
+  character except a double quote or a line break.
+- **Attribute reference** — A *backticked* value (not quoted) is not a literal
+  at all — it names another data attribute and is instead an
+  [attribute reference](#attribute-reference-values). The backtick delimiter
+  makes this distinction syntactic: no name-matching is involved.
 
 ##### Condition semantics
 
@@ -472,14 +475,17 @@ Examples:
 
 ##### Attribute reference values
 
-A condition's value may name another data attribute of the same state machine
-instead of a literal — the value is then resolved dynamically, from that other
-attribute's own current value, rather than being fixed.
+A condition's value may name a data attribute instead of a literal — the value
+is then resolved dynamically, from that other attribute's own current value,
+rather than being fixed.
 
-- **Disambiguation** — Exactly as an [event trigger is told apart from a state
-  trigger](#trigger-types): a backticked value is a reference when it matches
-  the name of an attribute already declared under `## Data` or used elsewhere
-  in the same state machine; otherwise it is a literal value.
+- **Disambiguation** — Syntactic, by delimiter: a backticked condition value is
+  always a reference; a double-quoted (or bare numeric) value is always a
+  literal. No name-matching is involved.
+- **Target** — The referenced name must be a data attribute declared (or
+  inferred from usage) in *some* state machine in the project — not
+  necessarily the one owning the condition. Naming an attribute that exists
+  nowhere is an error.
 - **`Result` cell only** — An attribute reference is only supported on a
   `Result` cell condition (a postcondition). Using one in a `States` or
   `Trigger` cell condition is an error: those conditions filter against a
@@ -573,17 +579,23 @@ for user authentication and these combinations need not be specified separately.
 
 ---
 
-## Backtick convention
+## Backtick and quote convention
 
-Backticks delimit identifiers for parser disambiguation.
+Backticks and double quotes delimit tokens for parser disambiguation, and the
+choice of delimiter is meaningful: a backticked token always *names* something
+(a state machine, state, trigger, or attribute — or, as a condition value, an
+[attribute reference](#attribute-reference-values)); a double-quoted token is
+always a literal text value.
 
-- **Required targets**: State machine names, state names, trigger names, 
-  attribute names, and text-based attribute values are always backticked.
+- **Required targets**: State machine names, state names, trigger names, and
+  attribute names are always backticked. Literal text-based attribute values
+  are always double-quoted.
 - **Title exception**: The H1 state machine name is plain text (not backticked).
-- **Numeric values**: Numeric attribute values are never backticked.
-- **Backticked numerals are text**: A backticked numeral (for example,
-  `` `42` ``) is interpreted as a text value, and therefore only text-based
-  conditions are valid for it.
+- **Numeric values**: Numeric attribute values are never quoted or backticked.
+- **Quoted numerals are text**: A quoted numeral (for example, `"42"`) is
+  interpreted as a text value, and therefore only text-based conditions are
+  valid for it. A *backticked* numeral (`` `42` ``) is instead an attribute
+  reference naming an attribute called `42`.
 
 ---
 

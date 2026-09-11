@@ -34,3 +34,7 @@
   Unused test IDs:
 
 - Add validation for duplicate transition ID.
+
+- Let the ohm grammar already distinguish between numerical and string attr. Strings have "".
+- Use null for undefined (numerical or string) attr. Null is also allowed in json
+- cleanup/compact the sm.spec.md. There is a lot of repetition that makes it very verbose and hard to read.

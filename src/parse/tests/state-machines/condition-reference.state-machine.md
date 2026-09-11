@@ -1,8 +1,8 @@
 # Condition reference
 
-Exercises attribute-reference condition values on a result argument: a value
-that matches another registered attribute name is classified as a reference
-to that attribute, dynamically resolved per row, instead of a literal.
+Exercises attribute-reference condition values on a result argument: a
+backticked value names another attribute, dynamically resolved per row,
+instead of being a quoted literal.
 
 ## States
 
@@ -20,8 +20,8 @@ Example values:
 
 | `list price` | `note`    |
 |--------------|-----------|
-| 10           | `default` |
-| 20           | `default` |
+| 10           | "default" |
+| 20           | "default" |
 
 ## Transitions
 
@@ -29,4 +29,4 @@ Example values:
 
 | States                              | Trigger          | Result                                                                    |
 |-------------------------------------|------------------|---------------------------------------------------------------------------|
-| `Painting listed` with `list price` | `Sale confirmed` | `Painting sold` with `sale price` = `list price` and `note` as `archived` |
+| `Painting listed` with `list price` | `Sale confirmed` | `Painting sold` with `sale price` = `list price` and `note` as "archived" |

@@ -14,8 +14,8 @@ import { fileURLToPath } from "url"
 import { grammar, Grammar } from "ohm-js"
 
 import { createSemantics, saveStateMachines } from "./sm.ast"
-import type { Argument, Condition, StateMachine, Trigger } from "./sm.ast.d"
-import { collectUsedAttributeNames, completeStateMachines } from "./complete"
+import type { StateMachine, Trigger } from "./sm.ast.d"
+import { completeStateMachines } from "./complete"
 import { validateStateMachines } from "./validate"
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
@@ -97,73 +97,6 @@ function classifyTriggers(stateMachines: StateMachine[]): void {
 }
 
 /**
- * Marks `condition.value` as an attribute reference in place when it names another attribute
- * already registered in `registeredAttributeNames`, mirroring `classifyTriggers`'s event-vs-state
- * disambiguation: a backticked token is generic until matched against a set of known names.
- *
- * Only a single string value is eligible (never an array — `in`/range conditions never reference)
- * and never an `undefined`/`defined` condition (neither carries a value at all).
- *
- * @param condition Condition whose value may be reclassified. Mutated in place.
- * @param registeredAttributeNames Lower-cased attribute names already known to this machine.
- */
-function classifyConditionValue(condition: Condition, registeredAttributeNames: ReadonlySet<string>): void {
-    if (typeof condition.value !== "string") return
-    if (registeredAttributeNames.has(condition.value.toLowerCase())) {
-        condition.valueIsReference = true
-    }
-}
-
-/**
- * Classifies every condition value in every state machine as either a literal or a reference to
- * another attribute of the same machine, mutating `condition.valueIsReference` in place — the
- * condition-value analog of `classifyTriggers`'s event-vs-state classification.
- *
- * A condition's value is classified as a reference when it case-insensitively matches an attribute
- * name already registered on its own machine — declared under `## Data` or used anywhere else in
- * the machine (`collectUsedAttributeNames`) — never a *different* machine's attributes, since
- * `dataExampleValues` rows (which a reference resolves against at generation time) are always the
- * owning machine's own.
- *
- * Must run after parsing (so every machine's usages are visible) and before `completeStateMachines`
- * (whose own attribute inference and example-table augmentation must see the classification: a
- * reference-conditioned result argument is excluded from attribute inference, and a reference value
- * is excluded from required literal example combinations).
- *
- * @param stateMachines Array of parsed state machines to classify. Mutated in place.
- */
-function classifyConditionValueReferences(stateMachines: StateMachine[]): void {
-    for (const machine of stateMachines) {
-        const registeredAttributeNames = new Set<string>([
-            ...Object.keys(machine.data ?? {}).map((name) => name.toLowerCase()),
-            ...collectUsedAttributeNames(machine),
-        ])
-
-        const classifyArguments = (args: Argument[] | undefined): void => {
-            for (const argument of args ?? []) {
-                if (argument.condition) classifyConditionValue(argument.condition, registeredAttributeNames)
-            }
-        }
-
-        for (const state of machine.states) {
-            for (const implied of state.impliedConditions ?? []) {
-                classifyConditionValue(implied.condition, registeredAttributeNames)
-            }
-        }
-        for (const precondition of machine.defaultPreconditions ?? []) {
-            classifyArguments(precondition.arguments)
-        }
-        for (const transition of machine.transitions ?? []) {
-            for (const stateRef of transition.states ?? []) {
-                classifyArguments(stateRef.arguments)
-            }
-            classifyArguments(transition.trigger.arguments)
-            classifyArguments(transition.result.arguments)
-        }
-    }
-}
-
-/**
  * Recursively collects all `.state-machine.md` files from a directory.
  *
  * @param dir The directory path to search recursively.
@@ -222,7 +155,6 @@ export function parse(inputDir: string, astFile?: string): StateMachine[] {
         return stateMachine
     })
     classifyTriggers(stateMachines)
-    classifyConditionValueReferences(stateMachines)
     // FIXME: Expect a validate-minimal-AST here.
     completeStateMachines(stateMachines)
     validateStateMachines(stateMachines)

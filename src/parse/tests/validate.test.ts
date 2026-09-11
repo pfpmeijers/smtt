@@ -279,6 +279,34 @@ describe("validateStateMachines business rules", () => {
 
         assert.doesNotThrow(() => validateStateMachines(stateMachines))
     })
+
+    it("[TST-165] → [REQ-425]: rejects an attribute-reference condition naming an unknown attribute", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].data = { a1: "", a2: "" }
+        stateMachines[1].data = { a1: "", a2: "" }
+        stateMachines[0].transitions![0].result = {
+            name: "s2",
+            arguments: [{ name: "a2", condition: { operator: "=", value: "a3", valueIsReference: true } }],
+        }
+
+        assert.throws(
+            () => validateStateMachines(stateMachines),
+            /Argument `a2` references attribute `a3`, but no state machine declares a data attribute by the name `a3` \(REQ-425\)/,
+        )
+    })
+
+    it("[TST-166] → [REQ-425]: accepts an attribute-reference condition naming an attribute of another machine", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].data = { a1: "" }
+        stateMachines[1].data = { a3: "" }
+        stateMachines[1].dataExampleValues = [{ a3: "v1" }]
+        stateMachines[0].transitions![0].result = {
+            name: "s2",
+            arguments: [{ name: "a1", condition: { operator: "=", value: "a3", valueIsReference: true } }],
+        }
+
+        assert.doesNotThrow(() => validateStateMachines(stateMachines))
+    })
 })
 
 

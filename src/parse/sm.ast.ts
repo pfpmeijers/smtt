@@ -43,6 +43,9 @@ type ImpliedCondition = {
     condition: Condition
 }
 
+/** A condition's right-hand side: either a literal `value`, or a `value` naming a reference. */
+type ConditionValue = Pick<Condition, "value" | "valueIsReference">
+
 type TransitionRow = {
     id?: string
     states: StateRef[]
@@ -508,7 +511,7 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
                 attribute: attributeNode.toAST() as string,
                 condition: {
                     operator: opNode.sourceString.trim() as Condition["operator"],
-                    value: String(valueNode.toAST())
+                    ...(valueNode.toAST() as ConditionValue)
                 }
             } satisfies ImpliedCondition
         },
@@ -531,7 +534,7 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             }
             return {
                 attribute: attributeNode.toAST() as string,
-                condition: { operator: operator as Condition["operator"], value: String(valueNode.toAST()) }
+                condition: { operator: operator as Condition["operator"], ...(valueNode.toAST() as ConditionValue) }
             } satisfies ImpliedCondition
         },
 
@@ -624,6 +627,14 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
 
         string(_open, chars, _close) {
             return chars.sourceString
+        },
+
+        conditionValue_literal(valueNode) {
+            return { value: String(valueNode.toAST()) } satisfies ConditionValue
+        },
+
+        conditionValue_reference(identifierNode) {
+            return { value: identifierNode.toAST() as string, valueIsReference: true } satisfies ConditionValue
         },
 
         number(_signOpt, _intOrDot, _fracOrDigits, _exponentOpt) {

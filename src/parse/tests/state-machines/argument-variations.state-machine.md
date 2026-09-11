@@ -22,11 +22,11 @@ Example values:
 
 | `Count` | `Label` | `Score` |
 |---------|---------|---------|
-| 2       | `alpha` | 10      |
-| 0       | `beta`  | 20      |
-| 1       | `beta`  | 20      |
-| 3       | `beta`  | 20      |
-| 5       | `beta`  | 20      |
+| 2       | "alpha" | 10      |
+| 0       | "beta"  | 20      |
+| 1       | "beta"  | 20      |
+| 3       | "beta"  | 20      |
+| 5       | "beta"  | 20      |
 
 ## Transitions
 
@@ -49,9 +49,9 @@ Example values:
 | `Phase two` with `Count` <> 0 and `Score` >= 10   | `Non-empty confirmed`          | `Phase two` with next `Score`        | Ne condition + next modifier     |
 | `Phase two` with `Count` < 5 and `Score` = 10     | `Space available`              | `Phase two` with previous `Score`    | Lt condition + previous modifier |
 | `Phase two` with `Count` in [1, 5]                | `Range validated`              | `Phase three`                        | Range condition                  |
-| `Phase two` with `Label` in (`alpha`, `beta`)     | `Selected from set`            | `Phase three`                        | Set condition                    |
-| `Phase two` with `Label` as `alpha`               | `Default confirmed`            | `Phase three`                        | Text equality: literal value     |
-| `Phase two` with `Label` not as `alpha`           | `Custom confirmed`             | `Phase three`                        | Text inequality: literal value   |
+| `Phase two` with `Label` in ("alpha", "beta")     | `Selected from set`            | `Phase three`                        | Set condition                    |
+| `Phase two` with `Label` as "alpha"               | `Default confirmed`            | `Phase three`                        | Text equality: literal value     |
+| `Phase two` with `Label` not as "alpha"           | `Custom confirmed`             | `Phase three`                        | Text inequality: literal value   |
 | `Phase two` with `Count` not in [1, 5]            | `Out-of-range confirmed`       | `Phase three`                        | Not-in-range condition           |
-| `Phase two` with `Label` not in (`alpha`, `beta`) | `Unlisted label confirmed`     | `Phase three`                        | Not-in-set condition             |
+| `Phase two` with `Label` not in ("alpha", "beta") | `Unlisted label confirmed`     | `Phase three`                        | Not-in-set condition             |
 | `Phase three`                                     | `Reset`                        | `Phase one`                          | Simple reset                     |

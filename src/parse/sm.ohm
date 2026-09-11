@@ -1,18 +1,8 @@
 /*
  * State Machine Specification — Ohm Grammar
  *
- * Identifiers (state machine dependencies, state names, and attribute names)
- * are read as backticked alphanumeric tokens via `identifier`.
- * Text values are read via `string`.
- * The grammar performs NO semantic classification: it does not distinguish
- * a machine's own state from a dependency state, a text attribute from a
- * numeric one, or which values belong to which attribute. That alignment is
- * the responsibility of a later post-parse step. This also covers condition
- * values: a backticked condition value (`attributeValue`'s `string`
- * alternative) is syntactically identical whether it denotes a literal text
- * value or a reference to another attribute — post-parse classification
- * decides which, by matching it against the machine's registered attribute
- * names, the same way an event trigger is told apart from a state trigger.
+ * The grammar does not distinguish a ownership of states, attributes or values.
+ * That is handled by a later post-parse step.
  */
 
 StateMachine {
@@ -102,9 +92,9 @@ StateMachine {
   attributeValuesTableRow
     = pipe (attributeValue? inlineComment? pipe)+ nl
 
-  // A value is either a backticked non-empty string token or a bare number.
+  // A value is either a quoted non-empty string token or a bare number.
   // Which values belong to which attribute is resolved post-parse.
-  attributeValue 
+  attributeValue
     = string | number
 
   // --- Transitions section ---
@@ -213,18 +203,22 @@ StateMachine {
     | identifier                     -- bare
 
   // A condition: an attribute identifier followed by an operator and value(s).
-  // Both the attribute and the comparison value(s) are generic tokens; whether
-  // the operator/value are valid for the attribute is checked post-parse.
-  // A scalar backticked value may later be classified as a reference to
-  // another attribute rather than a literal (see the header comment); the
-  // grammar itself makes no such distinction.
+  // The attribute is a generic token; whether the operator/value are valid
+  // for the attribute is checked post-parse. A range or set condition only
+  // ever takes literal values (a reference is never one of several values);
+  // a scalar comparison takes a `conditionValue`, which may be a literal or a
+  // reference to another attribute.
   conditionalAttributeExpression
     = identifier rangeOperator literal<"["> attributeValue literal<","> attributeValue literal<"]"> -- range
     | identifier setCompare literal<"("> attributeValue (comma attributeValue)* literal<")">        -- set
-    | identifier numericOperator attributeValue                                                     -- numericComparison
-    | identifier textCompare attributeValue                                                         -- textComparison
+    | identifier numericOperator conditionValue                                                     -- numericComparison
+    | identifier textCompare conditionValue                                                         -- textComparison
     | identifier undefinedCompare                                                                   -- undefined
     | identifier definedCompare                                                                     -- defined
+
+  conditionValue
+    = attributeValue -- literal
+    | identifier     -- reference
 
   undefinedCompare
     = literal<"undefined"> | literal<"is undefined">
@@ -303,12 +297,12 @@ StateMachine {
 
   // --- Text ---
 
-  // A backticked value string; empty strings are not allowed.
+  // A double-quoted literal value string; empty strings are not allowed.
   string
-    = "`" stringChar+ "`"
+    = "\"" stringChar+ "\""
 
   stringChar
-    = ~"`" ~nl any
+    = ~"\"" ~nl any
 
   description<stopAt>
     = ":" descriptionLine<stopAt>+ ignoredLine*

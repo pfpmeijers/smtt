@@ -167,6 +167,7 @@ export function validateStateMachines(data: unknown): void {
     validateModifierValuePoolSize(stateMachines)
     validateResultConditionOperators(stateMachines)
     validateConditionReferenceScope(stateMachines)
+    validateConditionReferenceTargets(stateMachines)
 
     // [REQ-163] Business-rule check performed after schema validation
     // succeeds, since it relies on `data` actually conforming to the
@@ -645,6 +646,51 @@ export function validateConditionReferenceScope(stateMachines: StateMachine[]): 
                 rejectReferenceInArguments(transitionContext, stateRef.arguments)
             }
             rejectReferenceInArguments(transitionContext, transition.trigger.arguments)
+        }
+    }
+}
+
+/**
+ * [REQ-425] Ensures every attribute-reference condition value (`condition.valueIsReference`) names
+ * a data attribute declared somewhere in the AST — in any state machine, not only the one owning the
+ * condition, since a reference is resolved against whichever machine actually declares that name.
+ *
+ * Runs on the complete AST (after `completeStateMachines`), so every attribute inferred from usage
+ * is already present in each machine's `data` map.
+ *
+ * @param stateMachines Parsed state-machine AST nodes.
+ * @returns Nothing. Validation succeeds by not throwing.
+ * @throws Error When a reference-valued condition names an attribute declared nowhere in the AST.
+ */
+export function validateConditionReferenceTargets(stateMachines: StateMachine[]): void {
+    const allAttributeNames = new Set<string>()
+    for (const stateMachine of stateMachines) {
+        for (const attributeName of Object.keys(stateMachine.data ?? {})) {
+            allAttributeNames.add(attributeName.toLowerCase())
+        }
+        for (const row of stateMachine.dataExampleValues ?? []) {
+            for (const attributeName of Object.keys(row)) {
+                allAttributeNames.add(attributeName.toLowerCase())
+            }
+        }
+    }
+
+    const checkReference = (context: string, attributeName: string, condition: Condition | undefined): void => {
+        if (!condition?.valueIsReference) return
+        const referencedName = typeof condition.value === "string" ? condition.value : ""
+        if (allAttributeNames.has(referencedName.toLowerCase())) return
+        throw new Error(
+            `${context}: Argument \`${attributeName}\` references attribute \`${condition.value}\`, but no state ` +
+            `machine declares a data attribute by the name \`${condition.value}\` (REQ-425).`,
+        )
+    }
+    const checkReferenceInArguments = (context: string, args: Argument[] | undefined): void => {
+        for (const argument of args ?? []) checkReference(context, argument.name, argument.condition)
+    }
+
+    for (const stateMachine of stateMachines) {
+        for (const transition of stateMachine.transitions ?? []) {
+            checkReferenceInArguments(formatTransitionContext(stateMachine.name, transition), transition.result.arguments)
         }
     }
 }
