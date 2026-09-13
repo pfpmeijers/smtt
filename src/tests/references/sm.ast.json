@@ -400,7 +400,16 @@
             "type": "state"
           },
           "result": {
-            "name": "m2 empty"
+            "name": "m2 empty",
+            "arguments": [
+              {
+                "qualifier": "with",
+                "name": "a2",
+                "result": {
+                  "value": "0"
+                }
+              }
+            ]
           },
           "notes": "Counter cleared when M1 deactivates",
           "expansion": [
@@ -427,7 +436,16 @@
             "type": "state"
           },
           "result": {
-            "name": "m2 empty"
+            "name": "m2 empty",
+            "arguments": [
+              {
+                "qualifier": "with",
+                "name": "a2",
+                "result": {
+                  "value": "0"
+                }
+              }
+            ]
           },
           "notes": "Counter cleared when M1 deactivates",
           "expansion": [

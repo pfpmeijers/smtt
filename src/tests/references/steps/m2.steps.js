@@ -47,12 +47,7 @@ When('e4', async ({ page }) => {
 
 // --- Then ---
 
-// 010, 011
-Then('expect m2 empty', async ({ page }) => {
-  await fixtures.expectM2Empty({ page })
-})
-
-// 008
+// 008, 010, 011
 Then('expect m2 empty with {string}', async ({ page }, resultingA2) => {
   await fixtures.expectM2Empty({ page }, resultingA2)
 })

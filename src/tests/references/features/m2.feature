@@ -57,18 +57,24 @@ Feature: m2
       | a2 | decremented a2 |
       | 3  | 2              |
 
-  Scenario: [010] m2 partial → m2 empty; when m1 inactive; given m1 active
+  Scenario Outline: [010] m2 partial → m2 empty with "<resulting a2>"; when m1 inactive; given m1 active
     Given initially m1 active
     And initially m2 partial
     When e2
     Then expect m1 inactive
-    And expect m2 empty
+    And expect m2 empty with "<resulting a2>"
     # Notes: Counter cleared when M1 deactivates
+    Examples:
+      | resulting a2 |
+      | 0            |
 
-  Scenario: [011] m2 full → m2 empty; when m1 inactive; given m1 active
+  Scenario Outline: [011] m2 full → m2 empty with "<resulting a2>"; when m1 inactive; given m1 active
     Given initially m1 active
     And initially m2 full
     When e2
     Then expect m1 inactive
-    And expect m2 empty
+    And expect m2 empty with "<resulting a2>"
     # Notes: Counter cleared when M1 deactivates
+    Examples:
+      | resulting a2 |
+      | 0            |

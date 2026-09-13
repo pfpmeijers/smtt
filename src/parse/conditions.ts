@@ -106,8 +106,10 @@ export function evaluateCondition(rawValue: string | undefined, condition: Condi
     switch (condition.operator) {
         case "=": return equalsValue(value, scalar)
         case "<>": return !equalsValue(value, scalar)
+        // `as` states sameness and is normally applied as a binding before any filtering
+        // (REQ-432). It still reaches here for the two cases a binding cannot serve: an `as`
+        // carrying a modifier, and structural expansion matching, which has no row to bind against.
         case "as": return value === scalar
-        case "not as": return value !== scalar
         case "in": return Array.isArray(conditionValue) && conditionValue.includes(value)
         case "not in": return Array.isArray(conditionValue) && !conditionValue.includes(value)
         case ">":
@@ -170,8 +172,7 @@ export function describeFilterCondition(filter: FilterCondition): string {
                 return `${attr} ${filter.condition.operator} (${values.join(", ")})`
             }
             case "as":
-            case "not as":
-                return `${attr} ${filter.condition.operator} \`${filter.condition.value}\``
+                return `${attr} as \`${filter.condition.value}\``
             default:
                 return `${attr} ${filter.condition.operator} ${filter.condition.value}`
         }

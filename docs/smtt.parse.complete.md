@@ -68,8 +68,8 @@ removed.
   referenced attribute name is never mistaken for one. What a reference
   condition does contribute is the linked requirement of REQ-426.
 
-- [REQ-426] An equality condition on an attribute reference (`` `attr1` as
-  `attr2` ``, or the `=` spelling) shall imply example values for the
+- [REQ-426] An equality *filter* on an attribute reference (`` `attr1` =
+  `attr2` ``, or the `is` spelling) shall imply example values for the
   constrained attribute: the complete AST shall hold, per defined value of the
   referenced attribute, a row in which the constrained attribute holds that
   same value. The constrained attribute is thereby implicitly defined from the
@@ -79,8 +79,16 @@ removed.
   defined value in this machine — it is declared by another state machine —
   nothing is implied: this machine's own table holds no value to copy.
 
+  This exists because `=` *searches*: it can only ever hold if a row in which
+  the two attributes coincide exists, so completion supplies one.
+
+  `as` implies no row. It states sameness rather than comparison, and the
+  generator gives the constrained attribute the referenced value outright
+  (REQ-432 in `smtt.generate.features.md`) — there is no row to find it in, so
+  none has to be manufactured.
+
   The remaining comparison operators state what a value must *not* be
-  (`<>`, `not as`), or an open-ended relation (`<`, `>`, `<=`, `>=`), so no
+  (`<>`, `is not`), or an open-ended relation (`<`, `>`, `<=`, `>=`), so no
   single value follows from them and they imply no row.
 
 ## Expansion annotation

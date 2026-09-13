@@ -64,6 +64,23 @@
     |          | `User authenticated`,                           |                                                    |                                                                 |                                                                             |
     |          | `Painting in cart`                              |                                                    |
 
+  Or better, allow alternative bulleted definition:
+
+      - 039c:
+        - States:
+          - `User session present`
+          - `User authenticated` with `user email address`
+          - `Painting in cart` with `painting assignee email address` as `user email address`
+        - Trigger:
+          - `Painting reservation confirmed` using
+            `reservation email address` <> `user email address` and `reservation name`
+        - Result:
+          - `Painting reserved` for `reservation email address` and `reservation name`
+             and `painting email address` set to `reservation email address`
+        - Notes:
+          - Reservation confirmed using new email address
+
+
 - Define values per attribute and generate examples from all combinations.
 
   ## Data
@@ -128,3 +145,5 @@
 - Add ### to example values to make it heading style
 
 - Update the test coverage report creation to all current smtt.**.md files.
+
+- Move data before states section since implied conditions rely on data.

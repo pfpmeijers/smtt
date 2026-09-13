@@ -262,7 +262,7 @@
             - qualifier: with
               name: label
               condition:
-                operator: not as
+                operator: <>
                 value: alpha
       trigger:
         name: custom confirmed
@@ -391,18 +391,6 @@
     - bid: ""
       list price: "10"
       note: default
-      quoted price: ""
-      reserve price: ""
-      sale price: "10"
-    - bid: ""
-      list price: "20"
-      note: default
-      quoted price: ""
-      reserve price: ""
-      sale price: "20"
-    - bid: ""
-      list price: "10"
-      note: default
       quoted price: "10"
       reserve price: ""
       sale price: ""
@@ -415,18 +403,6 @@
     - bid: ""
       list price: "10"
       note: archived
-      quoted price: ""
-      reserve price: ""
-      sale price: ""
-    - bid: "10"
-      list price: "10"
-      note: default
-      quoted price: ""
-      reserve price: ""
-      sale price: ""
-    - bid: "20"
-      list price: "20"
-      note: default
       quoted price: ""
       reserve price: ""
       sale price: ""
@@ -448,7 +424,7 @@
         - qualifier: with
           name: quoted price
           condition:
-            operator: as
+            operator: =
             value: list price
             valueIsReference: true
       description: The price quoted to the buyer is the asking price.
@@ -522,6 +498,69 @@
   irrelevant: []
   initialState: painting listed
   source: smtt/src/parse/tests/state-machines/condition-reference.state-machine.md
+- name: list form transitions
+  overview: "Exercises the bulleted list-form alternative for transition rules:
+    mixed with the table form in the same Rules subsection, an inline id
+    description, a multi-bullet Notes block, and a value wrapped onto a
+    continuation line."
+  states:
+    - name: listed idle
+    - name: listed active
+      description: The counter is running.
+  data:
+    list count: Running count.
+  dataExampleValues:
+    - list count: "0"
+    - list count: "1"
+  defaultPreconditions: []
+  transitions:
+    - states:
+        - name: listed idle
+      trigger:
+        name: list started
+        type: event
+      result:
+        name: listed active
+      notes: Table row
+    - id: "002"
+      states:
+        - name: listed active
+          arguments:
+            - qualifier: with
+              name: list count
+              condition:
+                operator: =
+                value: "0"
+      trigger:
+        name: list counted
+        arguments:
+          - qualifier: with
+            name: list count
+            condition:
+              operator: ">"
+              value: "0"
+        type: event
+      result:
+        name: listed active
+        arguments:
+          - preQualifier: with
+            modifier: incremented
+            name: list count
+      notes: List-form entry with two note bullets
+    - id: "003"
+      states:
+        - name: listed active
+      trigger:
+        name: list reset
+        type: event
+      result:
+        name: listed idle
+      notes: Reset back to idle.
+  impossible:
+    defined: []
+  irrelevant: []
+  initialState: listed idle
+  source: smtt/src/parse/tests/state-machines/list-form-transitions.state-machine.md
 - name: minimal machine
   states:
     - name: idle

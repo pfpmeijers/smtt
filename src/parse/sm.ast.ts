@@ -59,6 +59,14 @@ type TransitionRow = {
     notes?: string
 }
 
+/**
+ * The four States/Trigger/Result/Notes sub-blocks of a list-form transition entry, shared by the
+ * `withDescription` and `withoutDescription` cases of `transitionListEntry` — everything but the
+ * id, which each case reads (and, for `withDescription`, folds a description into `notes`) on its
+ * own.
+ */
+type TransitionListBody = Omit<TransitionRow, "id">
+
 type TransitionsSection = {
     transitions: TransitionRow[]
     impossible: ImpossibleTrigger[]
@@ -202,6 +210,25 @@ function normalizeWhitespace(text: string): string {
  */
 export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
     const semantics = grammar.createSemantics()
+
+    /**
+     * Re-parses one joined logical line from a list-form transition entry (a state reference,
+     * trigger, or result) using the grammar's own `trigger`/`result` rule — the same rule a table
+     * cell is parsed with — so list-form and table-form entries share identical argument,
+     * modifier, and condition handling.
+     *
+     * @param text The normalized, single-line source text to re-parse.
+     * @param ruleName The grammar start rule to parse `text` with.
+     * @returns The resulting AST node (a `StateRef` or `Trigger`, depending on `ruleName`).
+     * @throws Error when `text` does not match the given rule.
+     */
+    function reparseListValue<T>(text: string, ruleName: "trigger" | "result"): T {
+        const matchResult = grammar.match(text, ruleName)
+        if (matchResult.failed()) {
+            throw new Error(`Failed to parse list-form transition value \`${text}\`: ${matchResult.message ?? ""}`)
+        }
+        return semantics(matchResult).toAST() as T
+    }
 
     // noinspection JSUnusedGlobalSymbols,SpellCheckingInspection
     semantics.addOperation<unknown>("toAST", {
@@ -400,11 +427,11 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             }
         },
 
-        attributeValuesTableHeader(_pipe, identifierIter, _inlineCommentIter, _pipeIter, _nl) {
+        attributeValuesTableHeader(_pipe, identifierIter, _inlineCommentIter, _pipeIter, _trailingComment, _nl) {
             return identifierIter.children.map((node: ohm.NonterminalNode) => node.toAST() as string)
         },
 
-        attributeValuesTableRow(_pipe, cellsIter, _commentOpts, _pipeIter, _eol) {
+        attributeValuesTableRow(_pipe, cellsIter, _commentOpts, _pipeIter, _trailingComment, _eol) {
             return cellsIter.children.map((cellOptNode: ohm.NonterminalNode) => {
                 const inner = (cellOptNode as unknown as { children: ohm.NonterminalNode[] }).children
                 if (!inner || inner.length === 0) return ""
@@ -458,8 +485,20 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             }
         },
 
-        transitionRules(_h3, _kw, _terminateLine, table) {
-            return table.toAST()
+        transitionRules(_h3, _kw, _terminateLine, bodyNode) {
+            return bodyNode.toAST()
+        },
+
+        // Merges the table-form and list-form blocks of a `### Rules` subsection into one flat
+        // list of transitions, in source order.
+        transitionRulesBody(blocksIter) {
+            const rows: TransitionRow[] = []
+            for (const blockNode of blocksIter.children) {
+                const block = blockNode.toAST() as TransitionRow | TransitionRow[]
+                if (Array.isArray(block)) rows.push(...block)
+                else rows.push(block)
+            }
+            return rows
         },
 
         transitionsTable(_header, _sep, rows, _ignoredLineIter) {
@@ -487,6 +526,65 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
 
         transitionId(_firstChar, _remainingChars) {
             return this.sourceString.trim()
+        },
+
+        // --- Transition rules (list form) ---
+
+        // A description following the id's `:` folds into the transition's `notes`, ahead of any
+        // text from an explicit `- Notes:` sub-block.
+        transitionListEntry_withDescription(_li, idNode, descriptionNode, bodyNode) {
+            const id = idNode.sourceString.trim()
+            const description = descriptionNode.toAST() as string | null
+            const body = bodyNode.toAST() as TransitionListBody
+            const notes = [description, body.notes].filter((text): text is string => Boolean(text)).join(" ")
+            return {
+                id, states: body.states, trigger: body.trigger, result: body.result,
+                ...(notes ? { notes } : {})
+            }
+        },
+
+        transitionListEntry_withoutDescription(_li, idNode, _colon, _commentOpt, _eol, bodyNode) {
+            const id = idNode.sourceString.trim()
+            const body = bodyNode.toAST() as TransitionListBody
+            return {
+                id, states: body.states, trigger: body.trigger, result: body.result,
+                ...(body.notes ? { notes: body.notes } : {})
+            }
+        },
+
+        transitionListBody(statesBlock, triggerBlock, resultBlock, notesBlockOpt, _ignoredLineIter) {
+            return {
+                states: statesBlock.toAST() as StateRef[],
+                trigger: triggerBlock.toAST() as Trigger,
+                result: resultBlock.toAST() as StateRef,
+                notes: notesBlockOpt.children[0]?.toAST() as string | undefined
+            } satisfies TransitionListBody
+        },
+
+        transitionListStatesBlock(_sub, _kw, _eol, itemsIter) {
+            return itemsIter.children.map(node => reparseListValue<StateRef>(node.toAST() as string, "trigger"))
+        },
+
+        transitionListTriggerBlock(_sub, _kw, _eol, itemNode) {
+            return reparseListValue<Trigger>(itemNode.toAST() as string, "trigger")
+        },
+
+        transitionListResultBlock(_sub, _kw, _eol, itemNode) {
+            return reparseListValue<StateRef>(itemNode.toAST() as string, "result")
+        },
+
+        transitionListNotesBlock(_sub, _kw, _eol, itemsIter) {
+            const lines = itemsIter.children.map(node => node.toAST() as string)
+            return normalizeWhitespace(lines.join(" "))
+        },
+
+        listItemValue(_sub, textIter, _commentOpt, _nl, continuationIter) {
+            const lines = [textIter.sourceString, ...continuationIter.children.map(node => node.toAST() as string)]
+            return normalizeWhitespace(lines.join(" "))
+        },
+
+        continuationLine(textIter, _commentOpt, _nl) {
+            return textIter.sourceString
         },
 
         // --- State combinations & references ---
@@ -578,14 +676,15 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             let operator = compareNode.sourceString.trim()
             switch (operator) {
                 case "as":
-                case "is":
-                case "are":
                     operator = "as"
                     break
-                case "not as":
+                case "is":
+                case "are":
+                    operator = "="
+                    break
                 case "is not":
                 case "are not":
-                    operator = "not as"
+                    operator = "<>"
                     break
                 default:
                     throw new Error(`Unsupported operator \`${operator}\``)
@@ -618,12 +717,16 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             return "not in range"
         },
 
-        textCompare_is(_op) {
+        textCompare_sameness(_op) {
             return "as"
         },
 
+        textCompare_is(_op) {
+            return "="
+        },
+
         textCompare_isNot(_op) {
-            return "not as"
+            return "<>"
         },
 
         setCompare_in(_op) {

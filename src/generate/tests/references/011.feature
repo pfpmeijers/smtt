@@ -1,4 +1,4 @@
-# Results from: conditions-filtering.test.ts, TST-011: As condition filters to text match
+# Results from: conditions-filtering.test.ts, TST-011: As binds the attribute to its literal value
 # State machines:
 #  - name: m
 #    states:
@@ -26,7 +26,11 @@
 #   triggers) shall filter the examples rows to those that match. For `state`-type triggers this is
 #   orthogonal to expansion candidate matching (REQ-118): expansion determines which source
 #   transitions apply; the condition then filters the data rows.
-# - [REQ-095] The generator shall support text equality forms: `as`, `not as`.
+# - [REQ-432] The `as` operator shall state sameness rather than filter: the attribute *takes* the
+#   value named — a literal, or, for an attribute reference (REQ-427), the value the referenced
+#   attribute holds in the same row. Every such binding shall be applied to all rows before any
+#   filter is evaluated, so a filter on a bound attribute tests the value the binding gave it rather
+#   than whatever the declared table held.
 
 Feature: m
 

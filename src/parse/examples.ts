@@ -261,6 +261,96 @@ export function derivedModifierValue(
     }
 }
 
+// --- Sameness bindings ---
+
+/**
+ * A sameness binding: the attribute takes `value` — a literal, or, when `valueIsReference`, the
+ * value the named attribute holds in the same row. Written `` `attr` as … `` (REQ-432).
+ *
+ * A binding is not a filter. It states what the attribute's value *is*, so it is satisfied by
+ * construction rather than searched for among pre-existing rows — which is what lets two state
+ * machines relate their attributes without having to declare coinciding literals.
+ */
+export interface Binding {
+    attribute: string
+    value: string
+    valueIsReference: boolean
+}
+
+/**
+ * Split collected conditions into sameness bindings and the conditions that genuinely filter
+ * (REQ-432). Only the `as` operator binds; `=`/`is`, `<>`/`is not`, the ordering, set, range and
+ * presence operators all state a test and stay filters.
+ *
+ * An `as` carrying a modifier stays a filter: it constrains a *derived* value (e.g. the next value
+ * in sequence), which is not something a row's own column can simply be assigned.
+ *
+ * @param conditions Conditions collected for one transition and its expansion chain.
+ * @returns The bindings and the remaining filters.
+ */
+export function partitionConditions(
+    conditions: FilterCondition[],
+): { bindings: Binding[]; filters: FilterCondition[] } {
+    const bindings: Binding[] = []
+    const filters: FilterCondition[] = []
+    for (const entry of conditions) {
+        const { condition } = entry
+        if (condition.operator === "as" && !entry.modifier && typeof condition.value === "string") {
+            bindings.push({
+                attribute: entry.sourceName,
+                value: condition.value,
+                valueIsReference: condition.valueIsReference === true,
+            })
+            continue
+        }
+        filters.push(entry)
+    }
+    return { bindings, filters }
+}
+
+/**
+ * Apply sameness bindings to every row (REQ-432): each bound attribute takes its literal, or the
+ * value its referenced attribute holds in that same row.
+ *
+ * Bindings are applied before filtering, so a filter on a bound attribute tests the value the
+ * binding gave it rather than whatever the table happened to hold.
+ *
+ * A row whose reference cannot be resolved — the referenced attribute has no column in the
+ * effective table, or holds no value in this row — does not survive: there is no value for the
+ * bound attribute to take, so the sameness the author stated cannot hold for that row (REQ-427).
+ *
+ * @param rows Rows to bind.
+ * @param bindings Bindings to apply; no bindings returns `rows` unchanged.
+ * @returns The rows with every binding applied, minus those that could not satisfy one.
+ */
+export function applyBindings(rows: ExampleRow[], bindings: Binding[]): ExampleRow[] {
+    if (bindings.length === 0) return rows
+    const bound: ExampleRow[] = []
+    for (const row of rows) {
+        const boundRow: ExampleRow = { ...row }
+        let unresolvable = false
+        // A reference chain (`a` as `b`, `b` as `c`) settles by repetition: every pass propagates
+        // one more link, so a pass that changes nothing means all bindings hold. The pass cap also
+        // stops a cycle (`a` as `b`, `b` as `a`) from spinning.
+        for (let pass = 0; pass <= bindings.length && !unresolvable; pass++) {
+            let changed = false
+            for (const binding of bindings) {
+                const value = binding.valueIsReference ? boundRow[binding.value] : binding.value
+                if (value === undefined || value === "") {
+                    unresolvable = true
+                    break
+                }
+                if (boundRow[binding.attribute] === value) continue
+                boundRow[binding.attribute] = value
+                changed = true
+            }
+            if (!changed) break
+        }
+        if (!unresolvable) bound.push(boundRow)
+    }
+    return bound
+}
+
 // --- Rows ---
 
 /**

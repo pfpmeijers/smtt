@@ -120,7 +120,6 @@ export interface Condition {
     | "<="
     | ">="
     | "as"
-    | "not as"
     | "in"
     | "not in"
     | "in range"
@@ -132,7 +131,7 @@ export interface Condition {
    */
   value?: string | string[];
   /**
-   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal: the condition constrains the attribute to the value that the same `dataExampleValues` row holds for the named attribute, relating two attributes rather than pinning one to a fixed value. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only valid on a scalar comparison operator (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`, `not as`): the set, range and unary operators compare against fixed literals, which a name standing for another attribute's value cannot provide.
+   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal. With the `as` operator this states sameness: the attribute takes the referenced attribute's value. With a filtering operator it compares the attribute against the value the referenced attribute holds. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only valid on a scalar operator (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`): the set, range and unary operators compare against fixed literals, which a name standing for another attribute's value cannot provide.
    */
   valueIsReference?: boolean;
 }
@@ -199,7 +198,6 @@ export interface Condition1 {
     | "<="
     | ">="
     | "as"
-    | "not as"
     | "in"
     | "not in"
     | "in range"
@@ -211,7 +209,7 @@ export interface Condition1 {
    */
   value?: string | string[];
   /**
-   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal: the condition constrains the attribute to the value that the same `dataExampleValues` row holds for the named attribute, relating two attributes rather than pinning one to a fixed value. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only valid on a scalar comparison operator (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`, `not as`): the set, range and unary operators compare against fixed literals, which a name standing for another attribute's value cannot provide.
+   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal. With the `as` operator this states sameness: the attribute takes the referenced attribute's value. With a filtering operator it compares the attribute against the value the referenced attribute holds. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only valid on a scalar operator (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`): the set, range and unary operators compare against fixed literals, which a name standing for another attribute's value cannot provide.
    */
   valueIsReference?: boolean;
 }

@@ -51,7 +51,7 @@ Example values:
 | `Phase two` with `Score` in (10, 20]              | `Upper band confirmed`         | `Phase three`                        | Range: exclusive lower bound     |
 | `Phase two` with `Label` in ("alpha", "beta")     | `Selected from set`            | `Phase three`                        | Set condition                    |
 | `Phase two` with `Label` as "alpha"               | `Default confirmed`            | `Phase three`                        | Text equality: literal value     |
-| `Phase two` with `Label` not as "alpha"           | `Custom confirmed`             | `Phase three`                        | Text inequality: literal value   |
+| `Phase two` with `Label` is not "alpha"           | `Custom confirmed`             | `Phase three`                        | Text inequality: literal value   |
 | `Phase two` with `Count` not in [1, 5]            | `Out-of-range confirmed`       | `Phase three`                        | Not-in-range condition           |
 | `Phase two` with `Label` not in ("alpha", "beta") | `Unlisted label confirmed`     | `Phase three`                        | Not-in-set condition             |
 | `Phase three`                                     | `Reset`                        | `Phase one`                          | Simple reset                     |

@@ -7,7 +7,7 @@ test("[TST-046] → [REQ-158]: 'next' modifier derives position from the origina
         states: [{name: "s"}],
         dataExampleValues: [{a: "a0"}, {a: "a1"}, {a: "a2"}],
         transitions: [{
-            states: [{name: "s", arguments: [{name: "a", condition: {operator: "not as", value: "a0"}}]}],
+            states: [{name: "s", arguments: [{name: "a", condition: {operator: "<>", value: "a0"}}]}],
             trigger: {type: "event", name: "e", arguments: [{modifier: "next", name: "a"}]},
             result: {name: "s"},
             notes: "",

@@ -622,7 +622,9 @@ Supported operators:
     string (REQ-145, `smtt.parse.validate.md`); the fully exclusive
     `` `a in (1, 4)` `` is the set form, not a range.
 
-- [REQ-095] The generator shall support text equality forms: `as`, `not as`.
+- [REQ-095] The generator shall support the text spellings of the equality
+  filters: `is` / `are` for `=`, and `is not` / `are not` for `<>`. The `as`
+  operator is not one of them — it states sameness and binds (REQ-432).
 
 - [REQ-096] The generator shall support the unary absence check `undefined` (no
   value; checks that the attribute is absent/unset).
@@ -645,6 +647,30 @@ Supported operators:
   The referenced attribute contributes no column of its own: like any other
   attribute, it is rendered only when the transition also references it as an
   argument.
+
+- [REQ-432] The `as` operator shall state sameness rather than filter: the
+  attribute *takes* the value named — a literal, or, for an attribute reference
+  (REQ-427), the value the referenced attribute holds in the same row. Every
+  such binding shall be applied to all rows before any filter is evaluated, so
+  a filter on a bound attribute tests the value the binding gave it rather than
+  whatever the declared table held.
+
+  Sameness is satisfied by construction, never searched for among the declared
+  rows. Two state machines can therefore relate their attributes without either
+  having to declare a literal value that coincides with the other's — which no
+  author can arrange, since which machine's values survive the merge (REQ-168)
+  is decided by an expansion the author does not write.
+
+  A row whose reference cannot be resolved — the referenced attribute has no
+  column in the effective table, or holds no value in that row — shall not
+  survive: there is no value for the bound attribute to take, so the sameness
+  cannot hold for that row.
+
+  An `as` carrying a modifier (REQ-143/REQ-144) remains a filter: it constrains
+  a *derived* value, which is not something a row's own column can be assigned.
+
+  Chained bindings (`` `a` as `b` ``, `` `b` as `c` ``) shall resolve
+  transitively, so `a` ends up holding `c`'s value.
 
 - Data example table in state machine spec:
   ```markdown

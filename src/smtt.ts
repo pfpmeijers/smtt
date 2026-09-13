@@ -89,9 +89,9 @@ function resolveCliPaths(subArgs: string[], commandName: string): { inputDir: st
 function parseCli(subArgs: string[]): void {
     // TODO: Implement strict mode (exit with code 1 when warnings are produced).
     const { inputDir, astFile } = resolveCliPaths(subArgs, "parse")
-    const report = subArgs.includes("--report")
+    const debug = subArgs.includes("--debug")
 
-    parse(inputDir, astFile, { report })
+    parse(inputDir, astFile, { debug })
 }
 
 function inferCli(subArgs: string[]): void {
@@ -176,7 +176,7 @@ function printUsage(): void {
 }
 
 function printParseHelp(): void {
-    console.log("Usage: tsx smtt.ts parse [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--report] [--strict]")
+    console.log("Usage: tsx smtt.ts parse [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--debug] [--strict]")
     console.log("")
     console.log("Parses all `*.state-machine.md` files recursively from `--input-dir`")
     console.log("and writes an AST JSON file.")
@@ -187,7 +187,7 @@ function printParseHelp(): void {
     console.log("  --ast-file AST_FILE      Write AST JSON to this file instead of the default.")
     console.log("                           Default: `INPUT_DIR/state-machines.json`.")
     console.log("                           Relative paths are resolved from the current directory.")
-    console.log("  --report                 Write `transitions.txt` beside the AST file, describing how")
+    console.log("  --debug                  Write `transitions.txt` beside the AST file, describing how")
     console.log("                           each transition resolves.")
     console.log("  --strict                 Exit with code 1 when any warnings were produced.")
     console.log("                           Warnings are always written to stderr regardless.")

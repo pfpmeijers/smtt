@@ -178,6 +178,7 @@ export function validateStateMachines(data: unknown): void {
     // could not reach.
     validateStateTriggerResolution(stateMachines)
     validateExampleValuesPresence(stateMachines)
+    validateResultSatisfiesTargetState(stateMachines)
 }
 
 /**
@@ -568,7 +569,7 @@ export function validateModifierValuePoolSize(stateMachines: StateMachine[]): vo
  *  `not in range`) operators take a fixed list of literals instead, and the unary `undefined` /
  *  `defined` operators take no value at all. */
 const SCALAR_CONDITION_OPERATORS = new Set<Condition["operator"]>([
-    "=", "<>", "<", ">", "<=", ">=", "as", "not as",
+    "=", "<>", "<", ">", "<=", ">=", "as",
 ])
 
 /**
@@ -746,5 +747,190 @@ export function validateExampleValuesPresence(stateMachines: StateMachine[]): vo
             )
         }
     }
+}
+
+// --- Result vs. target state (REQ-433) ---
+
+/**
+ * What a transition leaves an attribute holding once it has fired. `defined` covers a value that
+ * is certainly present but not statically known (an attribute reference); `unknown` means nothing
+ * in the transition determines it, so no conclusion may be drawn.
+ */
+type PostValue =
+    | { kind: "undefined" }
+    | { kind: "literal", value: string }
+    | { kind: "defined" }
+    | { kind: "unknown" }
+
+/** Presence a condition establishes for the attribute it constrains, when it establishes one. */
+function presenceOfCondition(condition: Condition): PostValue {
+    switch (condition.operator) {
+        case "undefined":
+            return { kind: "undefined" }
+        // Sameness resolves to a value or the row is dropped, so the attribute is present either way.
+        case "defined":
+        case "as":
+            return { kind: "defined" }
+        case "=":
+            if (condition.valueIsReference || typeof condition.value !== "string") return { kind: "defined" }
+            return { kind: "literal", value: condition.value }
+        default:
+            return { kind: "unknown" }
+    }
+}
+
+/**
+ * What the transition's own result assigns to `attribute`, if it assigns anything.
+ *
+ * @param transition Transition to read.
+ * @param attribute Attribute name, lower-cased.
+ * @returns The assigned value, or `undefined` when the result does not mention the attribute.
+ */
+function assignedPostValue(transition: Transition, attribute: string): PostValue | undefined {
+    for (const argument of transition.result.arguments ?? []) {
+        if (argument.name.toLowerCase() !== attribute) continue
+        const result = argument.result
+        if (!result) continue
+        if (result.value === undefined) return { kind: "undefined" }
+        if (result.valueIsReference) return { kind: "defined" }
+        return { kind: "literal", value: result.value }
+    }
+    return undefined
+}
+
+/**
+ * What the transition's preconditions establish for `attribute`, for the case where the result
+ * assigns nothing and the value therefore carries over.
+ *
+ * Both the transition's own state arguments and the implied conditions of the states it names are
+ * consulted. Facts that disagree yield `unknown`: the attribute's presence is then not something
+ * this transition settles, and nothing may be reported about it.
+ *
+ * @param transition Transition to read.
+ * @param attribute Attribute name, lower-cased.
+ * @param impliedIndex Implied conditions declared per state.
+ * @returns The carried-over value, and the state that established it when there is one.
+ */
+function carriedPostValue(
+    transition: Transition,
+    attribute: string,
+    impliedIndex: Record<string, { attribute: string, condition: Condition }[]>,
+): { value: PostValue, source?: string } {
+    let settled: PostValue | undefined
+    let source: string | undefined
+    const consider = (candidate: PostValue, from: string): void => {
+        if (candidate.kind === "unknown") return
+        if (settled === undefined) {
+            settled = candidate
+            source = from
+            return
+        }
+        if (settled.kind !== candidate.kind) settled = { kind: "unknown" }
+    }
+
+    for (const stateRef of transition.states ?? []) {
+        for (const argument of stateRef.arguments ?? []) {
+            if (argument.name.toLowerCase() !== attribute || !argument.condition || argument.modifier) continue
+            consider(presenceOfCondition(argument.condition), `\`${stateRef.name}\``)
+        }
+        for (const implied of impliedIndex[stateRef.name.toLowerCase()] ?? []) {
+            if (implied.attribute.toLowerCase() !== attribute) continue
+            consider(presenceOfCondition(implied.condition), `\`${stateRef.name}\``)
+        }
+    }
+    return { value: settled ?? { kind: "unknown" }, source }
+}
+
+/** Describe a post value for an error message. */
+function describePostValue(value: PostValue): string {
+    switch (value.kind) {
+        case "undefined": return "leaves it undefined"
+        case "literal": return `sets it to "${value.value}"`
+        default: return "leaves it defined"
+    }
+}
+
+/**
+ * Whether `value` breaks `condition`. Only conclusions that hold statically are reported: an
+ * unknown value, a modifier-bearing condition, or an operator whose outcome depends on the row
+ * never yields a violation.
+ */
+function violates(value: PostValue, condition: Condition): boolean {
+    if (value.kind === "unknown") return false
+    switch (condition.operator) {
+        case "defined":
+            return value.kind === "undefined"
+        case "undefined":
+            return value.kind !== "undefined"
+        case "=":
+            if (value.kind === "undefined") return true
+            if (condition.valueIsReference || value.kind !== "literal") return false
+            return String(condition.value) !== value.value
+        default:
+            return false
+    }
+}
+
+/**
+ * [REQ-433] Raises an error when a transition's result cannot satisfy an implied condition its
+ * own target state declares — the state says an attribute is `defined`, say, while the transition
+ * neither sets it nor inherits a value for it.
+ *
+ * A state's implied conditions describe every occurrence of that state, so a transition that
+ * lands in it owes them. Without this check the contradiction only surfaces much later, as an
+ * empty examples table in some unrelated machine that expanded through the transition — or not at
+ * all, when the attribute happens to go unused.
+ *
+ * Only statically decidable cases are reported: an attribute whose post-transition value nothing
+ * determines is left alone, as is a sameness (`as`) declaration, which binds rather than demands.
+ *
+ * @param stateMachines Parsed state-machine AST nodes.
+ * @returns Nothing. Validation succeeds by not throwing.
+ * @throws Error When a transition result contradicts its target state's own declaration.
+ */
+export function validateResultSatisfiesTargetState(stateMachines: StateMachine[]): void {
+    const impliedIndex: Record<string, { attribute: string, condition: Condition }[]> = {}
+    for (const stateMachine of stateMachines) {
+        for (const state of stateMachine.states) {
+            if (!state.impliedConditions?.length) continue
+            const key = state.name.toLowerCase()
+            if (!(key in impliedIndex)) impliedIndex[key] = state.impliedConditions
+        }
+    }
+
+    for (const stateMachine of stateMachines) {
+        for (const transition of stateMachine.transitions ?? []) {
+            const target = transition.result
+            for (const implied of impliedIndex[target.name.toLowerCase()] ?? []) {
+                // A sameness declaration is satisfied by construction, never owed by the transition.
+                if (implied.condition.operator === "as") continue
+
+                const attribute = implied.attribute.toLowerCase()
+                const assigned = assignedPostValue(transition, attribute)
+                const { value, source } = assigned
+                    ? { value: assigned, source: undefined }
+                    : carriedPostValue(transition, attribute, impliedIndex)
+                if (!violates(value, implied.condition)) continue
+
+                const requirement = implied.condition.operator === "="
+                    ? `\`${implied.attribute}\` = ${JSON.stringify(implied.condition.value)}`
+                    : `\`${implied.attribute}\` ${implied.condition.operator}`
+                const cause = assigned
+                    ? `the transition's own result ${describePostValue(value)}`
+                    : `the transition does not set it and ${describePostValue(value)}${source ? ` (carried over from ${source})` : ""}`
+                throw new Error(
+                    `State machine \`${stateMachine.name}\`: ` +
+                    `${transitionLabel(transition)} results in \`${target.name}\`, which declares ` +
+                    `${requirement}, but ${cause}. Set \`${implied.attribute}\` in the result, or ` +
+                    `relax the declaration on \`${target.name}\` (REQ-433).`,
+                )
+            }
+        }
+    }
+}
+
+/** Label a transition by its id for an error message. */
+function transitionLabel(transition: Transition): string {
+    return transition.id ? `transition \`${transition.id}\`` : "anonymous transition"
 }
 

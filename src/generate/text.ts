@@ -163,7 +163,7 @@ export function fixtureNameFromStep(keyword: "Given" | "When" | "Then", stepText
 // --- Scenario labels ---
 
 const QUOTED_SEGMENT = /"[^"]*"/g
-const VALUE_LITERAL_CONTEXT = /(?:^|\s)(?:=|<>|>|<|>=|<=|as|not as|in|not in|in range|not in range)\s*$/
+const VALUE_LITERAL_CONTEXT = /(?:^|\s)(?:=|<>|>|<|>=|<=|as|is|is not|in|not in|in range|not in range)\s*$/
 
 /**
  * Lower case a scenario label while preserving the casing of quoted condition value literals

@@ -178,7 +178,7 @@ test("[TST-010] → [REQ-086/087/092]: Not-in-range condition excludes matching 
     assertMatchesReference(stateMachines, feature)
 })
 
-test("[TST-011] → [REQ-086/087/095]: As condition filters to text match", () => {
+test("[TST-011] → [REQ-086/087/432]: As binds the attribute to its literal value", () => {
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
@@ -196,13 +196,13 @@ test("[TST-011] → [REQ-086/087/095]: As condition filters to text match", () =
     assertMatchesReference(stateMachines, feature)
 })
 
-test("[TST-012] → [REQ-095]: Not-as condition filters out text match", () => {
+test("[TST-012] → [REQ-095]: Text inequality condition filters out the matching value", () => {
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
         dataExampleValues: [{a: "a1"}, {a: "a2"}],
         transitions: [{
-            states: [{name: "s", arguments: [{name: "a", condition: {operator: "not as", value: "a1"}}]}],
+            states: [{name: "s", arguments: [{name: "a", condition: {operator: "<>", value: "a1"}}]}],
             trigger: {type: "event", name: "e"},
             result: {name: "s"},
         }],
@@ -246,7 +246,7 @@ test("[TST-014] → [REQ-099/100]: All rows filtered out raises error", () => {
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
         'State machine `m`: Empty examples table for anonymous transition.\n' +
         '1 candidate row(s) available: { a=0 }.\n' +
-        'No row satisfied every filter:\n' +
+        'No row satisfied every condition:\n' +
         '  - `a` > 5 (declared on `m`#?)')
 })
 
@@ -304,6 +304,6 @@ test("[TST-176] → [REQ-427]: Reference condition on an attribute absent from t
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
         'State machine `m`: Empty examples table for anonymous transition.\n' +
         '1 candidate row(s) available: { a1=1 }.\n' +
-        'No row satisfied every filter:\n' +
+        'No row satisfied every condition:\n' +
         '  - `a1` as `a9` (declared on `m`#?)')
 })

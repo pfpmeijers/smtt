@@ -25,5 +25,5 @@
 
 # Throws: State machine `m`: Empty examples table for anonymous transition.
 1 candidate row(s) available: { a=0 }.
-No row satisfied every filter:
+No row satisfied every condition:
   - `a` > 5 (declared on `m`#?)

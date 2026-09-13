@@ -388,6 +388,80 @@ describe("validateStateMachines business rules", () => {
 
         assert.doesNotThrow(() => validateStateMachines(stateMachines))
     })
+
+    it("[TST-177] → [REQ-433]: rejects a result leaving an attribute undefined that the target state declares defined", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].states = [
+            { name: "s1", impliedConditions: [{ attribute: "a1", condition: { operator: "undefined" } }] },
+            { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "defined" } }] },
+        ]
+        stateMachines[0].transitions![0].states = [{ name: "s1" }]
+
+        assert.throws(
+            () => validateStateMachines(stateMachines),
+            /transition `001` results in `s2`, which declares `a1` defined, but the transition does not set it and leaves it undefined \(carried over from `s1`\).*\(REQ-433\)/s,
+        )
+    })
+
+    it("[TST-178] → [REQ-433]: accepts the same transition once its result sets the attribute", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].states = [
+            { name: "s1", impliedConditions: [{ attribute: "a1", condition: { operator: "undefined" } }] },
+            { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "defined" } }] },
+        ]
+        stateMachines[0].transitions![0].states = [{ name: "s1" }]
+        stateMachines[0].transitions![0].result = {
+            name: "s2",
+            arguments: [{ name: "a1", result: { value: "v1" } }],
+        }
+
+        assert.doesNotThrow(() => validateStateMachines(stateMachines))
+    })
+
+    it("[TST-179] → [REQ-433]: rejects a result setting an attribute the target state declares undefined", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].states = [
+            { name: "s1" },
+            { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "undefined" } }] },
+        ]
+        stateMachines[0].transitions![0].result = {
+            name: "s2",
+            arguments: [{ name: "a1", result: { value: "v1" } }],
+        }
+
+        assert.throws(
+            () => validateStateMachines(stateMachines),
+            /results in `s2`, which declares `a1` undefined, but the transition's own result sets it to "v1".*\(REQ-433\)/s,
+        )
+    })
+
+    it("[TST-180] → [REQ-433]: reports nothing when no precondition settles the attribute", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].states = [
+            { name: "s1" },
+            { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "defined" } }] },
+        ]
+        stateMachines[0].transitions![0].states = [{ name: "s1" }]
+
+        assert.doesNotThrow(() => validateStateMachines(stateMachines))
+    })
+
+    it("[TST-181] → [REQ-433]: a sameness declaration on the target state is never owed", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].data = { a1: "", a2: "" }
+        stateMachines[0].states = [
+            { name: "s1", impliedConditions: [{ attribute: "a1", condition: { operator: "undefined" } }] },
+            {
+                name: "s2",
+                impliedConditions: [
+                    { attribute: "a1", condition: { operator: "as", value: "a2", valueIsReference: true } },
+                ],
+            },
+        ]
+        stateMachines[0].transitions![0].states = [{ name: "s1" }]
+
+        assert.doesNotThrow(() => validateStateMachines(stateMachines))
+    })
 })
 
 

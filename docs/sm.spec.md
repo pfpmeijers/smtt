@@ -26,7 +26,8 @@ Each state machine file must follow this general structure:
 6.  **Transitions (H2)**: The rules governing state changes, with optional
     subsections:
     1. **Default preconditions (H3, Optional)**: Default precondition states.
-    2. **Rules (H3)**: The transitions table.
+    2. **Rules (H3)**: The transitions, as a table, as bulleted [list-form
+       entries](#list-form), or both.
     3. **Impossible  (H3, Optional)**: Declared impossible state - trigger
        combinations.
     4. **Irrelevant (H3, Optional)**: Declared irrelevant state - trigger
@@ -286,6 +287,71 @@ Example:
 |   | `Painting in cart`                           | `Painting removed`       | `Painting available` |       |
 ```
 
+#### List form
+
+As an alternative to a table row, write a single transition as a nested
+bulleted entry. Both notations may appear anywhere under `### Rules`, in any
+order and any number of times — every table row and every list entry is
+merged into one combined list of transitions.
+
+- **Format**: Start the entry with `- <id>:`, then nest four sub-bullets, in
+  this order: `States`, `Trigger`, `Result`, and (optionally) `Notes`.
+- **Identifier**: Unlike the table's optional `#` column, the identifier is
+  required on a list entry — it is the only thing that labels the entry.
+  Write it as plain text, not backticked.
+- **Description** (optional): Write `: some text` directly after the id,
+  in the same format used for a [state description](#states) or a
+  [default precondition description](#default-preconditions). It is folded
+  into the transition's `Notes`, ahead of any text from an explicit `Notes:`
+  sub-bullet.
+- **States**: List one state reference per sub-bullet, in place of the
+  table's `,`-separated cell. Each bullet uses the same [state
+  reference](#multiple-states-in-the-state-column) syntax as a table cell —
+  arguments, [modifiers](#data-modifiers), and [value
+  conditions](#value-conditions) all work the same way.
+- **Trigger** and **Result**: Exactly one sub-bullet each, holding the same
+  [trigger](#trigger-types)/[result](#result-values) syntax as the
+  corresponding table cell.
+- **Notes** (optional): One or more sub-bullets of free text, equivalent to
+  the table's `Notes` cell. Multiple bullets are joined with a space.
+- **Wrapping long lines**: A sub-bullet's value may continue onto further
+  physical lines for readability. A continuation line must be indented
+  further than its bullet and must not itself start with `-`; it is joined
+  onto the previous line with a single space before being parsed.
+
+Example — the following list-form entry is equivalent to a single table row:
+
+```markdown
+### Rules
+
+- 039c:
+  - States:
+    - `User session present`
+    - `User authenticated` with `user email address`
+    - `Painting in cart` with `painting assignee email address` as `user email address`
+  - Trigger:
+    - `Painting reservation confirmed` using
+      `reservation email address` <> `user email address` and `reservation name`
+  - Result:
+    - `Painting reserved` for `reservation email address` and `reservation name`
+       and `painting email address` set to `reservation email address`
+  - Notes:
+    - Reservation confirmed using new email address
+```
+
+With an inline description instead of (or alongside) a `Notes:` sub-bullet:
+
+```markdown
+- 040: Removing painting from cart.
+  - States:
+    - `User session present`
+    - `Painting in cart`
+  - Trigger:
+    - `Painting removed from cart`
+  - Result:
+    - `Painting available`
+```
+
 #### Multiple states in the State column
 
 The **State** column combines multiple states using `,` as separator. The
@@ -442,20 +508,55 @@ Supported numerical condition operators:
 
 Supported text condition operators:
 
-| Syntax                                    | Meaning                                       |
-|-------------------------------------------|-----------------------------------------------|
-| `` `attribute` as "value" ``              | Attribute equals `"value"`                    |
-| `` `attribute` is "value" ``              | Attribute equals `"value"` (synonym for `as`) |
-| `` `attributes` are "values" ``           | Attribute equals `"value"` (synonym for `as`) |
-| `` `attribute` not as "value" ``          | Attribute is not equal to `"value"`           |
-| `` `attribute` is not "value" ``          | Attribute is not equal to `"value"`           |
-| `` `attributes` are not "values" ``       | Attribute is not equal to `"value"`           |
-| `` `attribute` in ("v1", "v2", ...)``     | Attribute is one of the listed values (set)   |
-| `` `attribute` not in ("v1", "v2", ...)`` | Attribute is none of the listed values (set)  |
-| `` `attribute` undefined``                | Attribute has no value                        |
-| `` `attribute` is undefined``             | Attribute has no value (alias of `undefined`) |
-| `` `attribute` defined``                  | Attribute has a value                         |
-| `` `attribute` is defined``               | Attribute has a value (alias of `defined`)    |
+| Syntax                                    | Meaning                                        |
+|-------------------------------------------|------------------------------------------------|
+| `` `attribute` is "value" ``              | Attribute equals `"value"` (synonym for `=`)   |
+| `` `attributes` are "values" ``           | Attribute equals `"value"` (synonym for `=`)   |
+| `` `attribute` is not "value" ``          | Attribute is not equal to `"value"` (as `<>`)  |
+| `` `attributes` are not "values" ``       | Attribute is not equal to `"value"` (as `<>`)  |
+| `` `attribute` in ("v1", "v2", ...)``     | Attribute is one of the listed values (set)    |
+| `` `attribute` not in ("v1", "v2", ...)`` | Attribute is none of the listed values (set)   |
+| `` `attribute` undefined``                | Attribute has no value                         |
+| `` `attribute` is undefined``             | Attribute has no value (alias of `undefined`)  |
+| `` `attribute` defined``                  | Attribute has a value                          |
+| `` `attribute` is defined``               | Attribute has a value (alias of `defined`)     |
+
+The `as` operator is deliberately absent from these tables: it does not compare.
+See [Sameness](#sameness) below.
+
+##### Sameness
+
+`` `attribute` as <value> `` does not test anything — it states that the
+attribute **is** that value. The attribute takes it, whether it is a literal or
+an [attribute reference](#attribute-reference-values):
+
+| Syntax                              | Meaning                                            |
+|-------------------------------------|----------------------------------------------------|
+| `` `attribute` as "value" ``        | The attribute holds `"value"`                      |
+| `` `attribute` as `other attr` ``   | The attribute holds whatever `other attr` holds    |
+
+The distinction from `is` matters as soon as two state machines are involved.
+`` `a` is `b` `` asks for a row in which `a` and `b` happen to hold the same
+text, so such a row has to exist. `` `a` as `b` `` needs no such row: `a` is
+*given* `b`'s value. Two machines can therefore relate their attributes without
+either having to declare a literal that coincides with the other's — which no
+author can reliably arrange, since which machine's values apply depends on an
+expansion the author does not write.
+
+Use `as` to say two things are the same thing, and `is` / `=` to test a value.
+
+Example:
+
+- `` `Painting in cart` with `assignee email address` as `user email address` ``
+  — the painting in the cart is *this* user's; its assignee email is the
+  authenticated user's email, whatever that is.
+- `` `Painting in cart` with `assignee email address` is "info@domain.com" ``
+  — only applies to rows where the assignee email is exactly that address.
+
+A sameness on an attribute that also carries a
+[modifier](#data-modifiers) is the one exception: it constrains a derived value
+(e.g. the next in sequence) rather than the attribute's own cell, so it is
+tested like any other condition.
 
 ##### Values
 
@@ -533,8 +634,8 @@ own value, rather than being fixed.
   attribute is compared against: both values are read from the same example
   combination, so the condition relates two attributes rather than pinning one
   to a literal.
-- **Operators** — A reference is only supported on the scalar comparison
-  operators: `=`, `<>`, `<`, `>`, `<=`, `>=`, `as`, `is`, `are`, `not as`,
+- **Operators** — A reference is only supported on `as` (sameness) and on the
+  scalar comparison operators: `=`, `<>`, `<`, `>`, `<=`, `>=`, `is`, `are`,
   `is not`, `are not`. The set (`in (…)`), range (`in [low, high]`) and
   presence (`defined` / `undefined`) forms compare against fixed values and
   reject a reference.
@@ -562,22 +663,30 @@ fixed literal value.
 
 ##### Implied attribute and values
 
-Referring to an attribute with `as` (or `=`) also *defines* the constrained
+Referring to an attribute with `as` or `=` also *defines* the constrained
 attribute, so it needs no declaration of its own:
 
 - The attribute is added to the data attributes of the state machine, exactly
   as any other attribute reference in a transition does.
-- Its example values follow from the attribute it is compared to: each value
-  of the referenced attribute implies an example combination in which both
-  attributes hold that same value. Declaring example values for the
-  constrained attribute is therefore optional.
+- With `as`, its value simply *is* the referenced attribute's, resolved per
+  scenario. Nothing has to be declared or pre-arranged.
+- With `=`, a row in which both attributes hold the same value must exist for
+  the comparison to ever hold, so one is implied from the referenced
+  attribute's own declared values.
 
-The other operators say what a value must *not* be (`<>`, `not as`), or state
+The other operators say what a value must *not* be (`<>`, `is not`), or state
 an open-ended relation (`<`, `>`, `<=`, `>=`), so no value follows from them —
-give the attribute its own example values when using those. The same holds when
-the referenced attribute belongs to another state machine: its values live in
-that machine's own table, so declare example values for the constrained
-attribute in this one.
+give the attribute its own example values when using those.
+
+Note the asymmetry when the referenced attribute belongs to **another** state
+machine. A machine must be specifiable stand-alone, so another machine's table
+is never drawn on for a plain precondition (only along an expansion chain).
+With `=` that means declaring example values for the constrained attribute in
+this machine — and since the other machine's values are not consulted, the two
+cannot be made to coincide deliberately. With `as` there is nothing to
+coincide: the value is taken from whichever attribute is authoritative in the
+scenario being generated, so the same rule reads correctly whether the machine
+is generated on its own or reached through another machine's transition.
 
 Example:
 

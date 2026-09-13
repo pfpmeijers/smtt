@@ -88,11 +88,16 @@ function attributeNamesFromArguments(args: Argument[]): string[] {
 /**
  * Condition operators for which an attribute-reference value pins the constrained attribute to
  * the referenced attribute's own row value, and can therefore imply an example row (REQ-426).
- * The remaining comparison operators (`<>`, `<`, `>`, `<=`, `>=`, `not as`) accept a reference
- * too, but state what a row must *not* be, or an open-ended relation, so no single implied value
- * follows from them.
+ *
+ * Only the equality *filter* is listed. `=` (and its `is` spelling) tests that two attributes
+ * coincide, so a row in which they do must exist for it to ever hold — that row is what REQ-426
+ * supplies. `as` is not a filter but a sameness binding (REQ-432): the generator gives the
+ * attribute the referenced value outright, so no row has to be manufactured for it to be found in.
+ *
+ * The remaining comparison operators (`<>`, `<`, `>`, `<=`, `>=`) accept a reference too, but
+ * state what a row must *not* be, or an open-ended relation, so no single implied value follows.
  */
-const REFERENCE_EQUALITY_OPERATORS = new Set<Condition["operator"]>(["=", "as"])
+const REFERENCE_EQUALITY_OPERATORS = new Set<Condition["operator"]>(["="])
 
 /**
  * A linked value requirement between two attributes: `attribute` holds whatever value

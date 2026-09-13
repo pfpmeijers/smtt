@@ -131,7 +131,7 @@ unaffected by completion.
   that value, a condition compares its attribute against it. A reference shall
   only appear where a single example-values row can resolve it: on a result
   argument's `result`, or on a condition using a scalar comparison operator
-  (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`, `not as`). A set (`in`, `not in`),
+  (`=`, `<>`, `<`, `>`, `<=`, `>=`) or the sameness operator `as`. A set (`in`, `not in`),
   range (`in range`, `not in range`), or unary (`undefined`, `defined`)
   condition rejects a reference-classified value: it compares against a fixed
   list of literals, or against no value at all, which a dynamically resolved
@@ -157,13 +157,19 @@ whether it was produced by that step or supplied ready-made.
   present in the example data values table for that attribute.
 
 - [REQ-429] A condition shall be evaluated against a single attribute value:
-  `=` and `as` hold when the two values are equal — numerically when both are
-  numeric, textually otherwise — and `<>` and `not as` when they are not; the
+  `=` holds when the two values are equal — numerically when both are
+  numeric, textually otherwise — and `<>` when they are not; the
   ordering operators `<`, `>`, `<=` and `>=` hold only between numeric values;
   `in` and `not in` test membership of the listed values; `in range` and
   `not in range` test the bounds and their inclusivity (REQ-145); `defined` and
   `undefined` test presence. An absent value — an empty cell or a missing
   column — shall satisfy `undefined` only, and never any comparison.
+
+  `as` is not evaluated here: it states sameness and is applied as a binding
+  before any condition is tested (REQ-432 in `smtt.generate.features.md`). It
+  is evaluated as an equality only where a binding cannot serve — an `as`
+  carrying a modifier, and structural expansion matching, which has no example
+  row to bind against.
 
 - [REQ-430] A state trigger shall resolve to those transitions whose result
   state name equals the trigger's state name and whose result is compatible
@@ -196,3 +202,31 @@ whether it was produced by that step or supplied ready-made.
   name. Naming an attribute that exists nowhere is an error. The check runs on
   the complete AST, so an attribute declared only by inference (REQ-419)
   counts as declared.
+
+- [REQ-433] A transition shall leave its target state's own implied conditions
+  satisfied. A state's implied conditions describe every occurrence of that
+  state, so a transition landing in it owes them: the value the transition
+  leaves an attribute holding — assigned by its own result, or otherwise
+  carried over from its preconditions — shall not contradict what the target
+  state declares about that attribute.
+
+  Only statically decidable contradictions are errors:
+
+  - the target declares `defined` and the transition leaves the attribute
+    undefined, or declares `undefined` and the transition leaves it set;
+  - the target declares `` = `` a literal and the transition leaves a
+    different literal, or leaves the attribute undefined.
+
+  An attribute whose post-transition value nothing determines — no result
+  assignment, and no precondition that settles its presence — is not reported,
+  nor is one whose preconditions disagree: the transition does not settle it,
+  so nothing follows. Ordering, set and range declarations are likewise not
+  reported, since whether they hold depends on the row.
+
+  A sameness (`as`) declaration on the target state is never owed: it binds
+  rather than demands (REQ-432 in `smtt.generate.features.md`), so the
+  generator satisfies it by construction.
+
+  Without this check a contradiction surfaces only much later — as an empty
+  examples table in some other machine that expanded through the transition —
+  or not at all, when the attribute happens to go unused.

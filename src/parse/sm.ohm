@@ -86,11 +86,13 @@ StateMachine {
   attributeValuesTable<caption>
     = literal<caption> eol attributeValuesTableHeader tableSeparatorRow attributeValuesTableRow+ ignoredLine*
 
+  // A trailing `comment?` lets a row be annotated after its closing pipe, the way any other line
+  // can be. An `inlineComment` inside a cell stops at the next pipe; this one runs to end of line.
   attributeValuesTableHeader
-    = pipe (identifier inlineComment? pipe)+ nl
+    = pipe (identifier inlineComment? pipe)+ comment? nl
 
   attributeValuesTableRow
-    = pipe (value? inlineComment? pipe)+ nl
+    = pipe (value? inlineComment? pipe)+ comment? nl
 
   // A value is either a quoted non-empty string token or a bare number.
   // Which values belong to which attribute is resolved post-parse.
@@ -128,7 +130,17 @@ StateMachine {
 
   // --- Transition rules subsection ---
 
-  transitionRules = h3 literal<"Rules"> eol transitionsTable
+  // A `### Rules` subsection holds one or more blocks, each either the table form or a single
+  // list-form entry; blocks may be mixed and repeated in any order, and their transitions are
+  // merged into one list in source order.
+  transitionRules = h3 literal<"Rules"> eol transitionRulesBody
+
+  transitionRulesBody
+    = transitionRulesBlock+
+
+  transitionRulesBlock
+    = transitionsTable
+    | transitionListEntry
 
   transitionsTable
     = transitionsHeaderRow tableSeparatorRow transitionRow+ ignoredLine*
@@ -153,6 +165,50 @@ StateMachine {
 
   transitionId
     = (~"`" ~pipe ~nl any) (~pipe ~nl any)*
+
+  // --- Transition rules subsection (list form) ---
+
+  // A single transition, written as a nested bulleted entry instead of a table row. The four
+  // sub-blocks mirror the table's columns (States/Trigger/Result/Notes) and must appear in that
+  // order; Notes is optional, matching the table's optional Notes column. Unlike the table's
+  // optional `#` column, the identifier is required here — it is the only label on the entry.
+  // An optional description may follow the id's `:`, in the same `: text` shape used for a
+  // state or default-precondition description; it folds into the transition's notes.
+  transitionListEntry
+    = listItem transitionListId description<sublistItem> transitionListBody -- withDescription
+    | listItem transitionListId ":" comment? eol transitionListBody         -- withoutDescription
+
+  transitionListId
+    = (~":" ~nl ~commentStart any)+
+
+  transitionListBody
+    = transitionListStatesBlock
+      transitionListTriggerBlock
+      transitionListResultBlock
+      transitionListNotesBlock?
+      ignoredLine*
+
+  transitionListStatesBlock
+    = sublistItem literal<"States:"> eol listItemValue+
+
+  transitionListTriggerBlock
+    = sublistItem literal<"Trigger:"> eol listItemValue
+
+  transitionListResultBlock
+    = sublistItem literal<"Result:"> eol listItemValue
+
+  transitionListNotesBlock
+    = sublistItem literal<"Notes:"> eol listItemValue+
+
+  // One sub-sub-list bullet. Its value may continue onto further physical lines so long as they
+  // are indented and don't themselves start a new bullet — a soft wrap for long trigger/result
+  // expressions. The physical lines are joined into one logical line in a post-parse step, then
+  // re-parsed with the same `trigger`/`result` rule used for a table cell.
+  listItemValue
+    = subsublistItem textChar+ comment? nl continuationLine*
+
+  continuationLine
+    = ~(hsp? "-") ~sectionStart textChar+ comment? nl
 
   // --- State combinations ---
 
@@ -260,9 +316,14 @@ StateMachine {
   rangeClose
     = literal<"]"> | literal<")">
 
+  // `as` states sameness — the attribute *takes* the value or the referenced attribute's value —
+  // so it binds rather than filters. `is`/`are` and `is not`/`are not` are the text spellings of
+  // the `=` and `<>` filters. The negative spellings are tried first: `is` would otherwise match
+  // the head of `is not` and strand the `not`.
   textCompare
-    = literal<"as"> | literal<"is"> | literal<"are">             -- is
-    | literal<"not as"> | literal<"is not"> | literal<"are not"> -- isNot
+    = literal<"as">                                          -- sameness
+    | literal<"is not"> | literal<"are not">                 -- isNot
+    | literal<"is"> | literal<"are">                          -- is
 
   setCompare
     = literal<"in">     -- in
@@ -400,6 +461,9 @@ StateMachine {
 
   sublistItem
     = "  - "
+
+  subsublistItem
+    = "    - "
 
   none
     = literal<"None">

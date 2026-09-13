@@ -13,7 +13,7 @@
 #            arguments:
 #              - name: a
 #                condition:
-#                  operator: not as
+#                  operator: <>
 #                  value: a0
 #        trigger:
 #          type: event

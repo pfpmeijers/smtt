@@ -24,10 +24,12 @@ import {
     type TaggedTransition,
 } from "./expand"
 import {
+    applyBindings,
     collectPathExampleColumns,
     describeEmptyExampleValues,
     filterRows,
     mergeExampleValues,
+    partitionConditions,
     resolveCellValue,
     type ExampleColumn,
     type ExampleRow,
@@ -82,8 +84,7 @@ function debugConditionText(condition: Condition): string {
             return `${condition.operator} (${values.map((value) => `"${value}"`).join(", ")})`
         }
         case "as":
-        case "not as":
-            return `${condition.operator} "${condition.value}"`
+            return `as "${condition.value}"`
         default:
             return `${condition.operator} ${condition.value}`
     }
@@ -285,8 +286,12 @@ function tagPreconditions(
 
 /**
  * Merge a candidate's own precondition states into the accumulated context (REQ-116 style
- * dedupe): a state is only appended when no already-accumulated state shares its owning machine
- * (or, for unmodeled/foreign states, its exact name) — the first-seen reference wins.
+ * dedupe, mirroring `dedupeStateRefs`): a state is appended when no already-accumulated state
+ * shares its owning machine (or, for unmodeled/foreign states, its exact name); otherwise, when
+ * the already-accumulated state is bare and the candidate's own state for the same owner carries
+ * arguments, the bare reference is upgraded to the specific one in place (a bare reference carries
+ * no information beyond its name, so it cannot contradict a more specific reference for the same
+ * state) — matching the `specializes` tag `tagPreconditions` already computes for this same case.
  *
  * @param accumulated Precondition states already established by the ancestor chain.
  * @param own Candidate's own precondition states to merge in.
@@ -297,10 +302,11 @@ function mergeGivens(accumulated: StateRef[], own: StateRef[], ownership: StateO
     const merged = [...accumulated]
     for (const stateRef of own) {
         const owner = ownerOfStateRef(stateRef, ownership)
-        const alreadyPresent = owner
-            ? merged.some((other) => ownerOfStateRef(other, ownership) === owner)
-            : merged.some((other) => other.name.toLowerCase() === stateRef.name.toLowerCase())
-        if (!alreadyPresent) merged.push(stateRef)
+        const existingIndex = owner
+            ? merged.findIndex((other) => ownerOfStateRef(other, ownership) === owner)
+            : merged.findIndex((other) => other.name.toLowerCase() === stateRef.name.toLowerCase())
+        if (existingIndex === -1) merged.push(stateRef)
+        else if (isBareStateRef(merged[existingIndex]) && !isBareStateRef(stateRef)) merged[existingIndex] = stateRef
     }
     return merged
 }
@@ -446,19 +452,21 @@ function renderExamplesLines(
     }
 
     const availableAttributes = new Set(Object.keys(exampleValues[0]))
-    const filters = [
+    const conditions = [
         ...collectChainFilterConditions(rootStateMachine.name, root, sourceChain),
         ...collectImpliedFilterConditionsForGivens(rootStateMachine.name, mergedGivens, context.impliedIndex, availableAttributes),
     ]
-    const rows = filterRows(context.stateMachines, rootStateMachine.name, exampleValues, exampleValues, filters)
+    const { bindings, filters } = partitionConditions(conditions)
+    const boundValues = applyBindings(exampleValues, bindings)
+    const rows = filterRows(context.stateMachines, rootStateMachine.name, boundValues, boundValues, filters)
     if (rows.length === 0) {
         return [
-            `${pad}Examples: EMPTY — no row satisfied every filter:`,
-            ...filters.map((filter) => `${pad}  - ${describeFilterCondition(filter)}`),
+            `${pad}Examples: EMPTY — no row satisfied every condition:`,
+            ...conditions.map((condition) => `${pad}  - ${describeFilterCondition(condition)}`),
         ]
     }
 
-    return formatValueTable(context.stateMachines, rootStateMachine.name, columns, rows, exampleValues)
+    return formatValueTable(context.stateMachines, rootStateMachine.name, columns, rows, boundValues)
         .map((line) => `${pad}${line}`)
 }
 

@@ -5,6 +5,7 @@ import type {
 } from "../parse"
 import {
     ambiguousStateNames,
+    applyBindings,
     buildImpliedConditionsIndex,
     buildStateOwnership,
     collectChainFilterConditions,
@@ -12,6 +13,7 @@ import {
     describeEmptyExampleValues,
     describeFilterCondition,
     mergeExampleValues,
+    partitionConditions,
     filterRows,
     ownerOfStateRef,
     transitionDescription,
@@ -110,14 +112,18 @@ function buildExamplesTable(
     }
 
     const availableAttributes = new Set(Object.keys(exampleValues[0]))
-    const filters: FilterCondition[] = [
+    const conditions: FilterCondition[] = [
         ...collectChainFilterConditions(stateMachine.name, transition, path.sourceChain),
         ...collectImpliedFilterConditions(
             stateMachine, transition, defaultPreconditions, ownership, impliedIndex, availableAttributes,
             path.injectedGivenStates,
         ),
     ]
-    const rows = filterRows(stateMachines, stateMachine.name, exampleValues, exampleValues, filters)
+    // Sameness bindings settle the values they name before any filter is tested (REQ-432), so a
+    // bound attribute is never searched for among the declared rows.
+    const { bindings, filters } = partitionConditions(conditions)
+    const boundValues = applyBindings(exampleValues, bindings)
+    const rows = filterRows(stateMachines, stateMachine.name, boundValues, boundValues, filters)
     if (rows.length === 0) {
         const chainSuffix = path.sourceChain.length === 0 ? "" : ` (resolved via ${
             [`\`${stateMachine.name}\`#${transition.id ?? "?"}`, ...[...path.sourceChain].reverse().map(
@@ -128,17 +134,20 @@ function buildExamplesTable(
             `{ ${Object.entries(row).map(([key, value]) => `${key}=${value === "" ? "<empty>" : value}`).join(", ")} }`,
         ).join(", ")
         const moreRowsSuffix = exampleValues.length > 3 ? `, … (${exampleValues.length} total)` : ""
-        const filterDescriptions = filters.length === 0
-            ? "  (no filters — every candidate row was still empty)"
-            : filters.map((filter) => `  - ${describeFilterCondition(filter)}`).join("\n")
+        // Every collected condition is listed, bindings included: a sameness whose referenced
+        // attribute resolves to nothing discards rows just as a filter does, so omitting it would
+        // point the reader at the wrong cause.
+        const conditionDescriptions = conditions.length === 0
+            ? "  (no conditions — every candidate row was still empty)"
+            : conditions.map((condition) => `  - ${describeFilterCondition(condition)}`).join("\n")
         throw new Error(
             `State machine \`${stateMachine.name}\`: Empty examples table for ` +
             `${transitionDescription(transition).toLowerCase()}${chainSuffix}.\n` +
             `${exampleValues.length} candidate row(s) available: ${sampleRows}${moreRowsSuffix}.\n` +
-            `No row satisfied every filter:\n${filterDescriptions}`,
+            `No row satisfied every condition:\n${conditionDescriptions}`,
         )
     }
-    return formatExamplesTable(stateMachines, stateMachine.name, columns, rows, exampleValues)
+    return formatExamplesTable(stateMachines, stateMachine.name, columns, rows, boundValues)
 }
 
 // --- Scenario rendering ---

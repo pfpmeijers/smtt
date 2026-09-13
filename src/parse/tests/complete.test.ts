@@ -715,7 +715,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
                 name: "m1",
                 states: [
                     { name: "s1" },
-                    { name: "s2", impliedConditions: [{ attribute: "a2", condition: referenceCondition("a1") }] },
+                    { name: "s2", impliedConditions: [{ attribute: "a2", condition: referenceCondition("a1", "=") }] },
                 ],
                 data: { a1: "" },
                 dataExampleValues: [{ a1: "v1" }],
@@ -764,7 +764,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
                 dataExampleValues: [],
                 transitions: [
                     {
-                        states: [{ name: "s1", arguments: [{ name: "a2", condition: referenceCondition("foreign") }] }],
+                        states: [{ name: "s1", arguments: [{ name: "a2", condition: referenceCondition("foreign", "=") }] }],
                         trigger: { type: "event", name: "e1" },
                         result: { name: "s2" },
                     },
