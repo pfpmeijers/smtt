@@ -217,15 +217,25 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
      * cell is parsed with — so list-form and table-form entries share identical argument,
      * modifier, and condition handling.
      *
-     * @param text The normalized, single-line source text to re-parse.
-     * @param ruleName The grammar start rule to parse `text` with.
+     * @param itemNode The original `listItemValue` parse node the text was derived from, used to
+     *                 translate a failure position back to its real line/column in the source file.
+     * @param ruleName The grammar start rule to parse the item's normalized text with.
      * @returns The resulting AST node (a `StateRef` or `Trigger`, depending on `ruleName`).
-     * @throws Error when `text` does not match the given rule.
+     * @throws Error when the normalized text does not match the given rule.
      */
-    function reparseListValue<T>(text: string, ruleName: "trigger" | "result"): T {
+    function reparseListValue<T>(itemNode: ohm.Node, ruleName: "trigger" | "result"): T {
+        const text = itemNode.toAST() as string
         const matchResult = grammar.match(text, ruleName)
         if (matchResult.failed()) {
-            throw new Error(`Failed to parse list-form transition value \`${text}\`: ${matchResult.message ?? ""}`)
+            // `text` is a normalized, single-line copy of the item's source, so ohm reports
+            // failures relative to it (always "Line 1"). Re-anchor the failure position onto the
+            // item's own first-line source interval to report the real line/column instead.
+            const contentSource = itemNode.child(1).source
+            const failureOffset = matchResult.getRightmostFailurePosition()
+            const location = contentSource.subInterval(failureOffset, 0).getLineAndColumnMessage()
+            throw new Error(
+                `Failed to parse list-form transition value \`${text}\`: ${location}Expected ${matchResult.getExpectedText()}`
+            )
         }
         return semantics(matchResult).toAST() as T
     }
@@ -562,15 +572,15 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
         },
 
         transitionListStatesBlock(_sub, _kw, _eol, itemsIter) {
-            return itemsIter.children.map(node => reparseListValue<StateRef>(node.toAST() as string, "trigger"))
+            return itemsIter.children.map(node => reparseListValue<StateRef>(node, "trigger"))
         },
 
         transitionListTriggerBlock(_sub, _kw, _eol, itemNode) {
-            return reparseListValue<Trigger>(itemNode.toAST() as string, "trigger")
+            return reparseListValue<Trigger>(itemNode, "trigger")
         },
 
         transitionListResultBlock(_sub, _kw, _eol, itemNode) {
-            return reparseListValue<StateRef>(itemNode.toAST() as string, "result")
+            return reparseListValue<StateRef>(itemNode, "result")
         },
 
         transitionListNotesBlock(_sub, _kw, _eol, itemsIter) {

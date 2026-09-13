@@ -884,6 +884,13 @@ function violates(value: PostValue, condition: Condition): boolean {
  * Only statically decidable cases are reported: an attribute whose post-transition value nothing
  * determines is left alone, as is a sameness (`as`) declaration, which binds rather than demands.
  *
+ * On the complete AST, a target's literal `=` or `undefined` implied condition is rarely the
+ * source of a reported violation any more: completion (REQ-434) already gives a transition that
+ * leaves the attribute otherwise unassigned an explicit result matching that concrete value. This
+ * check still catches the case REQ-434 deliberately leaves alone — a transition whose own
+ * explicit result contradicts the target — and remains the only check for `defined` targets, the
+ * one implied condition that pins no single concrete value for REQ-434 to assign.
+ *
  * @param stateMachines Parsed state-machine AST nodes.
  * @returns Nothing. Validation succeeds by not throwing.
  * @throws Error When a transition result contradicts its target state's own declaration.

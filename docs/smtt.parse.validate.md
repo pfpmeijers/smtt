@@ -38,9 +38,12 @@ values are only guaranteed once the AST is complete.
 2. Validate raw AST
 3. Classify triggers
 4. Complete AST (specified in `smtt.parse.complete.md`)
-   a. Infer data attributes from every usage site
-   b. Synthesise undefined example rows for attributes with no values
-   c. Augment the example table with condition/result-referenced value
+   a. Infer a result assignment for transitions landing in a state whose
+      implied condition pins an attribute to a concrete value (a literal via
+      `=`, or absence via `undefined`)
+   b. Infer data attributes from every usage site
+   c. Synthesise undefined example rows for attributes with no values
+   d. Augment the example table with condition/result-referenced value
       combinations
 5. Validate the complete AST
 6. Annotate state triggers with their resolved expansion chains
@@ -143,11 +146,12 @@ The following requirements shall hold on the complete AST. They constrain the
 `data` map and the `dataExampleValues` table, both of which raw AST authors
 may leave partially or entirely unspecified.
 
-What the completion step itself adds to reach that state — attribute
-inference (REQ-419), synthesised undefined rows (REQ-420), and augmented
-value combinations (REQ-421, REQ-426) — is specified separately, in
-`smtt.parse.complete.md`. The requirements below are checks on the result,
-whether it was produced by that step or supplied ready-made.
+What the completion step itself adds to reach that state — inferred result
+assignments (REQ-434), attribute inference (REQ-419), synthesised undefined
+rows (REQ-420), and augmented value combinations (REQ-421, REQ-426) — is
+specified separately, in `smtt.parse.complete.md`. The requirements below are
+checks on the result, whether it was produced by that step or supplied
+ready-made.
 
 - [REQ-417] Every `dataExampleValues` row in the complete AST shall include a
   column for every attribute present in the machine's `data` map.
@@ -230,3 +234,14 @@ whether it was produced by that step or supplied ready-made.
   Without this check a contradiction surfaces only much later — as an empty
   examples table in some other machine that expanded through the transition —
   or not at all, when the attribute happens to go unused.
+
+  On the complete AST, the `` = `` literal and `undefined` cases are reachable
+  only through a transition's own explicit result: completion (REQ-434 in
+  `smtt.parse.complete.md`) already gives any transition that would otherwise
+  leave the attribute unassigned or merely carried over a result matching the
+  target's concrete value. So by the time this check runs, either contradiction
+  means the author's own result explicitly names a conflicting value (or
+  explicitly leaves/sets the attribute the wrong way) — never an omission.
+  Only the `defined` case is unaffected: REQ-434 assigns no value for it,
+  since it pins none, so it remains reachable through an unset or
+  precondition-carried attribute exactly as described above.

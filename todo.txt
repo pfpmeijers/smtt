@@ -86,7 +86,7 @@
   ## Data
   - attr1: Attribute 1. Examples: "value1", "value2"
   - attr2: Attribute 2. Examples: "value3", "value4"
-  ### Example combinations
+  ### Data values
   All combinations  (instead of table)
 
 - Implied states
@@ -142,8 +142,10 @@
 
 - Remove explicit initial state statement. Always first state
 
-- Add ### to example values to make it heading style
-
 - Update the test coverage report creation to all current smtt.**.md files.
 
 - Move data before states section since implied conditions rely on data.
+
+- Allow plain text in a section to be just informational text. All real content in bulleted items or tables.
+
+- Replace "Example values:" with "### Data values:"

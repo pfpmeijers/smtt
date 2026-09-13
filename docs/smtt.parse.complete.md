@@ -17,25 +17,60 @@ Scope:
 
 ## What completion changes
 
-Completing an AST never changes its structural skeleton — states,
-transitions, triggers, and precondition lists are exactly as declared by the
-author. It only adds or fills in data attributes and example value rows, in
-this order:
+Completing an AST never changes the states, triggers, or precondition lists
+declared by the author, and never changes a transition's *target* state. It
+only adds or fills in data attributes and example value rows — plus, for one
+narrow case, a transition's own result arguments (REQ-434) — in this order:
 
-1. Infer data attributes from every usage site (REQ-419).
-2. Synthesise undefined example rows for attributes with no values (REQ-420).
-3. Augment the example table with the value combinations that conditions and
+1. Infer a result argument for every transition whose target state pins an
+   attribute to a concrete value — a literal via `=`, or absence via
+   `undefined` — that the transition does not already assign or reference
+   (REQ-434).
+2. Infer data attributes from every usage site (REQ-419).
+3. Synthesise undefined example rows for attributes with no values (REQ-420).
+4. Augment the example table with the value combinations that conditions and
    results reference (REQ-421), including the combinations implied by an
    attribute reference (REQ-426).
 
-A fourth step, the expansion annotation below, runs after validation and adds
+Step 1 runs first because it can introduce new result arguments that steps
+2-4 must treat exactly like author-written ones: the inferred value needs a
+declared attribute (REQ-419) and a place in the example table (REQ-421) just
+as much as an explicit one does.
+
+A fifth step, the expansion annotation below, runs after validation and adds
 derived data rather than completing the model.
 
 Each step only ever adds: an attribute already declared keeps its
-description, and an example row already present is never rewritten or
-removed.
+description, an example row already present is never rewritten or removed,
+and a result argument already present — for any reason, including one an
+earlier author-written value assigns — is never replaced.
 
 ## Requirements
+
+- [REQ-434] The complete AST shall assign, on a transition's own result, every
+  attribute that the transition's target state pins to a concrete value via a
+  plain literal `=` or an `undefined` implied condition, unless the
+  transition's result already carries an argument for that attribute (a
+  literal, a reference, or an explicit `set to undefined`). The synthesized
+  argument sets the attribute to the target state's literal for `=`, or to
+  undefined (no `value`, as `set to undefined` itself parses) for `undefined`.
+
+  A state's implied conditions describe every occurrence of that state
+  (REQ-433 in `smtt.parse.validate.md`), so either of these holds on arrival
+  regardless of what the transition's preconditions otherwise carry: an
+  author who leaves such an attribute unset in the result is stating the
+  obvious, not omitting information the model needs. `undefined` is included
+  precisely because it is as much an equality as `=` is — it pins the
+  attribute to the single value "absent" — whereas `defined` pins no single
+  value (any defined value satisfies it) and so has nothing for this step to
+  assign; a target declaring `defined` remains a REQ-433 validation check
+  only.
+
+  This step never overrides an explicit result. A transition whose own result
+  already sets the attribute — even to a value that contradicts the target —
+  is left exactly as authored, and REQ-433 continues to flag that
+  contradiction: it reflects a decision the author actually wrote down, not a
+  gap this step should paper over.
 
 - [REQ-419] The complete AST shall declare a data attribute for every
   attribute referenced anywhere in the machine: `dataExampleValues` column

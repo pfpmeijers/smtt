@@ -2,6 +2,8 @@
  * Tests for the `completeStateMachines` step (`complete.ts`).
  *
  * Covers:
+ *  - Inferred result assignments for transitions landing in a state with a literal implied
+ *    condition.
  *  - Attribute inference from all usage sites.
  *  - Synthetic undefined row when the example table is empty.
  *  - Row augmentation for condition-referenced values.
@@ -43,6 +45,235 @@ function makeWithData(): StateMachine {
         transitions: [],
     }
 }
+
+// --- Inferred result assignments ---
+
+describe("completeStateMachines — Step 0: inferred result assignments (REQ-434)", () => {
+    it("[TST-186] → [REQ-434]: infers a result assignment for a literal implied condition the transition leaves unset", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [
+                    { name: "s1" },
+                    { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "=", value: "0" } }] },
+                ],
+                transitions: [
+                    { id: "001", states: [{ name: "s1" }], trigger: { type: "event", name: "e1" }, result: { name: "s2" } },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.deepEqual(stateMachines[0].transitions![0].result.arguments, [
+            { name: "a1", result: { value: "0" } },
+        ])
+    })
+
+    it("[TST-187] → [REQ-434]: does not override an explicit result assignment, even a conflicting one", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [
+                    { name: "s1" },
+                    { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "=", value: "0" } }] },
+                ],
+                transitions: [
+                    {
+                        id: "001",
+                        trigger: { type: "event", name: "e1" },
+                        result: { name: "s2", arguments: [{ name: "a1", result: { value: "5" } }] },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.deepEqual(stateMachines[0].transitions![0].result.arguments, [
+            { name: "a1", result: { value: "5" } },
+        ])
+    })
+
+    it("[TST-188] → [REQ-434]: does not infer anything for a `defined` implied condition", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [
+                    { name: "s1" },
+                    { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "defined" } }] },
+                ],
+                transitions: [
+                    { id: "001", trigger: { type: "event", name: "e1" }, result: { name: "s2" } },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.strictEqual(stateMachines[0].transitions![0].result.arguments, undefined)
+    })
+
+    it("[TST-193] → [REQ-434]: infers an explicit clear for an `undefined` implied condition", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [
+                    { name: "s1" },
+                    { name: "s2", impliedConditions: [{ attribute: "a2", condition: { operator: "undefined" } }] },
+                ],
+                transitions: [
+                    { id: "001", trigger: { type: "event", name: "e1" }, result: { name: "s2" } },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.deepEqual(stateMachines[0].transitions![0].result.arguments, [
+            { name: "a2", result: {} },
+        ])
+    })
+
+    it("[TST-194] → [REQ-434]: does not override an explicit result that leaves an `undefined`-declaring target set", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [
+                    { name: "s1" },
+                    { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "undefined" } }] },
+                ],
+                transitions: [
+                    {
+                        id: "001",
+                        trigger: { type: "event", name: "e1" },
+                        result: { name: "s2", arguments: [{ name: "a1", result: { value: "v1" } }] },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.deepEqual(stateMachines[0].transitions![0].result.arguments, [
+            { name: "a1", result: { value: "v1" } },
+        ])
+    })
+
+    it("[TST-195] → [REQ-434]: overrides a value merely carried over from a precondition that leaves the attribute defined", () => {
+        // Mirrors the painting-status bug: a transition's precondition (via the source state's own
+        // implied condition) carries the attribute forward as defined, but the target declares it
+        // undefined, and the transition's result does not otherwise mention the attribute.
+        const stateMachines: StateMachine[] = [
+            {
+                name: "painting status",
+                states: [
+                    { name: "reserved", impliedConditions: [{ attribute: "assignee email", condition: { operator: "defined" } }] },
+                    { name: "available", impliedConditions: [{ attribute: "assignee email", condition: { operator: "undefined" } }] },
+                ],
+                data: { "assignee email": "" },
+                dataExampleValues: [{ "assignee email": "a@example.com" }],
+                transitions: [
+                    {
+                        id: "043",
+                        states: [{ name: "reserved" }],
+                        trigger: { type: "event", name: "reservation cancelled" },
+                        result: { name: "available" },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.deepEqual(stateMachines[0].transitions![0].result.arguments, [
+            { name: "assignee email", result: {} },
+        ])
+    })
+
+    it("[TST-189] → [REQ-434]: does not infer anything for a reference-valued implied equality", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [
+                    { name: "s1" },
+                    {
+                        name: "s2",
+                        impliedConditions: [
+                            { attribute: "a1", condition: { operator: "=", value: "a2", valueIsReference: true } },
+                        ],
+                    },
+                ],
+                data: { a2: "" },
+                dataExampleValues: [{ a2: "v1" }],
+                transitions: [
+                    { id: "001", trigger: { type: "event", name: "e1" }, result: { name: "s2" } },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.strictEqual(stateMachines[0].transitions![0].result.arguments, undefined)
+    })
+
+    it("[TST-190] → [REQ-434]: an inferred assignment is picked up by attribute inference and table augmentation", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [
+                    { name: "s1" },
+                    { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "=", value: "0" } }] },
+                ],
+                transitions: [
+                    { id: "001", trigger: { type: "event", name: "e1" }, result: { name: "s2" } },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.ok("a1" in (stateMachines[0].data ?? {}), "`a1` must be declared")
+        const pool = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
+        assert.ok(pool.includes("0"), "the inferred value `0` must reach the example table")
+    })
+
+    it("[TST-191] → [REQ-434]: does not add an assignment when the result already references another attribute", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [
+                    { name: "s1" },
+                    { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "=", value: "0" } }] },
+                ],
+                transitions: [
+                    {
+                        id: "001",
+                        trigger: { type: "event", name: "e1" },
+                        result: { name: "s2", arguments: [{ name: "a1", result: { value: "a3", valueIsReference: true } }] },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.deepEqual(stateMachines[0].transitions![0].result.arguments, [
+            { name: "a1", result: { value: "a3", valueIsReference: true } },
+        ])
+    })
+
+    it("[TST-192] → [REQ-434]: overrides a value merely carried over from a conflicting precondition", () => {
+        // Mirrors the cart bug this requirement was introduced for: a transition's precondition
+        // pins the attribute to a value the target state's own implied condition contradicts, and
+        // the transition's result does not otherwise mention the attribute.
+        const stateMachines: StateMachine[] = [
+            {
+                name: "cart",
+                states: [
+                    { name: "non-empty", impliedConditions: [{ attribute: "count", condition: { operator: ">", value: "0" } }] },
+                    { name: "empty", impliedConditions: [{ attribute: "count", condition: { operator: "=", value: "0" } }] },
+                ],
+                data: { count: "" },
+                dataExampleValues: [{ count: "1" }],
+                transitions: [
+                    {
+                        id: "004",
+                        states: [{ name: "non-empty", arguments: [{ name: "count", condition: { operator: "=", value: "1" } }] }],
+                        trigger: { type: "event", name: "removed" },
+                        result: { name: "empty" },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.deepEqual(stateMachines[0].transitions![0].result.arguments, [
+            { name: "count", result: { value: "0" } },
+        ])
+    })
+})
 
 // --- Attribute inference ---
 

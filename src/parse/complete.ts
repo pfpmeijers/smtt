@@ -6,6 +6,10 @@
  * succeed without requiring the author to declare every attribute explicitly.
  *
  * Operations performed for each state machine, in order:
+ *  - Infer a result assignment for every transition landing in a state whose implied
+ *    condition pins an attribute to a concrete value — a literal via `=`, or absence via
+ *    `undefined` — when the transition's own result does not already assign or reference
+ *    that attribute (REQ-434).
  *  - Infer data attributes from every usage site (example-value table columns,
  *    implied conditions, default-precondition / transition arguments).
  *  - Synthesise a single all-undefined row when `dataExampleValues` is empty.
@@ -140,6 +144,88 @@ function definedExampleValues(stateMachine: StateMachine, attributeName: string)
         .map((row) => row[attributeName])
         .filter((value): value is string => value !== undefined && value !== "")
     return [...new Set(values)]
+}
+
+// --- Infer implied result assignments ---
+
+/**
+ * Builds an index from (lower-cased) state name to that state's own implied conditions, across
+ * every machine in the AST. Mirrors the equivalent index in `validate.ts` (REQ-433) so both steps
+ * resolve a transition's target state identically. A name declared by more than one machine is a
+ * REQ-402 violation reported elsewhere; the first declaration found wins here, same as there.
+ *
+ * @param stateMachines Every state machine in the AST.
+ * @returns Implied conditions declared per lower-cased state name.
+ */
+function buildImpliedIndex(stateMachines: StateMachine[]): Record<string, { attribute: string, condition: Condition }[]> {
+    const impliedIndex: Record<string, { attribute: string, condition: Condition }[]> = {}
+    for (const stateMachine of stateMachines) {
+        for (const state of stateMachine.states) {
+            if (!state.impliedConditions?.length) continue
+            const key = state.name.toLowerCase()
+            if (!(key in impliedIndex)) impliedIndex[key] = state.impliedConditions
+        }
+    }
+    return impliedIndex
+}
+
+/**
+ * The result payload a literal implied condition pins, when it pins one.
+ *
+ * @param condition Implied condition to read.
+ * @returns `{ value: <literal> }` for a plain literal `=`, `{}` (no `value`, matching how the
+ *   grammar represents `set to undefined`) for `undefined`, or `undefined` when the condition
+ *   pins no concrete value at all — a `defined` declaration (any value satisfies it, so none can
+ *   be chosen), a reference-valued `=` (the value lives in another attribute, not a literal), or
+ *   any other operator.
+ */
+function impliedResultValue(condition: Condition): Result | undefined {
+    if (condition.operator === "undefined") return {}
+    if (condition.operator === "=" && !condition.valueIsReference && typeof condition.value === "string") {
+        return { value: condition.value }
+    }
+    return undefined
+}
+
+/**
+ * [REQ-434] For every transition, adds a synthesized result argument for each attribute the
+ * target state's implied conditions pin to a concrete value — a plain literal via `=`, or absence
+ * via `undefined` — unless the transition's own result already assigns or references that
+ * attribute.
+ *
+ * A state's implied conditions describe every occurrence of that state (REQ-433), so both of
+ * these hold on arrival regardless of what the transition otherwise carries forward — an author
+ * who leaves the attribute unset in the result is stating the obvious, not omitting information.
+ * `defined` is the one case left out: unlike `undefined`, it does not pin a single concrete value
+ * (any defined value satisfies it), so there is nothing to synthesize; REQ-433 continues to
+ * validate a transition against it from whatever the transition otherwise determines.
+ *
+ * A transition's own explicit result for the attribute — a literal, a reference, or an explicit
+ * `set to undefined` — is never touched, even one that contradicts the target: that reflects a
+ * decision the author actually wrote down, so it remains a REQ-433 error rather than being
+ * silently overwritten.
+ *
+ * @param stateMachine State machine to mutate.
+ * @param impliedIndex Implied conditions declared per lower-cased state name, across the AST.
+ */
+function inferImpliedResultAssignments(
+    stateMachine: StateMachine,
+    impliedIndex: Record<string, { attribute: string, condition: Condition }[]>,
+): void {
+    for (const transition of stateMachine.transitions ?? []) {
+        const target = transition.result
+        for (const implied of impliedIndex[target.name.toLowerCase()] ?? []) {
+            const result = impliedResultValue(implied.condition)
+            if (!result) continue
+
+            const attribute = implied.attribute.toLowerCase()
+            const alreadyAssigned = (target.arguments ?? []).some((arg) => arg.name.toLowerCase() === attribute)
+            if (alreadyAssigned) continue
+
+            target.arguments ??= []
+            target.arguments.push({ name: implied.attribute, result })
+        }
+    }
 }
 
 // --- Infer data attributes ---
@@ -559,6 +645,10 @@ function augmentExampleTable(stateMachine: StateMachine, synthesizedUndefinedRow
  * example-value row to be declared explicitly in the source Markdown.
  *
  * Mutates each machine by performing, in order:
+ *  - Infer a result assignment for every transition landing in a state whose implied
+ *    condition pins an attribute to a concrete value — a literal via `=`, or absence via
+ *    `undefined` — when the transition's own result does not already assign or reference
+ *    that attribute (REQ-434).
  *  - Infer data attributes from usage (example columns, implied conditions,
  *    default-precondition / transition arguments).
  *  - Synthesise a single all-`""` row when `dataExampleValues` is empty.
@@ -569,7 +659,9 @@ function augmentExampleTable(stateMachine: StateMachine, synthesizedUndefinedRow
  * @param stateMachines Array of parsed state machines to complete (mutated in place).
  */
 export function completeStateMachines(stateMachines: StateMachine[]): void {
+    const impliedIndex = buildImpliedIndex(stateMachines)
     for (const stateMachine of stateMachines) {
+        inferImpliedResultAssignments(stateMachine, impliedIndex)
         inferDataAttributes(stateMachine)
         const synthesizedUndefinedRow = synthesiseUndefinedRows(stateMachine)
         augmentExampleTable(stateMachine, synthesizedUndefinedRow)
