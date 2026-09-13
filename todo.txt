@@ -64,6 +64,27 @@
     |          | `User authenticated`,                           |                                                    |                                                                 |                                                                             |
     |          | `Painting in cart`                              |                                                    |
 
+- Define values per attribute and generate examples from all combinations.
+
+  ## Data
+  - attr1: Attribute 1. Examples: "value1", "value2"
+  - attr2: Attribute 2. Examples: "value3", "value4"
+  ### Example combinations
+  All combinations  (instead of table)
+
+- Implied states
+    E.g. `user profile unavailable` implies `user unauthenticated`
+         `(un)named profile available` with `profile email address`: `user authenticated` with `user email address` as `profile email address`
+
+- Make attr "name space" prefix optional/intelligent.
+    E.g. instead of implication:
+       `named profile available` with `profile email address`: `user authenticated` with `user email address` as `profile email address`
+    Specify:
+       `named profile available` with its `email address`: `user authenticated` with its `email address` as `profile email address`
+    And then at sm level specify namespace that acts as prefix.
+        # User profile
+        Namespace: profile // To prefix attributes
+
 - Add to AST validation:
   - Check that all identifiers are properly matched to owning state machine and no duplicates.
   - If state arguments are different then it should be checked whether they are not disjunct.

@@ -360,8 +360,8 @@ Example — given:
 
   | `email address`     | `associated user name` |
   |---------------------|------------------------|
-  | `info@domain.com`   | `John Doe`             |
-  | `other@example.com` | `Jane Doe`             |
+  | "info@domain.com"   | "John Doe"             |
+  | "other@example.com" | "Jane Doe"             |
 ```
 
 Scenario example table:

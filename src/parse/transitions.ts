@@ -141,6 +141,7 @@ function debugArgumentText(argument: Argument, isFirst: boolean, isResult: boole
     if (argument.postQualifier) parts.push(argument.postQualifier)
     parts.push(debugAttributePlaceholderText(argument, isResult))
     if (argument.condition) parts.push(debugConditionText(argument.condition))
+    else if (argument.result) parts.push(debugResultText(argument.result))
     if (argument.suffix) parts.push(argument.suffix)
     return (isFirst ? " " : ", ") + parts.join(" ")
 }
