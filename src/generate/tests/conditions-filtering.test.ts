@@ -101,7 +101,7 @@ test("[TST-006] → [REQ-086/087/091]: Not-in-set condition filters rows", () =>
     assertMatchesReference(stateMachines, feature)
 })
 
-test("[TST-007] → [REQ-086/087/092/093/145]: In-range inclusive both bounds", () => {
+test("[TST-007] → [REQ-086/087/092/093]: In-range inclusive both bounds", () => {
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
@@ -266,3 +266,44 @@ test("[TST-015] → [REQ-075] Empty value on a non-undefined operator is rejecte
         'Use { operator: "undefined" } to match absent/empty values instead.')
 })
 
+test("[TST-175] → [REQ-427]: Reference condition compares two attributes of the same row", () => {
+    const stateMachines: StateMachines = [{
+        name: "m",
+        states: [{name: "s"}],
+        dataExampleValues: [{a1: "1", a2: "1"}, {a1: "2", a2: "9"}],
+        transitions: [{
+            states: [{name: "s", arguments: [
+                {name: "a1"},
+                {name: "a2", condition: {operator: "=", value: "a1", valueIsReference: true}},
+            ]}],
+            trigger: {type: "event", name: "e"},
+            result: {name: "s"},
+        }],
+    }]
+    validateStateMachines(stateMachines)
+    const feature = createFeatures(stateMachines)["m"]
+    // Only the row whose `a2` equals its own `a1` survives; the reference resolves per row.
+    assertContains(feature, "      | a1 | a2 |\n      | 1  | 1  |")
+    assertNotContains(feature, "| 9  |")
+    assertMatchesReference(stateMachines, feature)
+})
+
+test("[TST-176] → [REQ-427]: Reference condition on an attribute absent from the table filters out every row", () => {
+    const stateMachines: StateMachines = [{
+        name: "m",
+        states: [{name: "s"}],
+        dataExampleValues: [{a1: "1"}],
+        transitions: [{
+            states: [{
+                name: "s", arguments: [{name: "a1", condition: {operator: "as", value: "a9", valueIsReference: true}}],
+            }],
+            trigger: {type: "event", name: "e"},
+            result: {name: "s"},
+        }],
+    }]
+    assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
+        'State machine `m`: Empty examples table for anonymous transition.\n' +
+        '1 candidate row(s) available: { a1=1 }.\n' +
+        'No row satisfied every filter:\n' +
+        '  - `a1` as `a9` (declared on `m`#?)')
+})

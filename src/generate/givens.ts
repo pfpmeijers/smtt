@@ -1,6 +1,5 @@
-import type { DefaultPrecondition, StateMachine, StateRef, Transition } from "../parse"
-import { semanticArgumentsSignature } from "./arguments"
-import { ownerOfStateName, ownerOfStateRef, type StateOwnershipIndex } from "./ownership"
+import type { DefaultPrecondition, StateMachine, StateOwnershipIndex, StateRef, Transition } from "../parse"
+import { ownerOfStateName, ownerOfStateRef, semanticArgumentsSignature } from "../parse"
 
 // --- De-duplication ---
 

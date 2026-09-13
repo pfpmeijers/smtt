@@ -53,14 +53,14 @@ test("[TST-021] → [REQ-073/074]: Empty string in modifier lookup is treated as
         dataExampleValues: [{a: "1"}, {a: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
-            trigger: {type: "event", name: "e", arguments: [{modifier: "different", name: "a"}]},
+            trigger: {type: "event", name: "e", arguments: [{modifier: "next", name: "a"}]},
             result: {name: "s"},
             notes: "",
         }],
     }]
     validateStateMachines(stateMachines)
     const feature = createFeatures(stateMachines)["m"]
-    assertContains(feature, "| 1 | 2           |")
+    assertContains(feature, "| 1 | 2      |")
     assertMatchesReference(stateMachines, feature)
 })
 

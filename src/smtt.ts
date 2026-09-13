@@ -5,7 +5,7 @@
  *   tsx smtt.ts parse [--input-dir <dir>] [--ast-file <file>] [--strict]
  *   tsx smtt.ts infer [--input-dir <dir>] [--ast-file <file>] [--strict]
  *   tsx smtt.ts analyze [--input-dir <dir>] [--output-file <file>] [--max-states <n>] [--strict]
- *   tsx smtt.ts generate [--input-dir <dir>] [--ast-file <file>] [--output-dir <dir>] [--debug]
+ *   tsx smtt.ts generate [--input-dir <dir>] [--ast-file <file>] [--output-dir <dir>]
  *   tsx smtt.ts renumber [--input-dir <dir>]
  *
  * Relative paths are resolved from `process.cwd()`.
@@ -89,8 +89,9 @@ function resolveCliPaths(subArgs: string[], commandName: string): { inputDir: st
 function parseCli(subArgs: string[]): void {
     // TODO: Implement strict mode (exit with code 1 when warnings are produced).
     const { inputDir, astFile } = resolveCliPaths(subArgs, "parse")
+    const report = subArgs.includes("--report")
 
-    parse(inputDir, astFile)
+    parse(inputDir, astFile, { report })
 }
 
 function inferCli(subArgs: string[]): void {
@@ -102,10 +103,9 @@ function inferCli(subArgs: string[]): void {
 
 function generateCli(subArgs: string[]): void {
     const { astFile, outputDir } = resolveCliPaths(subArgs, "generate")
-    const debug = subArgs.includes("--debug")
 
     parseCli(subArgs)
-    generate(astFile, outputDir, { debug })
+    generate(astFile, outputDir)
 }
 
 function analyzeCli(subArgs: string[]): void {
@@ -176,7 +176,7 @@ function printUsage(): void {
 }
 
 function printParseHelp(): void {
-    console.log("Usage: tsx smtt.ts parse [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--strict]")
+    console.log("Usage: tsx smtt.ts parse [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--report] [--strict]")
     console.log("")
     console.log("Parses all `*.state-machine.md` files recursively from `--input-dir`")
     console.log("and writes an AST JSON file.")
@@ -187,6 +187,8 @@ function printParseHelp(): void {
     console.log("  --ast-file AST_FILE      Write AST JSON to this file instead of the default.")
     console.log("                           Default: `INPUT_DIR/state-machines.json`.")
     console.log("                           Relative paths are resolved from the current directory.")
+    console.log("  --report                 Write `transitions.txt` beside the AST file, describing how")
+    console.log("                           each transition resolves.")
     console.log("  --strict                 Exit with code 1 when any warnings were produced.")
     console.log("                           Warnings are always written to stderr regardless.")
 }
@@ -233,7 +235,7 @@ function printAnalyzeHelp(): void {
 }
 
 function printGenerateHelp(): void {
-    console.log("Usage: tsx smtt.ts generate [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--output-dir OUTPUT_DIR] [--debug]")
+    console.log("Usage: tsx smtt.ts generate [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--output-dir OUTPUT_DIR]")
     console.log("")
     console.log("Runs `parse` first, then generates:")
     console.log("  <output-dir>/features/    One `.feature` file per state machine (always overwritten).")
@@ -249,8 +251,6 @@ function printGenerateHelp(): void {
     console.log("                            Relative paths are resolved from the current directory.")
     console.log("  --output-dir OUTPUT_DIR   Base directory for `features/`, `steps/`, and `fixtures/` output.")
     console.log("                            Default: current directory.")
-    console.log("  --debug                   Write `generate.debug.txt` with each processed transition")
-    console.log("                            and its state-trigger expansion tree.")
 }
 
 function printRenumberHelp(): void {

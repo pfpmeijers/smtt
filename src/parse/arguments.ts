@@ -1,34 +1,16 @@
-import type { Argument } from "../parse"
+import type { Argument } from "./sm.ast.d"
 
 // --- Modifiers ---
 
-/** Modifier spellings that all denote the canonical `different` modifier (REQ-085). */
-const DIFFERENT_MODIFIER_ALIASES = new Set(["different", "other", "not", "unequal"])
-
-/** Canonical modifier name of the `not`/`other`/`different` family (REQ-085). */
-export const DIFFERENT_MODIFIER = "different"
-
-/**
- * Canonical modifier name of an argument.
- * Any `not`/`other`/`different` spelling collapses to `different` (REQ-085).
- *
- * @param argument Argument to inspect.
- * @returns The canonical modifier name, or `undefined` when the argument carries no modifier.
- */
-export function canonicalModifier(argument: Argument): string | undefined {
-    if (!argument.modifier) return undefined
-    return DIFFERENT_MODIFIER_ALIASES.has(argument.modifier) ? DIFFERENT_MODIFIER : argument.modifier
-}
-
 /**
  * Derived `Examples:` column name of a modifier argument, e.g. `incremented count`
- * or `different email address` (REQ-078/REQ-082/REQ-085).
+ * or `next email address` (REQ-078/REQ-082).
  *
  * @param argument Argument to inspect.
  * @returns The derived column name, or `undefined` when the argument carries no modifier.
  */
 export function modifierColumnName(argument: Argument): string | undefined {
-    const modifier = canonicalModifier(argument)
+    const modifier = argument.modifier
     return modifier ? `${modifier} ${argument.name}` : undefined
 }
 
@@ -97,8 +79,8 @@ export function argumentsSignature(args: Argument[] | undefined): string {
 
 /**
  * Semantic signature of an argument list, used to de-duplicate state references (REQ-116).
- * Captures only the substantive parts of each argument — name, canonical modifier (REQ-085), and
- * condition — and excludes the purely textual rendering fields (`qualifier`, `preQualifier`,
+ * Captures only the substantive parts of each argument — name, modifier and condition — and
+ * excludes the purely textual rendering fields (`qualifier`, `preQualifier`,
  * `postQualifier`, `suffix`, per REQ-051 through REQ-062): two state references naming the same
  * attribute with the same modifier/condition are the same reference regardless of which wording
  * variant authored each occurrence (e.g. a default precondition worded `of` and an explicit
@@ -110,7 +92,7 @@ export function argumentsSignature(args: Argument[] | undefined): string {
 export function semanticArgumentsSignature(args: Argument[] | undefined): string {
     return JSON.stringify((args ?? []).map((argument) => ({
         name: argument.name,
-        modifier: canonicalModifier(argument),
+        modifier: argument.modifier,
         condition: argument.condition,
     })))
 }

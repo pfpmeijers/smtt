@@ -61,7 +61,7 @@ export interface StateMachine {
     [k: string]: string;
   }[];
   /**
-   * Default precondition states declared in the Transitions section under 'Default preconditions:'. Each entry is a state name whose owning machine is resolved at generation time. The state is prepended as a Given precondition step for every transition that does not already mention a state from the same machine.
+   * Default precondition states declared in the Transitions section under 'Default preconditions:'. Each entry is a state name whose owning machine is resolved by matching the name against the states of all parsed machines. The state applies as an implicit leading precondition to every transition that does not already mention a state from the same machine.
    */
   defaultPreconditions?: DefaultPrecondition[];
   /**
@@ -132,7 +132,7 @@ export interface Condition {
    */
   value?: string | string[];
   /**
-   * When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only permitted on a transition result argument's `result` (see the `Result` definition); a state or trigger argument's `condition` rejects it (validation) since only a result can resolve dynamically.
+   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal: the condition constrains the attribute to the value that the same `dataExampleValues` row holds for the named attribute, relating two attributes rather than pinning one to a fixed value. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only valid on a scalar comparison operator (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`, `not as`): the set, range and unary operators compare against fixed literals, which a name standing for another attribute's value cannot provide.
    */
   valueIsReference?: boolean;
 }
@@ -211,7 +211,7 @@ export interface Condition1 {
    */
   value?: string | string[];
   /**
-   * When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only permitted on a transition result argument's `result` (see the `Result` definition); a state or trigger argument's `condition` rejects it (validation) since only a result can resolve dynamically.
+   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal: the condition constrains the attribute to the value that the same `dataExampleValues` row holds for the named attribute, relating two attributes rather than pinning one to a fixed value. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only valid on a scalar comparison operator (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`, `not as`): the set, range and unary operators compare against fixed literals, which a name standing for another attribute's value cannot provide.
    */
   valueIsReference?: boolean;
 }
@@ -224,7 +224,7 @@ export interface Result {
    */
   value?: string;
   /**
-   * When true, `value` names another data attribute (declared in any state machine in the AST) whose row value is substituted dynamically at generation time, instead of being a literal. Set directly by the grammar: a backticked result value is a reference, a quoted or numeric one is a literal. A result is the only condition/result site allowed to carry a reference (REQ-424).
+   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal: the attribute takes the value that the same `dataExampleValues` row holds for the named attribute. Set directly by the grammar: a backticked result value is a reference, a quoted or numeric one is a literal. A condition value may be a reference too, as its own `valueIsReference` describes.
    */
   valueIsReference?: boolean;
 }
@@ -246,6 +246,10 @@ export interface Transition {
    * Additional context or side effects for the transition. Optional.
    */
   notes?: string;
+  /**
+   * Resolved explanations of a state trigger: one entry per chain of source transitions leading from an event trigger to this transition's own trigger. Derived data, recorded by the parse step so a consumer need not repeat the resolution; an AST written by hand may omit it, and a consumer then resolves the trigger itself. Absent on an event-triggered transition. An empty array means the resolution ran and found no source, as opposed to not having run.
+   */
+  expansion?: ExpansionPath[];
   /**
    * The 1-based line number within the source file defining this transition.
    */
@@ -310,6 +314,32 @@ export interface StateRef1 {
    * Optional data attributes associated with this state reference.
    */
   arguments?: Argument[];
+}
+/**
+ * One chain of source transitions explaining a state trigger: the transition that produced the triggering state, the transition that triggered that one, and so on down to the transition carrying the event trigger that starts the chain.
+ */
+export interface ExpansionPath {
+  /**
+   * The chain's source transitions, innermost first: `sources[0]` carries the event trigger that starts the chain and the last entry produces the state this transition's own trigger names. Never empty — a trigger nothing explains has no path at all, rather than a path with no sources.
+   */
+  sources: ExpansionSourceRef[];
+}
+/**
+ * Position of a source transition in the AST. The transition is identified by its index within its machine's own `transitions` array, since a transition id is optional; the id travels along only to keep the annotation readable.
+ */
+export interface ExpansionSourceRef {
+  /**
+   * Name of the state machine declaring the source transition.
+   */
+  stateMachine: string;
+  /**
+   * Index of the source transition within its machine's `transitions` array.
+   */
+  transitionIndex: number;
+  /**
+   * The source transition's id, when it has one. Informational only.
+   */
+  transitionId?: string;
 }
 /**
  * Impossible trigger and state combinations, grouped by origin.

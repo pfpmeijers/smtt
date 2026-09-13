@@ -10,7 +10,8 @@
  *    implied conditions, default-precondition / transition arguments).
  *  - Synthesise a single all-undefined row when `dataExampleValues` is empty.
  *  - Augment `dataExampleValues` so that every condition-referenced value
- *    combination is satisfied by at least one row.
+ *    combination is satisfied by at least one row, including the rows implied by
+ *    attribute-reference conditions (REQ-426).
  */
 
 import type { Argument, Condition, Result, StateMachine } from "./sm.ast.d"
@@ -27,8 +28,8 @@ import type { Argument, Condition, Result, StateMachine } from "./sm.ast.d"
  *   Returns `[]` for `"undefined"` and `"defined"` operators (neither pins a specific literal
  *   value) nor absent values. Also returns `[]` when the condition's value is a reference to
  *   another attribute (`valueIsReference`): a reference doesn't pin a literal value either — its
- *   value is resolved dynamically at generation time, not drawn from this attribute's own example
- *   values — so it must not be treated as a required literal combination (REQ-421).
+ *   value follows from the referenced attribute in the same row, not from this attribute's own
+ *   example values — so it must not be treated as a required literal combination (REQ-421).
  *   For `"in"` operators, returns all listed values.
  *   For `"in range"` / `"not in range"` operators, returns the two boundary values.
  *   For all other operators, returns a single-element array with the value as a string.
@@ -63,8 +64,8 @@ function extractConditionValues(condition: Condition): string[] {
  * @param result Result expression to extract the value from.
  * @returns A single-element array with the result's literal value, or `[]` when the result sets
  *   the attribute to undefined (REQ-421), or when its value is a reference to another attribute
- *   (`valueIsReference`) — a reference doesn't pin a literal value either, since it resolves
- *   dynamically at generation time, not from this attribute's own example values.
+ *   (`valueIsReference`) — a reference doesn't pin a literal value either, since it follows from
+ *   the referenced attribute in the same row, not from this attribute's own example values.
  */
 function extractResultValues(result: Result): string[] {
     if (result.value === undefined || result.valueIsReference) return []
@@ -82,6 +83,60 @@ function attributeNamesFromArguments(args: Argument[]): string[] {
     return [...new Set(args.map((arg) => arg.name.toLowerCase()))]
 }
 
+// --- Reference conditions ---
+
+/**
+ * Condition operators for which an attribute-reference value pins the constrained attribute to
+ * the referenced attribute's own row value, and can therefore imply an example row (REQ-426).
+ * The remaining comparison operators (`<>`, `<`, `>`, `<=`, `>=`, `not as`) accept a reference
+ * too, but state what a row must *not* be, or an open-ended relation, so no single implied value
+ * follows from them.
+ */
+const REFERENCE_EQUALITY_OPERATORS = new Set<Condition["operator"]>(["=", "as"])
+
+/**
+ * A linked value requirement between two attributes: `attribute` holds whatever value
+ * `referencedAttribute` holds in the same example row (REQ-426). Unlike a literal condition
+ * value, a reference pins no value of its own — the value follows from the referenced attribute.
+ */
+interface ReferenceConstraint {
+    attribute: string
+    referencedAttribute: string
+}
+
+/**
+ * Reads the linked value requirement expressed by an equality condition on an attribute
+ * reference, e.g. `` `offer` as `list price` ``.
+ *
+ * @param attributeName Attribute the condition constrains.
+ * @param condition Condition to read, if any.
+ * @returns The constraint, or `undefined` when the condition holds a literal value, is absent,
+ *   or uses an operator other than an equality one (REQ-426).
+ */
+function referenceConstraint(
+    attributeName: string,
+    condition: Condition | undefined,
+): ReferenceConstraint | undefined {
+    if (!condition?.valueIsReference || typeof condition.value !== "string") return undefined
+    if (!REFERENCE_EQUALITY_OPERATORS.has(condition.operator)) return undefined
+    return { attribute: attributeName.toLowerCase(), referencedAttribute: condition.value.toLowerCase() }
+}
+
+/**
+ * Returns the distinct defined values an attribute already has in the example values table.
+ * Undefined (`""`) cells are skipped: they pin no value a reference could copy.
+ *
+ * @param stateMachine State machine whose example values are read.
+ * @param attributeName Attribute to collect the values of.
+ * @returns The attribute's distinct defined values, in table order.
+ */
+function definedExampleValues(stateMachine: StateMachine, attributeName: string): string[] {
+    const values = (stateMachine.dataExampleValues ?? [])
+        .map((row) => row[attributeName])
+        .filter((value): value is string => value !== undefined && value !== "")
+    return [...new Set(values)]
+}
+
 // --- Infer data attributes ---
 
 /**
@@ -91,10 +146,10 @@ function attributeNamesFromArguments(args: Argument[]): string[] {
  * - `argument.name` from default-precondition arguments, transition state
  *   arguments, trigger arguments, and result arguments.
  *
- * Also used, before either registered attribute is inferred, as the "registered attribute names"
- * lookup that `classifyConditionValueReferences` (`parse.ts`) matches condition values against —
- * safe to call at that point since it never reads condition *values*, only argument/attribute
- * *names*.
+ * An argument whose condition value is an attribute reference (e.g. `` `offer` as `list price` ``)
+ * declares its own attribute here like any other argument: the constrained attribute belongs to
+ * this machine's attribute space, only its *value* comes from the referenced attribute (REQ-419).
+ * This is the opposite of a result argument set to a reference, excluded below.
  *
  * @param stateMachine State machine to scan.
  * @returns Sorted, de-duplicated set of lower-cased attribute names.
@@ -140,8 +195,8 @@ export function collectUsedAttributeNames(stateMachine: StateMachine): string[] 
         }
         // A result argument whose result is a reference to another attribute is excluded for
         // the same reason state-trigger arguments are: its value never comes from this attribute's
-        // own example values (it's resolved dynamically from the referenced attribute at
-        // generation time), so this occurrence alone must not force a declaration for it.
+        // own example values (it follows from the referenced attribute instead), so this
+        // occurrence alone must not force a declaration for it.
         for (const argument of transition.result.arguments ?? []) {
             if (argument.result?.valueIsReference) continue
             names.add(argument.name.toLowerCase())
@@ -268,28 +323,130 @@ function rowSatisfiesCombination(
 }
 
 /**
- * Accumulates condition/result values from a flat argument list into `byAttribute`. Each argument
- * carries either `condition` (a state or trigger argument) or `result` (a transition result
- * argument), never both — whichever is present is the value/reference expression to scan.
+ * The value requirements collected for one context (a state's implied conditions, a default
+ * precondition, or a transition): the literal values required per attribute, plus the linked
+ * requirements expressed by attribute references (REQ-426), which pin no literal of their own.
+ */
+interface ContextRequirements {
+    byAttribute: Map<string, string[]>
+    constraints: ReferenceConstraint[]
+}
+
+/**
+ * Returns an empty requirements accumulator for one context.
+ *
+ * @returns A requirements accumulator with no values and no constraints yet.
+ */
+function emptyRequirements(): ContextRequirements {
+    return { byAttribute: new Map(), constraints: [] }
+}
+
+/**
+ * Accumulates literal values required for one attribute into `requirements`.
+ *
+ * @param attributeName Attribute the values belong to.
+ * @param values Literal values required for the attribute; an empty list is ignored.
+ * @param requirements Accumulator for the surrounding context (mutated in place).
+ */
+function accumulateValues(
+    attributeName: string,
+    values: string[],
+    requirements: ContextRequirements,
+): void {
+    if (values.length === 0) return
+    const key = attributeName.toLowerCase()
+    const existing = requirements.byAttribute.get(key) ?? []
+    requirements.byAttribute.set(key, [...existing, ...values])
+}
+
+/**
+ * Accumulates one attribute's condition into `requirements`: its literal values, or — when the
+ * condition value is an attribute reference — the linked requirement it expresses instead.
+ *
+ * @param attributeName Attribute the condition constrains.
+ * @param condition Condition to scan.
+ * @param requirements Accumulator for the surrounding context (mutated in place).
+ */
+function accumulateCondition(
+    attributeName: string,
+    condition: Condition,
+    requirements: ContextRequirements,
+): void {
+    const constraint = referenceConstraint(attributeName, condition)
+    if (constraint) {
+        requirements.constraints.push(constraint)
+        return
+    }
+    accumulateValues(attributeName, extractConditionValues(condition), requirements)
+}
+
+/**
+ * Accumulates condition/result requirements from a flat argument list. Each argument carries
+ * either `condition` (a state or trigger argument) or `result` (a transition result argument),
+ * never both — whichever is present is the value/reference expression to scan.
  *
  * @param args Arguments whose condition/result should be scanned.
- * @param byAttribute Accumulator map (mutated in place).
+ * @param requirements Accumulator for the surrounding context (mutated in place).
  */
 function accumulateArgumentConditions(
     args: Argument[],
-    byAttribute: Map<string, string[]>,
+    requirements: ContextRequirements,
 ): void {
     for (const arg of args) {
-        const values = arg.condition
-            ? extractConditionValues(arg.condition)
-            : arg.result
-                ? extractResultValues(arg.result)
-                : []
-        if (values.length === 0) continue
-        const key = arg.name.toLowerCase()
-        const existing = byAttribute.get(key) ?? []
-        byAttribute.set(key, [...existing, ...values])
+        if (arg.condition) {
+            accumulateCondition(arg.name, arg.condition, requirements)
+            continue
+        }
+        if (arg.result) {
+            accumulateValues(arg.name, extractResultValues(arg.result), requirements)
+        }
     }
+}
+
+/**
+ * [REQ-426] Expands the literal combinations of one context with its linked reference
+ * requirements: a constrained attribute takes the value the referenced attribute holds in the
+ * same row, so the implied combination holds both.
+ *
+ * When the referenced attribute is already pinned within the same combination, the constrained
+ * attribute simply copies that value. Otherwise the combination fans out over the referenced
+ * attribute's own defined example values — the constrained attribute is thereby implicitly
+ * defined from the attribute it references. A referenced attribute with no defined value of its
+ * own (e.g. one declared by another state machine) implies no combination: there is no value to
+ * copy, since this machine's table holds none.
+ *
+ * @param stateMachine State machine whose existing example values supply the value pool.
+ * @param requirements Requirements collected for one context.
+ * @returns The context's required row combinations, reference requirements included.
+ */
+function expandReferenceConstraints(
+    stateMachine: StateMachine,
+    requirements: ContextRequirements,
+): Map<string, string>[] {
+    const literalCombinations = cartesianProduct(requirements.byAttribute)
+    if (requirements.constraints.length === 0) return literalCombinations
+
+    let combinations = literalCombinations.length === 0 ? [new Map<string, string>()] : literalCombinations
+    for (const { attribute, referencedAttribute } of requirements.constraints) {
+        const expanded: Map<string, string>[] = []
+        for (const combination of combinations) {
+            const pinnedValue = combination.get(referencedAttribute)
+            if (pinnedValue !== undefined) {
+                expanded.push(new Map(combination).set(attribute, pinnedValue))
+                continue
+            }
+            const values = definedExampleValues(stateMachine, referencedAttribute)
+            if (values.length === 0) {
+                expanded.push(combination)
+                continue
+            }
+            for (const value of values) {
+                expanded.push(new Map(combination).set(attribute, value).set(referencedAttribute, value))
+            }
+        }
+        combinations = expanded
+    }
+    return combinations.filter((combination) => combination.size > 0)
 }
 
 /**
@@ -306,36 +463,33 @@ function collectRequiredCombinations(stateMachine: StateMachine): Map<string, st
 
     // State implied conditions — each state is its own context.
     for (const state of stateMachine.states) {
-        const byAttribute = new Map<string, string[]>()
+        const requirements = emptyRequirements()
         for (const implied of state.impliedConditions ?? []) {
-            const values = extractConditionValues(implied.condition)
-            if (values.length === 0) continue
-            const key = implied.attribute.toLowerCase()
-            byAttribute.set(key, [...(byAttribute.get(key) ?? []), ...values])
+            accumulateCondition(implied.attribute, implied.condition, requirements)
         }
-        combinations.push(...cartesianProduct(byAttribute))
+        combinations.push(...expandReferenceConstraints(stateMachine, requirements))
     }
 
     // Default preconditions — each entry is its own context.
     for (const precondition of stateMachine.defaultPreconditions ?? []) {
-        const byAttribute = new Map<string, string[]>()
-        accumulateArgumentConditions(precondition.arguments ?? [], byAttribute)
-        combinations.push(...cartesianProduct(byAttribute))
+        const requirements = emptyRequirements()
+        accumulateArgumentConditions(precondition.arguments ?? [], requirements)
+        combinations.push(...expandReferenceConstraints(stateMachine, requirements))
     }
 
     // Transitions — each transition is one combined context.
     // State trigger arguments are excluded for the same reason as in
     // `collectUsedAttributeNames`: they belong to the triggering machine, not this one.
     for (const transition of stateMachine.transitions ?? []) {
-        const byAttribute = new Map<string, string[]>()
+        const requirements = emptyRequirements()
         for (const stateRef of transition.states ?? []) {
-            accumulateArgumentConditions(stateRef.arguments ?? [], byAttribute)
+            accumulateArgumentConditions(stateRef.arguments ?? [], requirements)
         }
         if (transition.trigger.type === "event") {
-            accumulateArgumentConditions(transition.trigger.arguments ?? [], byAttribute)
+            accumulateArgumentConditions(transition.trigger.arguments ?? [], requirements)
         }
-        accumulateArgumentConditions(transition.result.arguments ?? [], byAttribute)
-        combinations.push(...cartesianProduct(byAttribute))
+        accumulateArgumentConditions(transition.result.arguments ?? [], requirements)
+        combinations.push(...expandReferenceConstraints(stateMachine, requirements))
     }
 
     return combinations
@@ -404,7 +558,8 @@ function augmentExampleTable(stateMachine: StateMachine, synthesizedUndefinedRow
  *    default-precondition / transition arguments).
  *  - Synthesise a single all-`""` row when `dataExampleValues` is empty.
  *  - Augment `dataExampleValues` so that every condition-referenced value
- *    combination is satisfied by at least one row.
+ *    combination is satisfied by at least one row, including the rows implied by
+ *    attribute-reference conditions (REQ-426).
  *
  * @param stateMachines Array of parsed state machines to complete (mutated in place).
  */

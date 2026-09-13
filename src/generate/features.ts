@@ -1,14 +1,26 @@
 import * as fs from "fs"
 import * as path from "path"
-import type { DefaultPrecondition, StateMachine, StateRef, Transition } from "../parse"
+import type {
+    DefaultPrecondition, StateMachine, StateOwnershipIndex, StateRef, Transition,
+} from "../parse"
 import {
+    ambiguousStateNames,
+    buildImpliedConditionsIndex,
+    buildStateOwnership,
     collectChainFilterConditions,
-    collectImpliedFilterConditions,
+    collectPathExampleColumns,
+    describeEmptyExampleValues,
     describeFilterCondition,
+    mergeExampleValues,
+    filterRows,
+    ownerOfStateRef,
+    transitionDescription,
+    type ExampleColumn,
     type FilterCondition,
-} from "./conditions"
+    type ImpliedConditionsIndex,
+} from "../parse"
+import { collectImpliedFilterConditions } from "./conditions"
 import {
-    applyAttributeAliases,
     buildTaggedTransitions,
     collectContributingStateMachineNames,
     expandStateTrigger,
@@ -16,24 +28,8 @@ import {
     type ExpansionPath,
     type TaggedTransition,
 } from "./expansion"
-import {
-    collectPathExampleColumns,
-    describeEmptyExampleValues,
-    filterRows,
-    formatExamplesTable,
-    mergeExampleValues,
-    transitionDescription,
-    type ExampleColumn,
-} from "./examples"
+import { formatExamplesTable } from "./examples"
 import { buildEffectiveGivens } from "./givens"
-import {
-    ambiguousStateNames,
-    buildImpliedConditionsIndex,
-    buildStateOwnership,
-    ownerOfStateRef,
-    type ImpliedConditionsIndex,
-    type StateOwnershipIndex,
-} from "./ownership"
 import {
     fixtureNameFromStep,
     getStepParams,
@@ -165,7 +161,6 @@ function resolveExpansionPaths(context: RenderContext, transition: Transition): 
         intermediateThenOwners: [],
         injectedGivenStates: [],
         sourceChain: [],
-        callerAliases: new Map(),
     }]
 }
 
@@ -233,10 +228,6 @@ function buildScenarioSteps(
  * Render all scenarios of a transition: one per expansion path (REQ-113), each with its own
  * `Examples:` table scoped to that path's own chain of expansion sources (REQ-170/REQ-171) — a
  * sibling path's source argument never leaks a column into a scenario that doesn't reference it.
- * The transition's own trigger/result arguments are rewritten per the path's `callerAliases`
- * (REQ-422) before rendering, so a plain trigger matched against a modified source result (or vice
- * versa) renders and resolves under one consistent designation instead of the transition's own
- * declared (and possibly stale) modifier.
  *
  * @param context Rendering context for the owning state machine.
  * @param transition Transition being rendered.
@@ -247,16 +238,15 @@ function renderScenarios(context: RenderContext, transition: Transition): string
     const expansionPaths = resolveExpansionPaths(context, transition)
 
     return expansionPaths.map((path, pathIndex) => {
-        const aliasedTransition = applyAttributeAliases(transition, path.callerAliases)
         const columns = collectPathExampleColumns(
-            stateMachine.name, defaultPreconditions, aliasedTransition, path.sourceChain,
+            stateMachine.name, defaultPreconditions, transition, path.sourceChain,
         )
         const isOutline = columns.length > 0
-        const examplesTable = isOutline ? buildExamplesTable(context, aliasedTransition, columns, path) : null
+        const examplesTable = isOutline ? buildExamplesTable(context, transition, columns, path) : null
         const keyword = isOutline ? "Scenario Outline" : "Scenario"
 
         const effectiveGivens = buildEffectiveGivens(
-            aliasedTransition, defaultPreconditions, ownership, stateMachine, path.injectedGivenStates,
+            transition, defaultPreconditions, ownership, stateMachine, path.injectedGivenStates,
         )
         const ownGiven = effectiveGivens.find(
             (stateRef) => ownerOfStateRef(stateRef, ownership) === stateMachine.name,
@@ -265,10 +255,10 @@ function renderScenarios(context: RenderContext, transition: Transition): string
         const idSuffix = expansionPaths.length > 1 ? `.${pathIndex + 1}` : ""
 
         const lines = [
-            buildScenarioLabel(stateMachine.name, aliasedTransition, keyword, ownGiven, contextGivens, idSuffix),
-            ...buildScenarioSteps(stateMachine.name, aliasedTransition, path, effectiveGivens),
+            buildScenarioLabel(stateMachine.name, transition, keyword, ownGiven, contextGivens, idSuffix),
+            ...buildScenarioSteps(stateMachine.name, transition, path, effectiveGivens),
         ]
-        if (aliasedTransition.notes) lines.push(`    # Notes: ${aliasedTransition.notes}`)
+        if (transition.notes) lines.push(`    # Notes: ${transition.notes}`)
         if (examplesTable) lines.push(examplesTable)
         return lines.join("\n")
     })

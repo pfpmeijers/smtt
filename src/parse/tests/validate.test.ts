@@ -160,7 +160,7 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("[TST-120] → [REQ-413]: rejects not-like modifiers when value pool has fewer than 2 distinct values", () => {
+    it("[TST-120] → [REQ-413]: rejects sequence modifiers when value pool has fewer than 2 distinct values", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].dataExampleValues = [{ a1: "v1" }]
         stateMachines[1].dataExampleValues = [{ a1: "v1" }]
@@ -171,7 +171,7 @@ describe("validateStateMachines business rules", () => {
                 trigger: {
                     type: "event",
                     name: "e1",
-                    arguments: [{ name: "a1" }, { name: "a1", modifier: "not" }],
+                    arguments: [{ name: "a1" }, { name: "a1", modifier: "next" }],
                 },
                 result: { name: "s2" },
             },
@@ -214,7 +214,7 @@ describe("validateStateMachines business rules", () => {
                 trigger: { type: "event", name: "e1" },
                 result: {
                     name: "s2",
-                    // `Result` has no `operator` field (REQ-089/REQ-415: a result is always a plain
+                    // `Result` has no `operator` field (REQ-415: a result is always a plain
                     // equality assignment) — the schema rejects it as an unknown property.
                     arguments: [{ name: "a2", result: { operator: ">=", value: "2" } as unknown as Result }],
                 },
@@ -256,7 +256,59 @@ describe("validateStateMachines business rules", () => {
         assert.doesNotThrow(() => validateStateMachines(stateMachines))
     })
 
-    it("[TST-125] → [REQ-424]: rejects an attribute-reference condition on a precondition state argument", () => {
+
+    it("[TST-184] → [REQ-406]: rejects a state trigger whose arguments no producing transition satisfies", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].data = { a1: "" }
+        stateMachines[1].data = { a1: "" }
+        stateMachines[0].transitions = [
+            {
+                id: "001",
+                states: [{ name: "s1" }],
+                trigger: { type: "event", name: "e1" },
+                result: { name: "s2", arguments: [{ name: "a1", result: { value: "v1" } }] },
+            },
+        ]
+        stateMachines[1].transitions = [
+            {
+                id: "002",
+                states: [{ name: "s3" }],
+                trigger: { type: "state", name: "s2", arguments: [{ name: "a1", condition: { operator: "as", value: "v2" } }] },
+                result: { name: "s4" },
+            },
+        ]
+
+        assert.throws(
+            () => validateStateMachines(stateMachines),
+            /State trigger `s2` names a state that is produced elsewhere, but no producing transition satisfies the trigger's argument `a1` \(REQ-406\)/,
+        )
+    })
+
+    it("[TST-185] → [REQ-406]: accepts a state trigger a producing transition satisfies", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].data = { a1: "" }
+        stateMachines[1].data = { a1: "" }
+        stateMachines[0].transitions = [
+            {
+                id: "001",
+                states: [{ name: "s1" }],
+                trigger: { type: "event", name: "e1" },
+                result: { name: "s2", arguments: [{ name: "a1", result: { value: "v1" } }] },
+            },
+        ]
+        stateMachines[1].transitions = [
+            {
+                id: "002",
+                states: [{ name: "s3" }],
+                trigger: { type: "state", name: "s2", arguments: [{ name: "a1", condition: { operator: "as", value: "v1" } }] },
+                result: { name: "s4" },
+            },
+        ]
+
+        assert.doesNotThrow(() => validateStateMachines(stateMachines))
+    })
+
+    it("[TST-125] → [REQ-424/426]: accepts an attribute-reference condition on a precondition state argument", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].data = { a1: "", a2: "" }
         stateMachines[1].data = { a1: "", a2: "" }
@@ -264,13 +316,40 @@ describe("validateStateMachines business rules", () => {
             { name: "s3", arguments: [{ name: "a2", condition: { operator: "=", value: "a1", valueIsReference: true } }] },
         ]
 
+        assert.doesNotThrow(() => validateStateMachines(stateMachines))
+    })
+
+    it("[TST-167] → [REQ-424]: rejects an attribute-reference condition value on a set operator", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].data = { a1: "", a2: "" }
+        stateMachines[1].data = { a1: "", a2: "" }
+        stateMachines[0].transitions![0].trigger = {
+            type: "event",
+            name: "e1",
+            arguments: [{ name: "a2", condition: { operator: "in", value: ["a1"], valueIsReference: true } }],
+        }
+
         assert.throws(
             () => validateStateMachines(stateMachines),
-            /Argument `a2` references attribute `a1`, but attribute references are only supported in transition result arguments' `result` \(REQ-424\)/,
+            /but operator `in` compares against fixed literal value\(s\), which an attribute reference cannot provide \(REQ-424\)/,
         )
     })
 
-    it("[TST-126] → [REQ-424]: accepts an attribute-reference result value on a result argument", () => {
+    it("[TST-168] → [REQ-425]: rejects an attribute-reference condition naming an unknown attribute", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].data = { a1: "", a2: "" }
+        stateMachines[1].data = { a1: "", a2: "" }
+        stateMachines[0].states[0].impliedConditions = [
+            { attribute: "a1", condition: { operator: "as", value: "a9", valueIsReference: true } },
+        ]
+
+        assert.throws(
+            () => validateStateMachines(stateMachines),
+            /Argument `a1` references attribute `a9`, but no state machine declares a data attribute by the name `a9` \(REQ-425\)/,
+        )
+    })
+
+    it("[TST-126] → [REQ-424/423]: accepts an attribute-reference result value on a result argument", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].data = { a1: "", a2: "" }
         stateMachines[1].data = { a1: "", a2: "" }

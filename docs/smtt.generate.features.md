@@ -149,9 +149,8 @@ The scenario steps shall be generated from the transition information:
     at the front with the other defaults — letting a single transition
     force a custom precondition order for itself.
   
-  - [REQ-150] The owning state machine of a state name shall be determined by
-    finding the machine whose `states` array contains an entry with a matching
-    `name`. State names are globally unique across all machines in the AST file.
+  - [REQ-150] The owning state machine of a state name shall be resolved with
+    the parse step's ownership lookup (REQ-409, `smtt.parse.validate.md`).
   
   - [REQ-038] The default precondition states and their names shall be taken
     from AST path `[i].defaultPreconditions[*].state`.
@@ -234,11 +233,11 @@ Examples:
 - `with "<email address>" prefilled`
   - `$qualifier`: `with`
   - `$suffix`: `prefilled`.
-- `under different "<email address>"`
-  - `$modifier`: `different`
+- `under next "<email address>"`
+  - `$modifier`: `next`
   - `$pre-qualifier`: `under`
-- `not under "<email address>"`
-  - `$modifier`: `not`
+- `next under "<email address>"`
+  - `$modifier`: `next`
   - `$post-qualifier`: `under`.
 
 
@@ -518,34 +517,6 @@ Detailed modifier specifications follow.
       | a2 | a0      |
     ```
 
-- `not` / `other` / `different`
-
-  - [REQ-083] The `not` / `other` / `different` / `unequal` modifiers (with 
-    different wording options, but meaning the same) shall select the first 
-    value in the example values table that is different from the condition's 
-    value. I.e. for the row holding value `v`, the selected value shall be the
-    first value `w` in the example values table where `w != v`.
-  - [REQ-085] Regardless of which synonym (`not`, `other`, `different`,
-    `unequal`) appears in the source, the derived column shall always be named
-    `different $attribute-name`.
-  - [REQ-141] The generator shall raise an error when the value pool for a
-    `not`/`other`/`different` modifier contains fewer than two distinct values
-    for the referenced attribute. The parser should validate this precondition.
-
-  - Data example table in state machine spec:
-    ```markdown
-      | a  |
-      |----|
-      | a1 |
-      | a2 |
-    ```
-  - Feature scenario example table:
-    ```gherkin
-      | a  | different a | 
-      | a1 | a2          |
-      | a2 | a1          |
-    ```
-
 #### Modifier with condition
 
 - [REQ-142] A modifier and a condition may co-exist on the same argument.
@@ -624,10 +595,10 @@ Examples:
 
 - [REQ-088] Result values shall extend the columns.
 
-- [REQ-089] A result argument's value shall always be a plain equality
-  assignment — the Result column's `attribute set to value` syntax has no
-  other operator to choose between. The `resulting $attribute-name` column
-  cell value shall be taken directly from `result.value` in the AST.
+- [REQ-089] The `resulting $attribute-name` column cell value shall be taken
+  directly from `result.value` in the AST. A result argument's value is always
+  a plain equality assignment (REQ-415, `smtt.parse.validate.md`), so there is
+  no operator to interpret here.
 
 E.g.
 - Result argument `` `count` set to 2 `` → `resulting count` column with value `2`.
@@ -647,10 +618,9 @@ Supported operators:
   - [REQ-093] Boundary notation shall follow interval convention: `[` and `]`
     denote inclusive bounds, `(` and `)` denote exclusive bounds.
   - [REQ-094] Mixed forms shall be allowed, e.g. `` `a in [1, 4)` `` means `1 <=
-    a < 4`.
-  - [REQ-145] The boundary inclusivity/exclusivity shall be encoded within the
-    condition value strings themselves (e.g. the value array contains `"[1"` and
-    `"4)"` for `[1, 4)`).
+    a < 4`. The bounds and their brackets reach the generator as one value
+    string (REQ-145, `smtt.parse.validate.md`); the fully exclusive
+    `` `a in (1, 4)` `` is the set form, not a range.
 
 - [REQ-095] The generator shall support text equality forms: `as`, `not as`.
 
@@ -662,6 +632,39 @@ Supported operators:
 
 - [REQ-098] The condition value shall be taken from AST path
   `...arguments[*].condition.value`.
+
+- [REQ-427] A condition value marked as an attribute reference
+  (`...condition.valueIsReference`, REQ-424 in `smtt.parse.validate.md`) shall
+  not be compared as a literal: for each candidate row, the condition shall be
+  evaluated against the value that row itself holds for the referenced
+  attribute. The same condition can therefore hold for one row and fail for
+  the next. A row that holds no value for the referenced attribute — it has no
+  column for it, or the cell is empty — shall not survive the filter: an
+  absent value pins nothing to compare against.
+
+  The referenced attribute contributes no column of its own: like any other
+  attribute, it is rendered only when the transition also references it as an
+  argument.
+
+- Data example table in state machine spec:
+  ```markdown
+    | offer | list price |
+    |-------|------------|
+    | 10    | 10         |
+    | 5     | 20         |
+  ```
+- With `` `offer` as `list price` `` on the precondition state argument, and
+  `list price` referenced as a plain argument too, then examples table — the
+  second row's `offer` differs from its own `list price`, so it drops out:
+  ```gherkin
+    | offer | list price |
+    | 10    | 10         |
+  ```
+
+- [REQ-428] A reference-valued condition on a state trigger's argument shall
+  impose no constraint while matching expansion candidates (REQ-118): that
+  matching is structural and has no example row to resolve the reference
+  against. The condition applies per row afterwards, as REQ-427 describes.
 
 #### State/trigger conditions
 
@@ -762,15 +765,11 @@ Supported operators:
         | 2           |
   ```
 
-- [REQ-423] A result's `result.value` may instead name a reference to another
-  attribute of the same machine (`result.valueIsReference`), set directly by
-  the grammar at parse time — a backticked value is a reference, a
-  double-quoted or bare numeric value is a literal — purely by delimiter, with
-  no name-matching or post-parse classification involved (unlike trigger
-  classification, which does match the trigger name against known state
-  names post-parse). The `resulting $attribute-name` column's cell value is
-  then taken from that *row's own value* for the referenced attribute,
-  dynamically, instead of the fixed literal REQ-089 otherwise takes it from.
+- [REQ-423] When a result's value is an attribute reference
+  (`result.valueIsReference`, REQ-424 in `smtt.parse.validate.md`), the
+  `resulting $attribute-name` column's cell value shall be taken from that
+  *row's own value* for the referenced attribute, instead of the fixed literal
+  REQ-089 otherwise takes it from.
 
 - Data example table in state machine spec:
   ```markdown
@@ -814,9 +813,9 @@ Supported operators:
   states (AST path `[i].states[*].name`) contain the trigger state name.
 
 - [REQ-154] The generator shall raise an error if a state name lookup is
-  ambiguous (i.e. the same state name appears in multiple machines). The
-  parser's validate step enforces uniqueness, so this serves as an internal
-  assertion.
+  ambiguous (i.e. the same state name appears in multiple machines, REQ-409).
+  The parser's validate step enforces uniqueness, so this serves as an
+  internal assertion.
 
 For each source found:
 
@@ -925,20 +924,17 @@ result (Identity machine's result).
 - [REQ-118] A source transition shall only be considered a matching expansion
   candidate if its result state arguments match the trigger state arguments of
   the referring transition (the transition being expanded). I.e., the same
-  attribute names shall be referenced, with the same canonical modifier
-  (REQ-085) on both sides — a bare trigger argument only matches a bare result
-  argument, and a modified trigger argument only matches a result argument
-  carrying the same (canonicalized) modifier — AND the source's result shall
-  produce a value that satisfies the referring transition's trigger condition.
-  This shall apply recursively when expansion chains through multiple state
-  triggers.
+  attribute names shall be referenced, with the same modifier on both sides —
+  a bare trigger argument only matches a bare result argument, and a modified
+  trigger argument only matches a result argument carrying the same modifier —
+  AND the source's result shall produce a value that satisfies the referring
+  transition's trigger condition. This shall apply recursively when expansion
+  chains through multiple state triggers.
 
-  A base-name match with differing canonical modifiers is not a match: the two
-  occurrences denote different roles for the same attribute (e.g. a plain
-  value vs. a `different` one), so the source is disqualified as a candidate
-  for that attribute rather than silently reconciled (see REQ-422 for the one
-  case that is still reconciled: two spellings of the same canonical
-  modifier).
+  A name match with differing modifiers is not a match: the two occurrences
+  denote different roles for the same attribute (e.g. a plain value vs. the
+  next one in sequence), so the source is disqualified as a candidate for that
+  attribute.
 
   **Matching example**: Trigger condition is `user authenticated as "<email>"`.
   Source transition result is `user authenticated as "<email>"` with condition
@@ -952,42 +948,11 @@ result (Identity machine's result).
   source doesn't provide.
 
   **Non-matching modifier example**: Trigger is `painting reserved under
-  "<email>"` (no modifier). Source transition result is `painting reserved for
-  "<different email>"` (`different` modifier). Both reference the same base
-  attribute (`email`), but the source carries a modifier the trigger doesn't
-  — the source is not a matching candidate for this trigger, even though a
-  looser, name-only comparison would accept it.
-
-- [REQ-422] Two source candidates can each match a trigger argument's
-  canonical modifier (REQ-118) while still spelling that modifier
-  differently — e.g. a trigger argument modified `other` matched against a
-  result argument modified `not` (both canonically `different`, REQ-085).
-  When this happens, the transition on the side with no modifier for that
-  attribute — the two sides never differ in whether they carry a modifier,
-  per REQ-118, so this can only apply when both sides have one, in different
-  spellings, and picks the trigger side's declared spelling as the aliased side
-  by convention — is treated as a parameterized function: every one of its own
-  occurrences of that attribute (its own precondition states, trigger, and
-  result — which already share one value by name, REQ-063) is rewritten to
-  carry the other side's spelling, for this resolved path only. This applies
-  at every level of an expansion chain, so the rewrite composes across
-  multiple hops.
-
-  Rationale: without this, a chain matches candidates by canonical modifier
-  (REQ-118) but renders each transition's own declared spelling, so one
-  produced quantity could silently render under two different column headers
-  (e.g. `different a` and `other a`) in one composed scenario instead of one
-  consistent label.
-
-  Example: state machine `m1` triggers on state `S2` produced with modifier
-  `other` on attribute `a` (`S2 as other a`). The only source transition whose
-  result reaches `S2` is owned by `m2` and produces `S2 as not a`; that same
-  rule's own precondition and trigger also reference `not a`. REQ-118 matches
-  them (same base name `a`, both canonically `different`). Per REQ-422,
-  `m2`'s own occurrences of `a` are rewritten to `other a` for this path — its
-  precondition renders `"<other a>"`, not `"<not a>"` — so the whole scenario
-  consistently reflects one derived value under one spelling instead of mixing
-  `not a` and `other a` for what is really the same produced quantity.
+  "<bid>"` (no modifier). Source transition result is `painting reserved for
+  "<next bid>"` (`next` modifier). Both reference the same attribute (`bid`),
+  but the source carries a modifier the trigger doesn't — the source is not a
+  matching candidate for this trigger, even though a looser, name-only
+  comparison would accept it.
 
 - [REQ-164] A state trigger is unresolvable when no transition result 
   matches, or when candidate source transitions exist by result state name 

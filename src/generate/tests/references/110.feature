@@ -39,13 +39,9 @@
 #        result:
 #          name: s4
 # Covers requirements:
-# - [REQ-423] A result's `result.value` may instead name a reference to another attribute of the
-#   same machine (`result.valueIsReference`), set directly by the grammar at parse time — a
-#   backticked value is a reference, a double-quoted or bare numeric value is a literal — purely by
-#   delimiter, with no name-matching or post-parse classification involved (unlike trigger
-#   classification, which does match the trigger name against known state names post-parse). The
-#   `resulting $attribute-name` column's cell value is then taken from that *row's own value* for
-#   the referenced attribute, dynamically, instead of the fixed literal REQ-089 otherwise takes it
-#   from.
+# - [REQ-423] When a result's value is an attribute reference (`result.valueIsReference`, REQ-424 in
+#   `smtt.parse.validate.md`), the `resulting $attribute-name` column's cell value shall be taken
+#   from that *row's own value* for the referenced attribute, instead of the fixed literal REQ-089
+#   otherwise takes it from.
 
 # Throws: State machine `m2`: Anonymous transition has an unresolvable state trigger `s2` — no source transition satisfies the trigger's argument `a` (REQ-118/REQ-164).

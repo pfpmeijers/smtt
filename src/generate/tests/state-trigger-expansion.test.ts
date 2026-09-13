@@ -7,7 +7,7 @@ import {
     createFeatures,
     test,
 } from "./utils"
-import { type StateMachines, validateStateMachines } from "../../parse"
+import { annotateExpansions, type StateMachines, validateStateMachines } from "../../parse"
 
 test("[TST-071] → [REQ-102/103/111]: Event trigger maps directly to When step", () => {
     const stateMachines: StateMachines = [{
@@ -237,3 +237,37 @@ test("[TST-078] → [REQ-118/164]: Source transition not matched when result arg
     )
 })
 
+test("[TST-183] → [REQ-431]: An annotated AST renders exactly as the same AST without the annotation", () => {
+    const build = (): StateMachines => [{
+        name: "m1",
+        states: [{name: "s1"}, {name: "s2"}],
+        dataExampleValues: [{a: "1"}, {a: "2"}],
+        transitions: [{
+            id: "001",
+            states: [{name: "s1", arguments: [{name: "a"}]}],
+            trigger: {type: "event", name: "e"},
+            result: {name: "s2", arguments: [{name: "a"}]},
+        }],
+    }, {
+        name: "m2",
+        states: [{name: "s3"}, {name: "s4"}],
+        transitions: [{
+            id: "002",
+            states: [{name: "s3"}],
+            trigger: {type: "state", name: "s2", arguments: [{name: "a"}]},
+            result: {name: "s4"},
+        }],
+    }]
+
+    const annotated = build()
+    annotateExpansions(annotated)
+    assert.deepEqual(
+        annotated[1].transitions?.[0].expansion,
+        [{sources: [{stateMachine: "m1", transitionIndex: 0, transitionId: "001"}]}],
+        "the state-triggered transition should carry an annotation to render from",
+    )
+
+    // The annotation only records what resolution would find, so both ASTs render identically:
+    // the annotated one reads the recorded sources, the bare one resolves them on the spot.
+    assert.equal(createFeatures(annotated)["m2"], createFeatures(build())["m2"])
+})

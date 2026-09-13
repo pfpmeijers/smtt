@@ -12,27 +12,35 @@
     count: Number of items.
     label: Display label.
     score: Numeric score. ... extra description ...
+    new label: ""
   dataExampleValues:
     - count: "2"
       label: alpha
       score: "10"
+      new label: ""
     - count: "0"
       label: beta
       score: "20"
+      new label: ""
     - count: "1"
       label: beta
       score: "20"
+      new label: ""
     - count: "3"
       label: beta
       score: "20"
+      new label: ""
     - count: "5"
       label: beta
       score: "20"
+      new label: ""
     - count: "0"
       label: alpha
+      new label: ""
       score: "10"
     - count: "5"
       label: alpha
+      new label: ""
       score: "10"
   defaultPreconditions:
     - state: idle
@@ -59,52 +67,15 @@
       trigger:
         name: renamed
         arguments:
-          - preQualifier: to
-            modifier: different
-            name: label
+          - qualifier: to
+            name: new label
         type: event
       result:
         name: phase two
         arguments:
           - qualifier: as
-            name: label
-      notes: "Negation: different"
-    - states:
-        - name: phase two
-          arguments:
-            - qualifier: as
-              name: label
-      trigger:
-        name: swapped
-        arguments:
-          - preQualifier: with
-            modifier: other
-            name: label
-        type: event
-      result:
-        name: phase two
-        arguments:
-          - qualifier: as
-            name: label
-      notes: "Negation: not"
-    - states:
-        - name: phase two
-          arguments:
-            - qualifier: as
-              name: label
-      trigger:
-        name: replaced
-        arguments:
-          - preQualifier: by
-            modifier: unequal
-            name: label
-        type: event
-      result:
-        name: phase two
-        arguments:
-          - qualifier: as
-            name: label
-      notes: "Negation: unequal"
+            name: new label
+      notes: Distinct attribute for a new value
     - states:
         - name: phase two
           arguments:
@@ -220,15 +191,41 @@
               name: count
               condition:
                 operator: in range
-                value:
-                  - "1"
-                  - "5"
+                value: "[1, 5]"
       trigger:
         name: range validated
         type: event
       result:
         name: phase three
       notes: Range condition
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: score
+              condition:
+                operator: in range
+                value: "[10, 20)"
+      trigger:
+        name: lower band confirmed
+        type: event
+      result:
+        name: phase three
+      notes: "Range: exclusive upper bound"
+    - states:
+        - name: phase two
+          arguments:
+            - qualifier: with
+              name: score
+              condition:
+                operator: in range
+                value: (10, 20]
+      trigger:
+        name: upper band confirmed
+        type: event
+      result:
+        name: phase three
+      notes: "Range: exclusive lower bound"
     - states:
         - name: phase two
           arguments:
@@ -280,9 +277,7 @@
               name: count
               condition:
                 operator: not in range
-                value:
-                  - "1"
-                  - "5"
+                value: "[1, 5]"
       trigger:
         name: out-of-range confirmed
         type: event
@@ -353,25 +348,110 @@
   initialState: idling
   source: smtt/src/parse/tests/state-machines/comments.state-machine.md
 - name: condition reference
-  overview: "Exercises attribute-reference result values on a result argument: a
-    backticked value names another attribute, dynamically resolved per row,
-    instead of being a quoted literal."
+  overview: "Exercises attribute references on both sides they are supported: a
+    result argument's result value, and a condition on a state or trigger
+    argument. A backticked value names another attribute, dynamically resolved
+    per row, instead of being a quoted literal. Every site that accepts a
+    condition is covered — state implied condition, default precondition,
+    `States` cell and `Trigger` cell — as is each operator spelling that carries
+    a reference."
   states:
     - name: painting listed
       description: The painting has a list price but no sale price yet.
     - name: painting sold
       description: The painting has been sold.
+      impliedConditions:
+        - attribute: sale price
+          condition:
+            operator: as
+            value: list price
+            valueIsReference: true
+    - name: painting offered
+      description: A buyer has bid on the painting.
   data:
     list price: The painting's asking price.
     note: Free-text annotation, unrelated to any attribute name.
+    bid: ""
+    quoted price: ""
+    reserve price: ""
+    sale price: ""
   dataExampleValues:
     - list price: "10"
       note: default
+      bid: ""
+      quoted price: ""
+      reserve price: ""
+      sale price: ""
     - list price: "20"
       note: default
-    - list price: "10"
+      bid: ""
+      quoted price: ""
+      reserve price: ""
+      sale price: ""
+    - bid: ""
+      list price: "10"
+      note: default
+      quoted price: ""
+      reserve price: ""
+      sale price: "10"
+    - bid: ""
+      list price: "20"
+      note: default
+      quoted price: ""
+      reserve price: ""
+      sale price: "20"
+    - bid: ""
+      list price: "10"
+      note: default
+      quoted price: "10"
+      reserve price: ""
+      sale price: ""
+    - bid: ""
+      list price: "20"
+      note: default
+      quoted price: "20"
+      reserve price: ""
+      sale price: ""
+    - bid: ""
+      list price: "10"
       note: archived
-  defaultPreconditions: []
+      quoted price: ""
+      reserve price: ""
+      sale price: ""
+    - bid: "10"
+      list price: "10"
+      note: default
+      quoted price: ""
+      reserve price: ""
+      sale price: ""
+    - bid: "20"
+      list price: "20"
+      note: default
+      quoted price: ""
+      reserve price: ""
+      sale price: ""
+    - bid: ""
+      list price: "10"
+      note: default
+      quoted price: ""
+      reserve price: "10"
+      sale price: ""
+    - bid: ""
+      list price: "20"
+      note: default
+      quoted price: ""
+      reserve price: "20"
+      sale price: ""
+  defaultPreconditions:
+    - state: user authenticated
+      arguments:
+        - qualifier: with
+          name: quoted price
+          condition:
+            operator: as
+            value: list price
+            valueIsReference: true
+      description: The price quoted to the buyer is the asking price.
   transitions:
     - states:
         - name: painting listed
@@ -392,6 +472,51 @@
           - name: note
             result:
               value: archived
+    - states:
+        - name: painting listed
+          arguments:
+            - qualifier: with
+              name: list price
+      trigger:
+        name: bid placed
+        arguments:
+          - qualifier: with
+            name: bid
+            condition:
+              operator: as
+              value: list price
+              valueIsReference: true
+        type: event
+      result:
+        name: painting offered
+    - states:
+        - name: painting listed
+          arguments:
+            - qualifier: with
+              name: reserve price
+              condition:
+                operator: =
+                value: list price
+                valueIsReference: true
+      trigger:
+        name: reserve met
+        type: event
+      result:
+        name: painting offered
+    - states:
+        - name: painting offered
+          arguments:
+            - qualifier: with
+              name: bid
+              condition:
+                operator: <>
+                value: list price
+                valueIsReference: true
+      trigger:
+        name: bid withdrawn
+        type: event
+      result:
+        name: painting listed
   impossible:
     defined: []
   irrelevant: []
@@ -525,9 +650,7 @@
               name: quantity
               condition:
                 operator: in range
-                value:
-                  - "1"
-                  - "10"
+                value: "[1, 10]"
             - name: customer id
               condition:
                 operator: =

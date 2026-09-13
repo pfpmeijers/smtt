@@ -17,7 +17,7 @@
 #        result:
 #          name: s
 #          arguments:
-#            - modifier: different
+#            - modifier: next
 #              postQualifier: from
 #              name: a
 #        notes: ""
@@ -28,11 +28,11 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s from "<different a>"; when e
+  Scenario Outline: [] s "<a>" → s from "<next a>"; when e
     Given initially s "<a>"
     When e
-    Then expect s from "<different a>"
+    Then expect s from "<next a>"
     Examples:
-      | a | different a |
-      | 1 | 2           |
-      | 2 | 1           |
+      | a | next a |
+      | 1 | 2      |
+      | 2 | 1      |

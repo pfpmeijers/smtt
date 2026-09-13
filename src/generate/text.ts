@@ -1,6 +1,6 @@
 import type { Argument, StateRef, Trigger } from "../parse"
-import type { ExampleColumn } from "./examples"
-import { attributePlaceholderName, validateArgument } from "./arguments"
+import type { ExampleColumn } from "../parse"
+import { attributePlaceholderName, validateArgument } from "../parse"
 
 // --- File names ---
 

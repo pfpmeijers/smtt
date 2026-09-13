@@ -42,9 +42,8 @@
 #   source transition found during expansion: a source transition's own owning state machine (not
 #   the top-level transition's machine) determines its default preconditions and effective initial
 #   state for this purpose.
-# - [REQ-150] The owning state machine of a state name shall be determined by finding the machine
-#   whose `states` array contains an entry with a matching `name`. State names are globally unique
-#   across all machines in the AST file.
+# - [REQ-150] The owning state machine of a state name shall be resolved with the parse step's
+#   ownership lookup (REQ-409, `smtt.parse.validate.md`).
 
 Feature: m2
 

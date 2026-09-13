@@ -99,3 +99,34 @@ test("[TST-110] → [REQ-423]: A reference-valued result does not satisfy a stat
     )
 })
 
+test("[TST-177] → [REQ-428]: A reference-valued trigger condition disqualifies no expansion source", () => {
+    const stateMachines: StateMachines = [{
+        name: "m1",
+        states: [{name: "s1"}, {name: "s2"}],
+        dataExampleValues: [{a: "1", b: "1"}, {a: "2", b: "9"}],
+        transitions: [{
+            states: [{name: "s1", arguments: [{name: "a"}, {name: "b"}]}],
+            trigger: {type: "event", name: "e"},
+            result: {name: "s2", arguments: [{name: "a"}, {name: "b"}]},
+        }],
+    }, {
+        name: "m2",
+        states: [{name: "s3"}, {name: "s4"}],
+        transitions: [{
+            states: [{name: "s3"}],
+            // The source's result carries `a` without a fixed value, so this condition can only be
+            // settled per row; the candidate is accepted here and the rows filtered afterwards.
+            trigger: {
+                type: "state", name: "s2",
+                arguments: [{name: "a", condition: {operator: "=", value: "b", valueIsReference: true}}],
+            },
+            result: {name: "s4"},
+        }],
+    }]
+    validateStateMachines(stateMachines)
+    const feature = createFeatures(stateMachines)["m2"]
+    // The source resolves, and only the row whose `a` equals its own `b` survives (REQ-427).
+    assertContains(feature, "| 1 |")
+    assertNotContains(feature, "| 2 |")
+    assertMatchesReference(stateMachines, feature)
+})

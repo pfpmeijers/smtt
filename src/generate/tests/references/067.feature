@@ -8,7 +8,7 @@
 #      - name: s
 # Covers requirements:
 # - [REQ-154] The generator shall raise an error if a state name lookup is ambiguous (i.e. the same
-#   state name appears in multiple machines). The parser's validate step enforces uniqueness, so
-#   this serves as an internal assertion.
+#   state name appears in multiple machines, REQ-409). The parser's validate step enforces
+#   uniqueness, so this serves as an internal assertion.
 
 # Throws: Ambiguous state name lookup: duplicate state names across machines: s (REQ-154).

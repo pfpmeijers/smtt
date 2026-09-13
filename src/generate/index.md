@@ -16,11 +16,9 @@ patterns used by more than one state machine.
 | [`steps.ts`](./steps.ts) | `renderStepFiles()` / `writeStepFiles()` — generates one `.steps.js` file per state machine, plus `shared.steps.js` for `When` patterns shared across state machines. |
 | [`fixtures.ts`](./fixtures.ts) | `renderFixtureFiles()` / `writeFixtureFiles()` — generates one `.fixtures.js` file per state machine, `shared.fixtures.js` for shared `When` fixtures, plus `fixtures/index.js`. |
 | [`sharing.ts`](./sharing.ts) | `collectSharedTriggerSteps()` / `ownSteps()` — determines which `When` step patterns are registered by more than one state machine, for the shared step/fixture files. |
-| [`arguments.ts`](./arguments.ts) | Argument level helpers: canonical modifiers, derived column names, placeholder names and validation. |
 | [`text.ts`](./text.ts) | Text rendering: `slugify`, `stateRefText`, `triggerText` and scenario label lower casing. |
-| [`ownership.ts`](./ownership.ts) | State ownership index (state name → declaring machine) and implied conditions index. |
 | [`givens.ts`](./givens.ts) | Effective `Given` state resolution: default precondition injection, implied initial state and de-duplication. |
-| [`expansion.ts`](./expansion.ts) | `expandStateTrigger()` — resolves state triggers to event trigger paths; chain analysis helpers. |
-| [`conditions.ts`](./conditions.ts) | Condition validation, evaluation and collection of example row filters. |
-| [`examples.ts`](./examples.ts) | Examples table construction: value table merging, column derivation, row filtering and formatting. |
+| [`expansion.ts`](./expansion.ts) | `expandStateTrigger()` — turns the sources resolved by `parse/expand.ts` into rendered paths: step texts and injected `Given` states. |
+| [`conditions.ts`](./conditions.ts) | Implied-condition filters of a transition's effective `Given` states. |
+| [`examples.ts`](./examples.ts) | Rendering of the `Examples:` block from the table the parse step resolves. |
 | [`tests/`](./tests/) | Regression tests for the generated feature output. |

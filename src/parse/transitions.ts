@@ -1,6 +1,15 @@
+/**
+ * Transition report: how every transition in a set of state machines resolves.
+ *
+ * Walks each machine's transitions, following state triggers through the transitions that can
+ * explain them, and writes what it finds: the preconditions accumulated along the way, the ones
+ * that conflict, the resolved event trigger of each path, and the example rows that survive the
+ * conditions in force. It reports on the model itself, so it answers "why does this transition
+ * resolve like this" independently of what any consumer makes of it.
+ */
+
 import { writeFileSync } from "fs"
 import { join as joinPath } from "path"
-import type { Argument, Condition, StateMachine, StateRef, Transition, Trigger } from "../parse"
 import { attributePlaceholderName, semanticArgumentsSignature } from "./arguments"
 import {
     collectChainFilterConditions,
@@ -8,24 +17,20 @@ import {
     describeFilterCondition,
 } from "./conditions"
 import {
-    applyAttributeAliases,
-    collectContributingStateMachineNames,
     buildTaggedTransitions,
     findExpansionSources,
-    isAliasedArgument,
-    originalModifierOfAliasedArgument,
-    reconcileAttributeAliases,
     MAX_EXPANSION_DEPTH,
-    type AttributeAliasMap,
     type ExpansionSourceStep,
     type TaggedTransition,
-} from "./expansion"
+} from "./expand"
 import {
     collectPathExampleColumns,
     describeEmptyExampleValues,
     filterRows,
-    formatExamplesTable,
     mergeExampleValues,
+    resolveCellValue,
+    type ExampleColumn,
+    type ExampleRow,
 } from "./examples"
 import {
     buildImpliedConditionsIndex,
@@ -34,8 +39,10 @@ import {
     type ImpliedConditionsIndex,
     type StateOwnershipIndex,
 } from "./ownership"
+import type { Argument, Condition, Result, StateMachine, StateRef, Transition, Trigger } from "./sm.ast.d"
 
-const DEBUG_FILE_NAME = "generate.debug.txt"
+/** Name of the file the report is written to. */
+const REPORT_FILE_NAME = "transitions.txt"
 
 /** Indentation width, in spaces, of one nesting step (a machine bullet or a transition bullet). */
 const INDENT_STEP = 4
@@ -49,14 +56,14 @@ const DETAIL_INDENT = 4
  * Render a value condition as debug text, mirroring the source markdown's own condition syntax
  * (`` `attribute` undefined ``, `` `attribute` = value ``, `` `attribute` as "value" ``, etc.), so a
  * filtered argument's condition is visible in the debug report instead of being silently dropped. A
- * reference value (REQ-423) renders backticked, exactly like the attribute name it points at,
+ * reference value (REQ-427) renders backticked, exactly like the attribute name it points at,
  * distinguishing it from a quoted literal the same way the source markdown does.
  *
  * @param condition Value condition to render.
  * @returns The rendered condition text, without its surrounding markers.
  */
 function debugConditionText(condition: Condition): string {
-    // REQ-423: a reference renders with the name delimiter (backticks), not the literal delimiter
+    // REQ-427: a reference renders with the name delimiter (backticks), not the literal delimiter
     // (quotes), so debug output doesn't read as though the referenced attribute's *name* were the
     // fixed value.
     if (condition.valueIsReference) return `${condition.operator} \`${condition.value}\``
@@ -101,26 +108,16 @@ function debugResultText(result: Result): string {
 }
 
 /**
- * Render an argument's attribute placeholder, e.g. `` `email address` ``. When the argument is a
- * rendering-only alias (REQ-422) — its modifier was rewritten from what the transition genuinely
- * declares, to match a source or caller it was reconciled against — the placeholder is suffixed
- * with a back arrow pointing at the pre-rewrite name it was substituted from, e.g. `` `different
- * email address` (←`email address`) ``, so a reconciled sub-transition's borrowed naming is
- * visible instead of looking like its own genuine declaration. Suppressed when `plain` is set (the
- * final expanded transition description, whose whole point is to read exactly like the resolved
- * scenario it produces — the same substituted value throughout, with no leftover trace of where it
- * was reconciled from).
+ * Render an argument's attribute placeholder, e.g. `` `email address` ``, or the derived column
+ * a modifier argument resolves against, e.g. `` `next email address` ``.
  *
  * @param argument Argument whose placeholder is rendered.
  * @param isResult Whether the argument belongs to the transition result.
  * @param plain Whether to omit the substitution annotation even for an aliased argument.
  * @returns The rendered, backtick-wrapped placeholder text.
  */
-function debugAttributePlaceholderText(argument: Argument, isResult: boolean, plain: boolean): string {
-    const current = `\`${attributePlaceholderName(argument, isResult)}\``
-    if (plain || !isAliasedArgument(argument)) return current
-    const original = attributePlaceholderName({ ...argument, modifier: originalModifierOfAliasedArgument(argument) }, isResult)
-    return `${current} (←\`${original}\`)`
+function debugAttributePlaceholderText(argument: Argument, isResult: boolean): string {
+    return `\`${attributePlaceholderName(argument, isResult)}\``
 }
 
 /**
@@ -142,7 +139,7 @@ function debugArgumentText(argument: Argument, isFirst: boolean, isResult: boole
     if (argument.qualifier) parts.push(argument.qualifier)
     if (argument.preQualifier) parts.push(argument.preQualifier)
     if (argument.postQualifier) parts.push(argument.postQualifier)
-    parts.push(debugAttributePlaceholderText(argument, isResult, plain))
+    parts.push(debugAttributePlaceholderText(argument, isResult))
     if (argument.condition) parts.push(debugConditionText(argument.condition))
     if (argument.suffix) parts.push(argument.suffix)
     return (isFirst ? " " : ", ") + parts.join(" ")
@@ -377,6 +374,41 @@ interface ExampleDebugContext {
 }
 
 /**
+ * Render the values a set of columns takes over a set of rows, as an aligned text table.
+ *
+ * @param stateMachines All state machines, for resolving derived cell values.
+ * @param stateMachineName State machine the rows belong to, for error context.
+ * @param columns Columns to render, in order.
+ * @param rows Rows to render.
+ * @param allRows Rows the table was filtered from, used for positional derivations.
+ * @returns The table's lines: a header, then one line per row.
+ */
+function formatValueTable(
+    stateMachines: StateMachine[],
+    stateMachineName: string,
+    columns: ExampleColumn[],
+    rows: ExampleRow[],
+    allRows: ExampleRow[],
+): string[] {
+    const rendered = rows.map((row) => {
+        const rowIndex = Math.max(allRows.indexOf(row), 0)
+        return columns.map((column) => resolveCellValue(stateMachines, stateMachineName, column, row, rowIndex, allRows))
+    })
+    // Two rows differing only in a column this table doesn't hold render identically.
+    const seen = new Set<string>()
+    const cells = rendered.filter((cell) => {
+        const signature = cell.join("")
+        if (seen.has(signature)) return false
+        seen.add(signature)
+        return true
+    })
+    const headers = columns.map((column) => column.name)
+    const widths = headers.map((header, index) => Math.max(header.length, ...cells.map((cell) => (cell[index] ?? "").length)))
+    const line = (values: string[]): string => `|${values.map((value, index) => ` ${value.padEnd(widths[index])} `).join("|")}|`
+    return ["Examples:", line(headers), ...cells.map(line)]
+}
+
+/**
  * Render the actual `Examples:` table for one fully-resolved expansion path — or, when it comes
  * out empty, exactly which filter(s) rejected every candidate row — by reusing the very same
  * merge/filter functions the real feature generator calls (REQ-063/REQ-099/REQ-100). Sharing the
@@ -404,7 +436,9 @@ function renderExamplesLines(
     const columns = collectPathExampleColumns(rootStateMachine.name, rootStateMachine.defaultPreconditions ?? [], root, sourceChain)
     if (columns.length === 0) return [`${pad}Examples: (none — plain Scenario)`]
 
-    const contributingStateMachines = collectContributingStateMachineNames(rootStateMachine, sourceChain)
+    const contributingStateMachines = new Set([
+        rootStateMachine.name, ...sourceChain.map((step) => step.stateMachineName),
+    ])
     const exampleValues = mergeExampleValues(context.stateMachines, contributingStateMachines)
     if (exampleValues.length === 0) {
         return [`${pad}Examples: EMPTY — ${describeEmptyExampleValues(contributingStateMachines)}`]
@@ -423,8 +457,8 @@ function renderExamplesLines(
         ]
     }
 
-    const table = formatExamplesTable(context.stateMachines, rootStateMachine.name, columns, rows, exampleValues)
-    return table.split("\n").map((line) => `${pad}${line}`)
+    return formatValueTable(context.stateMachines, rootStateMachine.name, columns, rows, exampleValues)
+        .map((line) => `${pad}${line}`)
 }
 
 /**
@@ -439,8 +473,6 @@ function renderExamplesLines(
  *
  * @param root Top-level transition whose expansion path is being resolved.
  * @param rootStateMachine State machine owning `root`.
- * @param rootAliases Attribute aliases (REQ-422) `root`'s own trigger/result occurrences must be
- *   rewritten to for this path, reconciling `root`'s own match against its immediate source.
  * @param sourceChain This path's own chain of expansion sources.
  * @param mergedGivens Full merged precondition context at the terminal candidate.
  * @param leafTrigger The terminal candidate's own trigger, used as the resolved `When` event.
@@ -452,7 +484,6 @@ function renderExamplesLines(
 function renderResolvedLeaf(
     root: Transition,
     rootStateMachine: StateMachine,
-    rootAliases: AttributeAliasMap,
     sourceChain: ExpansionSourceStep[],
     mergedGivens: StateRef[],
     leafTrigger: Trigger,
@@ -460,7 +491,6 @@ function renderResolvedLeaf(
     pathIndex: number,
     context: ExampleDebugContext,
 ): string[] {
-    const aliasedRoot = applyAttributeAliases(root, rootAliases)
     const indent = candidateBulletIndent + INDENT_STEP
     const idPart = `[${root.id ?? ""}.${pathIndex}]`
     const detailIndent = indent + DETAIL_INDENT
@@ -468,8 +498,8 @@ function renderResolvedLeaf(
 
     lines.push(...mergedGivens.map((stateRef) => `${" ".repeat(detailIndent)}${CHECK_PREFIX}${debugStateRefText(stateRef, false, true)}`))
     lines.push(`${" ".repeat(detailIndent)}➡️ ${debugTriggerText(leafTrigger, true)}`)
-    lines.push(`${" ".repeat(detailIndent)}⏩ ${debugStateRefText(aliasedRoot.result, true)}`)
-    lines.push(...renderExamplesLines(aliasedRoot, rootStateMachine, sourceChain, mergedGivens, context, indent))
+    lines.push(`${" ".repeat(detailIndent)}⏩ ${debugStateRefText(root.result, true)}`)
+    lines.push(...renderExamplesLines(root, rootStateMachine, sourceChain, mergedGivens, context, indent))
     return lines
 }
 
@@ -493,12 +523,9 @@ function renderResolvedLeaf(
  * @param ownership State ownership index.
  * @param exampleContext Shared state machines list and implied-conditions index, for computing
  *   each resolved leaf's real `Examples:` table.
- * @param parentTrigger The trigger `candidates` are being matched against (REQ-422), for
- *   reconciling each candidate's own modifier against it; `null` only at the true top level, where
- *   `candidates` are independent roots rather than sources of a shared trigger.
- * @param rootAliases Attribute aliases (REQ-422) `root`'s own trigger/result occurrences must be
- *   rewritten to for paths reached through this call, reconciled once at the level immediately
- *   below the true root and threaded unchanged through deeper recursion.
+ * @param parentTrigger The trigger `candidates` are being matched against; `null` only at the
+ *   true top level, where `candidates` are independent roots rather than sources of a shared
+ *   trigger.
  * @param depth Current recursive depth.
  * @param isRootLevel Whether `candidates` are top-level transitions being reported (each its own
  *   root, with its own resolved-leaf counter), whose own precondition states are shown untagged.
@@ -520,7 +547,6 @@ function renderMachineGroup(
     ownership: StateOwnershipIndex,
     exampleContext: ExampleDebugContext,
     parentTrigger: Trigger | null,
-    rootAliases: AttributeAliasMap,
     depth: number,
     isRootLevel: boolean,
     root: Transition,
@@ -536,28 +562,15 @@ function renderMachineGroup(
         const candidateLeafCounter = isRootLevel ? { count: 0 } : leafCounter
         const candidateRootStateMachine = taggedTransitions.find((tagged) => tagged.transition === candidateRoot)!.stateMachine
 
-        // Reconcile this candidate's own modifier against what `parentTrigger` actually asked for
-        // (REQ-422): a plain trigger matched against a modified result, or vice versa, otherwise
-        // renders and resolves as two different columns instead of one consistent value.
-        const { callerAliases, sourceAliases } = parentTrigger
-            ? reconcileAttributeAliases(parentTrigger.arguments, candidate.result.arguments)
-            : { callerAliases: new Map() as AttributeAliasMap, sourceAliases: new Map() as AttributeAliasMap }
-        const aliasedCandidate = applyAttributeAliases(candidate, sourceAliases)
-        // `callerAliases` reconciled here is the true root's own alias only when `parentTrigger`
-        // is the root's own trigger (i.e. `candidate` is one of the root's immediate sources);
-        // deeper levels' own `callerAliases` would belong to an intermediate transition whose
-        // lines already rendered, so there's nothing left to apply them to here — inherit instead.
-        const nextRootAliases = parentTrigger === root.trigger ? callerAliases : rootAliases
-
-        const tagged = tagPreconditions(aliasedCandidate.states ?? [], accumulated, ownership)
+        const tagged = tagPreconditions(candidate.states ?? [], accumulated, ownership)
         const hasConflict = tagged.some((precond) => precond.tag === "conflict")
 
         const canRecurse = !hasConflict
-            && aliasedCandidate.trigger.type === "state"
+            && candidate.trigger.type === "state"
             && !ancestorStack.has(candidate)
             && depth < MAX_EXPANSION_DEPTH
         const excluded = new Set([candidate])
-        const sources = canRecurse ? findExpansionSources(aliasedCandidate.trigger, taggedTransitions, excluded) : []
+        const sources = canRecurse ? findExpansionSources(candidate.trigger, taggedTransitions, excluded) : []
 
         // The root's own candidate is a fully-resolved, non-conflicting path in its own right
         // once it isn't expanded any further (no state-triggered sources left to recurse into).
@@ -566,20 +579,20 @@ function renderMachineGroup(
         // Skip result line for intermediate transitions only — always show it for the initial
         // (root-level) transition and for final, fully-resolved ones.
         const skipResult = !isRootLevel && !isFinal
-        lines.push(...renderCandidateLines(aliasedCandidate, displayTagged, bulletIndent, isFinal, skipResult))
+        lines.push(...renderCandidateLines(candidate, displayTagged, bulletIndent, isFinal, skipResult))
         if (isFinal) {
             lines.push(...renderExamplesLines(
-                candidateRoot, candidateRootStateMachine, sourceChain, aliasedCandidate.states ?? [],
+                candidateRoot, candidateRootStateMachine, sourceChain, candidate.states ?? [],
                 exampleContext, bulletIndent,
             ))
         }
 
         if (hasConflict) continue
 
-        const mergedGivens = mergeGivens(accumulated, aliasedCandidate.states ?? [], ownership)
+        const mergedGivens = mergeGivens(accumulated, candidate.states ?? [], ownership)
         const candidateStateMachine = taggedTransitions.find((tagged) => tagged.transition === candidate)!.stateMachine
         const nextSourceChain: ExpansionSourceStep[] = [...sourceChain, {
-            stateMachineName, transition: aliasedCandidate, defaultPreconditions: candidateStateMachine.defaultPreconditions ?? [],
+            stateMachineName, transition: candidate, defaultPreconditions: candidateStateMachine.defaultPreconditions ?? [],
         }]
 
         if (sources.length === 0) {
@@ -588,8 +601,8 @@ function renderMachineGroup(
             if (depth > 0) {
                 candidateLeafCounter.count += 1
                 lines.push(...renderResolvedLeaf(
-                    candidateRoot, candidateRootStateMachine, nextRootAliases, nextSourceChain, mergedGivens,
-                    aliasedCandidate.trigger, bulletIndent, candidateLeafCounter.count, exampleContext,
+                    candidateRoot, candidateRootStateMachine, nextSourceChain, mergedGivens,
+                    candidate.trigger, bulletIndent, candidateLeafCounter.count, exampleContext,
                 ))
             }
             continue
@@ -609,7 +622,7 @@ function renderMachineGroup(
             lines.push(...renderMachineGroup(
                 sourceMachineName, sourceCandidates, mergedGivens, nextSourceChain, nextAncestorStack,
                 bulletIndent + INDENT_STEP, taggedTransitions, ownership, exampleContext,
-                aliasedCandidate.trigger, nextRootAliases, depth + 1, false, candidateRoot, candidateLeafCounter,
+                candidate.trigger, depth + 1, false, candidateRoot, candidateLeafCounter,
             ))
         }
     }
@@ -627,15 +640,15 @@ function renderMachineGroup(
  * @param stateMachines Parsed state machines.
  * @returns Markdown debug report text.
  */
-export function renderGenerateDebugReport(stateMachines: StateMachine[]): string {
+export function renderTransitionsReport(stateMachines: StateMachine[]): string {
     const taggedTransitions = buildTaggedTransitions(stateMachines)
     const ownership = buildStateOwnership(stateMachines)
     const impliedIndex = buildImpliedConditionsIndex(stateMachines)
     const exampleContext: ExampleDebugContext = { stateMachines, impliedIndex }
     const lines: string[] = [
-        "# SMTT Generate Debug",
+        "# SMTT Transitions",
         "",
-        "Processed transitions and their state-trigger expansion trees.",
+        "Every transition and the state-trigger expansion tree that reaches it.",
         "",
         "Legend:",
         "- `[...]`: transition or resolved-scenario ID",
@@ -656,7 +669,7 @@ export function renderGenerateDebugReport(stateMachines: StateMachine[]): string
         if (transitions.length === 0) continue
         lines.push(...renderMachineGroup(
             stateMachine.name, transitions, [], [], new Set(), 0,
-            taggedTransitions, ownership, exampleContext, null, new Map(), 0, true, transitions[0], { count: 0 },
+            taggedTransitions, ownership, exampleContext, null, 0, true, transitions[0], { count: 0 },
         ))
     }
 
@@ -671,12 +684,12 @@ export function renderGenerateDebugReport(stateMachines: StateMachine[]): string
  * @param outputDir Generate output directory.
  * @returns Absolute path to the written debug report.
  */
-export function writeGenerateDebugFile(
+export function writeTransitionsReport(
     stateMachines: StateMachine[],
     outputDir: string,
 ): string {
-    const filePath = joinPath(outputDir, DEBUG_FILE_NAME)
-    writeFileSync(filePath, renderGenerateDebugReport(stateMachines), "utf8")
+    const filePath = joinPath(outputDir, REPORT_FILE_NAME)
+    writeFileSync(filePath, renderTransitionsReport(stateMachines), "utf8")
     console.info("Generated: `" + filePath + "`")
     return filePath
 }

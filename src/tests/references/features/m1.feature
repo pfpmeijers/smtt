@@ -10,15 +10,15 @@ Feature: m1
       | V1 |
       | V2 |
 
-  Scenario Outline: [002] m1 active with "<a1>" → m1 active with "<different a1>"; when e1 with "<different a1>"
+  Scenario Outline: [002] m1 active with "<a1>" → m1 active with "<new a1>"; when e1 with "<new a1>"
     Given initially m1 active with "<a1>"
-    When e1 with "<different a1>"
-    Then expect m1 active with "<different a1>"
-    # Notes: Re-activation under a different identifier
+    When e1 with "<new a1>"
+    Then expect m1 active with "<new a1>"
+    # Notes: Re-activation under another identifier
     Examples:
-      | a1 | different a1 |
-      | V1 | V2           |
-      | V2 | V1           |
+      | a1 | new a1 |
+      | V1 | V2     |
+      | V2 | V1     |
 
   Scenario: [003] m1 active → m1 inactive; when e2
     Given initially m1 active

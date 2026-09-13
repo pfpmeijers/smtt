@@ -126,6 +126,53 @@ function buildArgument({
     return argument
 }
 
+/**
+ * Reads the literal words trailing an argument, for either suffix flavour: the plain
+ * `argumentSuffix` of a table cell, or the `argumentSuffixBeforeDescription` of a list entry that
+ * carries its own description.
+ *
+ * @param tokensIter Iteration node holding the suffix characters.
+ * @returns The trimmed suffix text, or `undefined` when the suffix holds no words.
+ */
+function argumentSuffixText(tokensIter: ohm.IterationNode): string | undefined {
+    return tokensIter.sourceString.trim() || undefined
+}
+
+/**
+ * Builds a range condition, keeping the bracket characters the author wrote: they carry each
+ * bound's inclusivity, which no other part of the condition records. The bounds and their
+ * brackets are rendered into one value string, e.g. `[1, 4)` for a range that includes `1` and
+ * excludes `4`.
+ *
+ * @param attributeNode Node holding the constrained attribute's name.
+ * @param rangeOperatorNode Node holding the range operator (`in range` / `not in range`).
+ * @param openNode Node holding the opening bracket, `[` or `(`.
+ * @param lowNode Node holding the lower bound.
+ * @param highNode Node holding the upper bound.
+ * @param closeNode Node holding the closing bracket, `]` or `)`.
+ * @returns The attribute name with its range condition.
+ */
+function buildRangeCondition(
+    attributeNode: ohm.Node,
+    rangeOperatorNode: ohm.Node,
+    openNode: ohm.Node,
+    lowNode: ohm.Node,
+    highNode: ohm.Node,
+    closeNode: ohm.Node,
+): ImpliedCondition {
+    const openBracket = openNode.sourceString.trim()
+    const closeBracket = closeNode.sourceString.trim()
+    const low = String(lowNode.toAST())
+    const high = String(highNode.toAST())
+    return {
+        attribute: attributeNode.toAST() as string,
+        condition: {
+            operator: rangeOperatorNode.toAST() as Condition["operator"],
+            value: `${openBracket}${low}, ${high}${closeBracket}`,
+        },
+    } satisfies ImpliedCondition
+}
+
 // --- Whitespace cleanup ---
 
 /**
@@ -478,7 +525,11 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
         },
 
         argumentSuffix(tokensIter) {
-            return tokensIter.sourceString.trim() || undefined
+            return argumentSuffixText(tokensIter)
+        },
+
+        argumentSuffixBeforeDescription(tokensIter) {
+            return argumentSuffixText(tokensIter)
         },
 
         argumentExpression_conditional(expressionNode) {
@@ -492,14 +543,12 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
 
         // --- Conditions ---
 
-        conditionalAttributeExpression_range(attributeNode, rangeOpNode, _lb, lowNode, _comma, highNode, _rb) {
-            return {
-                attribute: attributeNode.toAST() as string,
-                condition: {
-                    operator: rangeOpNode.toAST() as Condition["operator"],
-                    value: [String(lowNode.toAST()), String(highNode.toAST())]
-                }
-            } satisfies ImpliedCondition
+        conditionalAttributeExpression_range(attributeNode, rangeOpNode, openNode, lowNode, _comma, highNode, closeNode) {
+            return buildRangeCondition(attributeNode, rangeOpNode, openNode, lowNode, highNode, closeNode)
+        },
+
+        conditionalAttributeExpression_rangeLeftOpen(attributeNode, rangeOpNode, openNode, lowNode, _comma, highNode, closeNode) {
+            return buildRangeCondition(attributeNode, rangeOpNode, openNode, lowNode, highNode, closeNode)
         },
 
         conditionalAttributeExpression_set(attributeNode, setCompareNode, _lp, headNode, _commaIter, tailIter, _rp) {

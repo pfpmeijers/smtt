@@ -18,9 +18,9 @@
 #              result:
 #                value: "2"
 # Covers requirements:
-# - [REQ-089] A result argument's value shall always be a plain equality assignment — the Result
-#   column's `attribute set to value` syntax has no other operator to choose between. The `resulting
-#   $attribute-name` column cell value shall be taken directly from `result.value` in the AST.
+# - [REQ-089] The `resulting $attribute-name` column cell value shall be taken directly from
+#   `result.value` in the AST. A result argument's value is always a plain equality assignment
+#   (REQ-415, `smtt.parse.validate.md`), so there is no operator to interpret here.
 
 Feature: m
 

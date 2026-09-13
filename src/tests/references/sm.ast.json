@@ -14,14 +14,17 @@
         }
       ],
       "data": {
-        "a1": "The identifier associated with the active M1 instance."
+        "a1": "The identifier associated with the active M1 instance.",
+        "new a1": "The identifier M1 is re-activated under."
       },
       "dataExampleValues": [
         {
-          "a1": "V1"
+          "a1": "V1",
+          "new a1": "V2"
         },
         {
-          "a1": "V2"
+          "a1": "V2",
+          "new a1": "V1"
         }
       ],
       "defaultPreconditions": [],
@@ -70,9 +73,8 @@
             "name": "e1",
             "arguments": [
               {
-                "preQualifier": "with",
-                "modifier": "different",
-                "name": "a1"
+                "qualifier": "with",
+                "name": "new a1"
               }
             ],
             "type": "event"
@@ -81,13 +83,12 @@
             "name": "m1 active",
             "arguments": [
               {
-                "preQualifier": "with",
-                "modifier": "different",
-                "name": "a1"
+                "qualifier": "with",
+                "name": "new a1"
               }
             ]
           },
-          "notes": "Re-activation under a different identifier"
+          "notes": "Re-activation under another identifier"
         },
         {
           "id": "003",
@@ -401,7 +402,18 @@
           "result": {
             "name": "m2 empty"
           },
-          "notes": "Counter cleared when M1 deactivates"
+          "notes": "Counter cleared when M1 deactivates",
+          "expansion": [
+            {
+              "sources": [
+                {
+                  "stateMachine": "m1",
+                  "transitionIndex": 2,
+                  "transitionId": "003"
+                }
+              ]
+            }
+          ]
         },
         {
           "id": "011",
@@ -417,7 +429,18 @@
           "result": {
             "name": "m2 empty"
           },
-          "notes": "Counter cleared when M1 deactivates"
+          "notes": "Counter cleared when M1 deactivates",
+          "expansion": [
+            {
+              "sources": [
+                {
+                  "stateMachine": "m1",
+                  "transitionIndex": 2,
+                  "transitionId": "003"
+                }
+              ]
+            }
+          ]
         }
       ],
       "impossible": {
@@ -700,7 +723,18 @@
           "result": {
             "name": "m3 paused"
           },
-          "notes": "Auto-paused when M1 deactivates"
+          "notes": "Auto-paused when M1 deactivates",
+          "expansion": [
+            {
+              "sources": [
+                {
+                  "stateMachine": "m1",
+                  "transitionIndex": 2,
+                  "transitionId": "003"
+                }
+              ]
+            }
+          ]
         },
         {
           "id": "019",
@@ -725,7 +759,18 @@
           "result": {
             "name": "m3 open"
           },
-          "notes": "Auto-resumed when M1 reactivates"
+          "notes": "Auto-resumed when M1 reactivates",
+          "expansion": [
+            {
+              "sources": [
+                {
+                  "stateMachine": "m1",
+                  "transitionIndex": 0,
+                  "transitionId": "001"
+                }
+              ]
+            }
+          ]
         }
       ],
       "impossible": {

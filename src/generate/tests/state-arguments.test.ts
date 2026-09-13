@@ -27,13 +27,13 @@ test("[TST-064] → [REQ-051/052]: preQualifier rendered before modifier", () =>
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},
-            result: {name: "s", arguments: [{preQualifier: "under", modifier: "different", name: "a"}]},
+            result: {name: "s", arguments: [{preQualifier: "under", modifier: "next", name: "a"}]},
             notes: "",
         }],
     }]
     validateStateMachines(stateMachines)
     const feature = createFeatures(stateMachines)["m"]
-    assertContains(feature, "under \"<different a>\"")
+    assertContains(feature, "under \"<next a>\"")
     assertMatchesReference(stateMachines, feature)
 })
 
@@ -45,13 +45,13 @@ test("[TST-065] → [REQ-055/056]: postQualifier rendered after modifier", () =>
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},
-            result: {name: "s", arguments: [{modifier: "different", postQualifier: "from", name: "a"}]},
+            result: {name: "s", arguments: [{modifier: "next", postQualifier: "from", name: "a"}]},
             notes: "",
         }],
     }]
     validateStateMachines(stateMachines)
     const feature = createFeatures(stateMachines)["m"]
-    assertContains(feature, "from \"<different a>\"")
+    assertContains(feature, "from \"<next a>\"")
     assertMatchesReference(stateMachines, feature)
 })
 

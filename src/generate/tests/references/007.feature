@@ -34,8 +34,6 @@
 #   e.g. `` `a in [1, 4]` ``.
 # - [REQ-093] Boundary notation shall follow interval convention: `[` and `]` denote inclusive
 #   bounds, `(` and `)` denote exclusive bounds.
-# - [REQ-145] The boundary inclusivity/exclusivity shall be encoded within the condition value
-#   strings themselves (e.g. the value array contains `"[1"` and `"4)"` for `[1, 4)`).
 
 Feature: m
 

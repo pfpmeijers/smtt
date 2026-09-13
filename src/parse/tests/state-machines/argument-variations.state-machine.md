@@ -39,9 +39,7 @@ Example values:
 | States                                            | Trigger                        | Result                               | Notes                            |
 |---------------------------------------------------|--------------------------------|--------------------------------------|----------------------------------|
 | `Phase one`                                       | `Started` for `Label`          | `Phase two` for `Label`              | Plain data ref                   |
-| `Phase two` as `Label`                            | `Renamed` to different `Label` | `Phase two` as `Label`               | Negation: different              |
-| `Phase two` as `Label`                            | `Swapped` with other `Label`   | `Phase two` as `Label`               | Negation: not                    |
-| `Phase two` as `Label`                            | `Replaced` by unequal `Label`  | `Phase two` as `Label`               | Negation: unequal                |
+| `Phase two` as `Label`                            | `Renamed` to `new Label`       | `Phase two` as `new Label`           | Distinct attribute for a new value |
 | `Phase two` with `Count` = 0                      | `Item added`                   | `Phase two` with incremented `Count` | Eq condition + incremented       |
 | `Phase two` with `Count` > 0                      | `Item removed`                 | `Phase two` with decremented `Count` | Gt condition + decremented       |
 | `Phase two` with `Count` >= 3                     | `Threshold reached`            | `Phase three`                        | Ge condition                     |
@@ -49,6 +47,8 @@ Example values:
 | `Phase two` with `Count` <> 0 and `Score` >= 10   | `Non-empty confirmed`          | `Phase two` with next `Score`        | Ne condition + next modifier     |
 | `Phase two` with `Count` < 5 and `Score` = 10     | `Space available`              | `Phase two` with previous `Score`    | Lt condition + previous modifier |
 | `Phase two` with `Count` in [1, 5]                | `Range validated`              | `Phase three`                        | Range condition                  |
+| `Phase two` with `Score` in [10, 20)              | `Lower band confirmed`         | `Phase three`                        | Range: exclusive upper bound     |
+| `Phase two` with `Score` in (10, 20]              | `Upper band confirmed`         | `Phase three`                        | Range: exclusive lower bound     |
 | `Phase two` with `Label` in ("alpha", "beta")     | `Selected from set`            | `Phase three`                        | Set condition                    |
 | `Phase two` with `Label` as "alpha"               | `Default confirmed`            | `Phase three`                        | Text equality: literal value     |
 | `Phase two` with `Label` not as "alpha"           | `Custom confirmed`             | `Phase three`                        | Text inequality: literal value   |

@@ -5,13 +5,14 @@
  *  - Attribute inference from all usage sites.
  *  - Synthetic undefined row when the example table is empty.
  *  - Row augmentation for condition-referenced values.
+ *  - Implicit definition of an attribute constrained by an attribute-reference condition.
  *  - Combined interactions (empty table + condition value, multi-attribute combos, etc.).
  */
 
 import { describe, it } from "node:test"
 import * as assert from "node:assert/strict"
 
-import type { StateMachine } from "../sm.ast.d"
+import type { Condition, StateMachine } from "../sm.ast.d"
 import { completeStateMachines } from "../complete"
 
 function clone<T>(value: T): T {
@@ -615,4 +616,163 @@ describe("completeStateMachines — attribute-reference result values", () => {
         assert.deepEqual(pool, ["v1"], "no row synthesized for a reference's target attribute name")
     })
 })
+// --- Attribute-reference condition values ---
 
+/**
+ * A condition comparing an attribute against another attribute's value, e.g. `` `a2` as `a1` ``.
+ *
+ * @param attributeName Name of the referenced attribute.
+ * @param operator Comparison operator; defaults to the text equality form.
+ * @returns The reference-valued condition.
+ */
+function referenceCondition(attributeName: string, operator: Condition["operator"] = "as"): Condition {
+    return { operator, value: attributeName, valueIsReference: true }
+}
+
+describe("completeStateMachines — attribute-reference condition values", () => {
+    it("[TST-169] → [REQ-419]: registers the attribute constrained by a reference condition", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [{ name: "s1" }, { name: "s2" }],
+                data: { a1: "" },
+                dataExampleValues: [{ a1: "v1" }],
+                transitions: [
+                    {
+                        trigger: {
+                            type: "event",
+                            name: "e1",
+                            arguments: [{ name: "a2", condition: referenceCondition("a1") }],
+                        },
+                        result: { name: "s2" },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.ok("a2" in (stateMachines[0].data ?? {}), "`a2` must be registered by its own condition occurrence")
+    })
+
+    it("[TST-170] → [REQ-426]: implies a row per value of the referenced attribute", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [{ name: "s1" }, { name: "s2" }],
+                data: { a1: "" },
+                dataExampleValues: [{ a1: "1" }, { a1: "2" }],
+                transitions: [
+                    {
+                        states: [{ name: "s1", arguments: [{ name: "a2", condition: referenceCondition("a1", "=") }] }],
+                        trigger: { type: "event", name: "e1" },
+                        result: { name: "s2" },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.deepEqual(stateMachines[0].dataExampleValues, [
+            { a1: "1", a2: "" },
+            { a1: "2", a2: "" },
+            { a1: "1", a2: "1" },
+            { a1: "2", a2: "2" },
+        ])
+    })
+
+    it("[TST-171] → [REQ-426]: implies the value pinned by a literal condition in the same context", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [{ name: "s1" }, { name: "s2" }],
+                data: { a1: "" },
+                dataExampleValues: [{ a1: "1" }, { a1: "2" }],
+                transitions: [
+                    {
+                        states: [{
+                            name: "s1",
+                            arguments: [
+                                { name: "a1", condition: { operator: "=", value: "2" } },
+                                { name: "a2", condition: referenceCondition("a1", "=") },
+                            ],
+                        }],
+                        trigger: { type: "event", name: "e1" },
+                        result: { name: "s2" },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        // Only the combination satisfying both the literal condition and the reference is implied.
+        assert.deepEqual(stateMachines[0].dataExampleValues, [
+            { a1: "1", a2: "" },
+            { a1: "2", a2: "" },
+            { a1: "2", a2: "2" },
+        ])
+    })
+
+    it("[TST-172] → [REQ-426]: implies a row for a state's implied reference condition", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [
+                    { name: "s1" },
+                    { name: "s2", impliedConditions: [{ attribute: "a2", condition: referenceCondition("a1") }] },
+                ],
+                data: { a1: "" },
+                dataExampleValues: [{ a1: "v1" }],
+                transitions: [],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.deepEqual(stateMachines[0].dataExampleValues, [
+            { a1: "v1", a2: "" },
+            { a1: "v1", a2: "v1" },
+        ])
+    })
+
+    it("[TST-173] → [REQ-426]: implies no row for a non-equality reference condition", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [{ name: "s1" }, { name: "s2" }],
+                data: { a1: "" },
+                dataExampleValues: [{ a1: "1" }, { a1: "2" }],
+                transitions: [
+                    {
+                        states: [{
+                            name: "s1", arguments: [{ name: "a2", condition: referenceCondition("a1", "<>") }],
+                        }],
+                        trigger: { type: "event", name: "e1" },
+                        result: { name: "s2" },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        // `<>` states what the value must *not* be, so no single value follows from the reference.
+        assert.deepEqual(stateMachines[0].dataExampleValues, [
+            { a1: "1", a2: "" },
+            { a1: "2", a2: "" },
+        ])
+    })
+
+    it("[TST-174] → [REQ-426]: implies no row when the referenced attribute has no defined value", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [{ name: "s1" }, { name: "s2" }],
+                data: {},
+                dataExampleValues: [],
+                transitions: [
+                    {
+                        states: [{ name: "s1", arguments: [{ name: "a2", condition: referenceCondition("foreign") }] }],
+                        trigger: { type: "event", name: "e1" },
+                        result: { name: "s2" },
+                    },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        // `foreign` is declared by another machine, so this machine has no value to copy.
+        assert.deepEqual(stateMachines[0].dataExampleValues, [{ a2: "" }])
+    })
+})

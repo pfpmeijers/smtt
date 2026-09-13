@@ -16,6 +16,8 @@ import { grammar, Grammar } from "ohm-js"
 import { createSemantics, saveStateMachines } from "./sm.ast"
 import type { StateMachine, Trigger } from "./sm.ast.d"
 import { completeStateMachines } from "./complete"
+import { annotateExpansions } from "./expand"
+import { writeTransitionsReport } from "./transitions"
 import { validateStateMachines } from "./validate"
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
@@ -138,14 +140,21 @@ export function parseSource(source: string, sourceFile = "<unknown>"): StateMach
     }
 }
 
+/** Flags of a parse run. */
+export interface ParseOptions {
+    /** Also write the transition report next to the AST file. */
+    report?: boolean
+}
+
 /**
  * Parses every `.state-machine.md` file in a directory into a `StateMachine` AST.
  *
  * @param inputDir The directory path containing `.state-machine.md` files.
  * @param astFile Optional file path to write the combined JSON AST result.
+ * @param options Optional flags: `report` also writes the transition report beside `astFile`.
  * @returns Array of parsed and validated `StateMachine` objects, sorted by source file path.
  */
-export function parse(inputDir: string, astFile?: string): StateMachine[] {
+export function parse(inputDir: string, astFile?: string, options: ParseOptions = {}): StateMachine[] {
     const sourceFiles = collectFiles(inputDir).sort((firstFile, secondFile) => firstFile.localeCompare(secondFile))
 
     const stateMachines = sourceFiles.map(sourceFile => {
@@ -158,10 +167,12 @@ export function parse(inputDir: string, astFile?: string): StateMachine[] {
     // FIXME: Expect a validate-minimal-AST here.
     completeStateMachines(stateMachines)
     validateStateMachines(stateMachines)
+    annotateExpansions(stateMachines)
     if (astFile) {
         const astDir = path.dirname(astFile)
         fs.mkdirSync(astDir, { recursive: true })
         saveStateMachines(astFile, stateMachines)
+        if (options.report) writeTransitionsReport(stateMachines, astDir)
     }
     return stateMachines
 }

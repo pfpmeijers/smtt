@@ -32,7 +32,9 @@
 #   transitions apply; the condition then filters the data rows.
 # - [REQ-093] Boundary notation shall follow interval convention: `[` and `]` denote inclusive
 #   bounds, `(` and `)` denote exclusive bounds.
-# - [REQ-094] Mixed forms shall be allowed, e.g. `` `a in [1, 4)` `` means `1 <= a < 4`.
+# - [REQ-094] Mixed forms shall be allowed, e.g. `` `a in [1, 4)` `` means `1 <= a < 4`. The bounds
+#   and their brackets reach the generator as one value string (REQ-145, `smtt.parse.validate.md`);
+#   the fully exclusive `` `a in (1, 4)` `` is the set form, not a range.
 
 Feature: m
 

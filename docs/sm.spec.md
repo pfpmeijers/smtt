@@ -1,7 +1,10 @@
 # State machine specification
 
-This document defines the formalism for specifying state machines in
-`*.state-machine.md` files.
+This document defines the formalism for specifying a state machine in a
+`*.state-machine.md` file.
+
+The document uses an instructions style instead of a specification style.
+For a specification of the formalism, see the [sm.ohm](../src/parse/sm.ohm) file.
 
 > **Authoring principle** — state machine files are intended to read as natural,
 > plain English. State machine names, state names, trigger names, and attribute
@@ -11,22 +14,22 @@ This document defines the formalism for specifying state machines in
 
 ## File structure
 
-Each state machine file should follow this general structure:
+Each state machine file must follow this general structure:
 
 1.  **Title (H1)**: The name of the state machine.
-2.  **Overview (Optional)**: A brief description of the state machine's 
+2.  **Overview (Optional)**: A brief description of the state machine's
     purpose.
-3.  **States (H2)**: A bulleted list of possible states.
-4.  **Initial State**: The state in which the machine starts.
+3.  **States (H2)**: A bulleted list of possible states, and implied data
+    conditions.
+4.  **Initial State**: The state in which the state machine starts.
 5.  **Data (H2, Optional)**: Data associated with the state machine.
-6.  **Transitions (H2)**: The rules governing state changes, with optional 
+6.  **Transitions (H2)**: The rules governing state changes, with optional
     subsections:
-    1. **Default preconditions (H3, Optional)**: Default precondition states per
-       dependent machine.
+    1. **Default preconditions (H3, Optional)**: Default precondition states.
     2. **Rules (H3)**: The transitions table.
-    3. **Impossible  (H3, Optional)**: Declared impossible trigger-state
+    3. **Impossible  (H3, Optional)**: Declared impossible state - trigger
        combinations.
-    4. **Irrelevant (H3, Optional)**: Declared irrelevant trigger-state
+    4. **Irrelevant (H3, Optional)**: Declared irrelevant state - trigger
        combinations.
 7.  **Notes (H2, Optional)**: Additional information.
 
@@ -49,17 +52,17 @@ Examples:
 
 ---
 
-
 ## States
 
-List all valid states.
+Create a "States" H2 section. 
 
-- **Format**: Use a bulleted list.
+List all valid states:
+- **Format**: Use a `-` bulleted list. 
 - **Backticks** — Put state names between backticks.
 - **Description** (optional): Use `: some text` format for additional info 
   about a state.
-  - Use the first `:` to separate the state name from the optional description.
-  - Additional `:` characters will be treated as literal text in the description
+  - The first `:` separates the state name from the description.
+  - Additional `:` characters are treated as literal text in the description
     part.
   - Use indented continuation lines for longer descriptions that do not fit on a
     single line.
@@ -71,25 +74,21 @@ Example:
 ```markdown
 ## States
 
-- `User authenticated`: The user is signed in with his email address.
+- `User authenticated`: The user is signed in with an email address.
 - `User unauthenticated`: The user is not signed in.
-  Only applies when there is no active session.
+   Only applies when there is no active session.
 ```
 
 ### Implied conditions
 
-Some states imply that a data attribute (explained below) holds a specific 
-value. Declare these as indented sub-bullets under the state entry.
+Some states imply that a state machine's [data attribute](#Data) 
+holds specific value(s). 
+Declare these as indented sub-bullets under the state entry.
 
-- **Format**: Place one implied condition per sub-bullet (` - ` prefixed
-  with two spaces of indentation) immediately after the state declaration
-  (after the description, if any).
-  the `## Data` section. 
-- **Attribute name**: Write the full attribute name as declared in
-- **Backticks and quotes** — Put attribute names between backticks and literal
-  text values between double quotes.
-- **Supported operators**: All [value condition operators](#value-conditions) 
-  are supported.
+- **Format**: Place one implied condition per sub-bullet (indented `-`)
+  immediately after the state declaration (after the description, if any). 
+- **Conditions**: See [value conditions](#value-conditions) for the
+  condition format as such. All condition operators are supported. 
 
 Examples:
 
@@ -233,7 +232,7 @@ unless its `State` cell already mentions any user session state.
 
 - **Format**: Use a Markdown table with columns: 
   - **#** (optional): An optional unique string identifier for the transition 
-    accross all state machines, e.g., `001`, `T01a`.
+    across all state machines, e.g., `001`, `T01a`.
   - **States**: The combined state: all precondition states (external 
     state machines) and the state machine's own precondition state, separated 
     by `,`. 
@@ -340,24 +339,38 @@ This describes the relationship between the value at that point in the
 transition and the value of the same attribute established elsewhere in the same
 transition context.
 
-##### Negation modifiers: `not` / `different` / `unequal` / `other`
+##### A second value of the same kind
 
-The value is the first value other than the one the attribute currently holds (as
-declared by the corresponding reference in the same transition row).
+When a transition needs a second value alongside an attribute's current one —
+a new identifier, a replacement address, a competing bid — declare it as an
+attribute of its own and reference it plainly. The example values table then
+states how the two relate, row by row.
 
-- Semantics: the attribute value is different from the attribute value used 
-  elsewhere in the same transition rule.
-- When this modifier is used, there shall be at least one other value specified
-  for the attribute in the example values table (at least two distinct values in total).
-- The first different value from the example values table is taken for the scenario.
-- All these keywords are synonyms.
+- **Naming**: Give the second attribute a name that reads naturally in the
+  sentence, e.g. `new email address` beside `email address`.
+- **Relating the values**: Pair the values per row in the example values table.
+  Writing a different value in each column of a row is what makes the two
+  differ; the values are the author's to choose.
 
-Examples:
+Example:
+
+```markdown
+## Data
+
+- `email address`: The address the user is signed in under.
+- `new email address`: The address the user re-signs in under.
+
+Example values:
+
+| `email address`   | `new email address` |
+|-------------------|---------------------|
+| "info@domain.com" | "other@example.com" |
+| "other@example.com" | "info@domain.com" |
+```
 
 - State: `` `User authenticated` with `email address` ``
-- Trigger: `` `User re-signed in` with different `email address` ``. 
-  Semantics: the user authenticated under a different email address than   
-  the one referenced in the precondition.
+- Trigger: `` `User re-signed in` with `new email address` `` — the user
+  authenticates under the address the row pairs with the current one.
 
 ##### Sequence modifiers: `next` / `previous` / `first` / `last`
 
@@ -403,6 +416,11 @@ Value conditions apply to `States` cell and `Trigger` cell arguments (and to
 state implied conditions and default preconditions); a `Result` cell argument
 instead uses [result values](#result-values), a separate `set to` syntax.
 
+A condition value may also be an
+[attribute reference](#attribute-reference-values) instead of a literal — the
+condition then compares the attribute against another attribute's value rather
+than against a fixed one.
+
 Supported numerical condition operators:
 
 | Syntax                              | Meaning                                                       |
@@ -416,22 +434,28 @@ Supported numerical condition operators:
 | `` `attribute` in [low, high]``     | Attribute falls within the inclusive <br/>range `low`–`high`  |
 | `` `attribute` not in [low, high]`` | Attribute falls outside the inclusive <br/>range `low`–`high` |
 
+- **Range brackets** — A square bracket includes the bound, a round bracket
+  excludes it, so `` `score` in [10, 20) `` reads as `10 <= score < 20`. Write
+  at least one square bracket: `[low, high]`, `[low, high)` and `(low, high]`
+  are ranges, while `(low, high)` is the set form below — both spellings use
+  `in`, so the brackets are what tell a range from a set.
+
 Supported text condition operators:
 
-| Syntax                                     | Meaning                                           |
-|--------------------------------------------|----------------------------------------------------|
-| `` `attribute` as "value" ``              | Attribute equals `"value"`                         |
-| `` `attribute` is "value" ``              | Attribute equals `"value"` (synonym for `as`)      |
-| `` `attributes` are "values" ``           | Attribute equals `"value"` (synonym for `as`)      |
-| `` `attribute` not as "value" ``          | Attribute is not equal to `"value"`                |
-| `` `attribute` is not "value" ``          | Attribute is not equal to `"value"`                |
-| `` `attributes` are not "values" ``       | Attribute is not equal to `"value"`                |
-| `` `attribute` in ("v1", "v2", ...)``     | Attribute is one of the listed values (set)        |
-| `` `attribute` not in ("v1", "v2", ...)`` | Attribute is none of the listed values (set)       |
-| `` `attribute` undefined``                | Attribute has no value                             |
-| `` `attribute` is undefined``             | Attribute has no value (alias of `undefined`)      |
-| `` `attribute` defined``                  | Attribute has a value                              |
-| `` `attribute` is defined``               | Attribute has a value (alias of `defined`)         |
+| Syntax                                    | Meaning                                       |
+|-------------------------------------------|-----------------------------------------------|
+| `` `attribute` as "value" ``              | Attribute equals `"value"`                    |
+| `` `attribute` is "value" ``              | Attribute equals `"value"` (synonym for `as`) |
+| `` `attributes` are "values" ``           | Attribute equals `"value"` (synonym for `as`) |
+| `` `attribute` not as "value" ``          | Attribute is not equal to `"value"`           |
+| `` `attribute` is not "value" ``          | Attribute is not equal to `"value"`           |
+| `` `attributes` are not "values" ``       | Attribute is not equal to `"value"`           |
+| `` `attribute` in ("v1", "v2", ...)``     | Attribute is one of the listed values (set)   |
+| `` `attribute` not in ("v1", "v2", ...)`` | Attribute is none of the listed values (set)  |
+| `` `attribute` undefined``                | Attribute has no value                        |
+| `` `attribute` is undefined``             | Attribute has no value (alias of `undefined`) |
+| `` `attribute` defined``                  | Attribute has a value                         |
+| `` `attribute` is defined``               | Attribute has a value (alias of `defined`)    |
 
 ##### Values
 
@@ -444,10 +468,8 @@ Supported text condition operators:
 - **Attribute reference** — A *backticked* value (not quoted) is not a literal
   at all — it names another data attribute and is instead an
   [attribute reference](#attribute-reference-values). The backtick delimiter
-  makes this distinction syntactic: no name-matching is involved. A condition
-  value never resolves to a reference in practice — only a
-  [result value](#result-values) does — but the same backtick-vs-quote
-  disambiguation applies to both.
+  makes this distinction syntactic: no name-matching is involved. Both a
+  condition value and a [result value](#result-values) may be a reference.
 
 ##### Condition semantics
 
@@ -491,23 +513,31 @@ Example:
 - `` `Cart empty`, so `item count` set to 0`` — postcondition: the cart is
   empty after the transition.
 
-##### Attribute reference values
+#### Attribute reference values
 
-A result value may name a data attribute instead of a literal — the value is
-then resolved dynamically, from that other attribute's own current value,
-rather than being fixed.
+A condition value or a result value may name a data attribute instead of a
+literal — the value is then resolved dynamically, from that other attribute's
+own value, rather than being fixed.
 
-- **Disambiguation** — Syntactic, by delimiter: a backticked result value is
-  always a reference; a double-quoted (or bare numeric) value is always a
-  literal. No name-matching is involved.
+- **Disambiguation** — Syntactic, by delimiter: a backticked value is always a
+  reference; a double-quoted (or bare numeric) value is always a literal. No
+  name-matching is involved.
 - **Target** — The referenced name must be a data attribute declared (or
   inferred from usage) in *some* state machine in the project — not
-  necessarily the one owning the result value. Naming an attribute that
-  exists nowhere is an error.
-- **`Result` cell only** — An attribute reference is only supported on a
-  `Result` cell's result value (a postcondition). Using one in a `States` or
-  `Trigger` cell condition is an error: those conditions filter against a
-  fixed value, which a dynamically-resolved reference cannot provide.
+  necessarily the one owning the reference. Naming an attribute that exists
+  nowhere is an error.
+- **As a result value** — On a `Result` cell, the reference is the value the
+  attribute takes on after the transition (a postcondition).
+- **As a condition value** — In a `States` cell, a `Trigger` cell, a state
+  implied condition, or a default precondition, the reference is what the
+  attribute is compared against: both values are read from the same example
+  combination, so the condition relates two attributes rather than pinning one
+  to a literal.
+- **Operators** — A reference is only supported on the scalar comparison
+  operators: `=`, `<>`, `<`, `>`, `<=`, `>=`, `as`, `is`, `are`, `not as`,
+  `is not`, `are not`. The set (`in (…)`), range (`in [low, high]`) and
+  presence (`defined` / `undefined`) forms compare against fixed values and
+  reject a reference.
 
 Example:
 
@@ -521,14 +551,64 @@ Example:
 
 ### Rules
 
-| States                              | Trigger         | Result                                                 |
-|-------------------------------------|-----------------|---------------------------------------------------------|
-| `Painting listed` with `list price` | `Painting sold` | `Painting sold` with `sale price` set to `list price`  |
+| States                              | Trigger         | Result                                                |
+|-------------------------------------|-----------------|-------------------------------------------------------|
+| `Painting listed` with `list price` | `Painting sold` | `Painting sold` with `sale price` set to `list price` |
 ```
 
 After `Painting sold`, `sale price` takes on whatever value `list price`
 currently holds for that scenario — a dynamic postcondition, rather than one
 fixed literal value.
+
+##### Implied attribute and values
+
+Referring to an attribute with `as` (or `=`) also *defines* the constrained
+attribute, so it needs no declaration of its own:
+
+- The attribute is added to the data attributes of the state machine, exactly
+  as any other attribute reference in a transition does.
+- Its example values follow from the attribute it is compared to: each value
+  of the referenced attribute implies an example combination in which both
+  attributes hold that same value. Declaring example values for the
+  constrained attribute is therefore optional.
+
+The other operators say what a value must *not* be (`<>`, `not as`), or state
+an open-ended relation (`<`, `>`, `<=`, `>=`), so no value follows from them —
+give the attribute its own example values when using those. The same holds when
+the referenced attribute belongs to another state machine: its values live in
+that machine's own table, so declare example values for the constrained
+attribute in this one.
+
+Example:
+
+```markdown
+## Data
+
+- `list price`
+
+Example values:
+
+| `list price` |
+|--------------|
+| 10           |
+| 20           |
+
+## Transitions
+
+### Rules
+
+| States                              | Trigger                                 | Result             |
+|-------------------------------------|-----------------------------------------|--------------------|
+| `Painting listed` with `list price` | `Bid placed` with `bid` as `list price` | `Painting offered` |
+```
+
+`bid` is neither declared under `## Data` nor given example values, yet the
+transition covers the combinations where `bid` equals `list price`: `bid` 10
+with `list price` 10, and `bid` 20 with `list price` 20.
+
+Note that the referenced attribute only appears as a column of the generated
+example values when the transition also mentions it as an argument — as
+`` with `list price` `` does above.
 
 ### Impossible state-trigger combinations
 
@@ -598,9 +678,9 @@ for user authentication and these combinations need not be specified separately.
 
 Backticks and double quotes delimit tokens for parser disambiguation, and the
 choice of delimiter is meaningful: a backticked token always *names* something
-(a state machine, state, trigger, or attribute — or, as a result value, an
-[attribute reference](#attribute-reference-values)); a double-quoted token is
-always a literal text value.
+(a state machine, state, trigger, or attribute — or, as a condition or result
+value, an [attribute reference](#attribute-reference-values)); a double-quoted
+token is always a literal text value.
 
 - **Required targets**: State machine names, state names, trigger names, and
   attribute names are always backticked. Literal text-based attribute values
@@ -651,6 +731,7 @@ Initial state: `State A`
 ## Data
 
 - `name`
+- `new name`
 
 ## Transitions
 
@@ -664,7 +745,7 @@ Initial state: `State A`
 |----------------------------------------------|----------------------|----------------------------------|-------|
 | `State A`                                    | `Event X`            | `State B`                        |       |
 | `State B`                                    | `Other state active` | `State A`                        |       |
-| `Other state active` under `name`, `State A` | `Event Y` for `name` | `State B` under different `name` |       |
+| `Other state active` under `name`, `State A` | `Event Y` for `name` | `State B` under `new name`       |       |
 | `State A` with `count` > 0                   | `Event Z`            | `State B`                        |       |
 ```
 

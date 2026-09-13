@@ -116,9 +116,12 @@ StateMachine {
     = none eol            -- none
     | defaultPrecondition+ -- withEntries
 
+  // A described entry parses its arguments with `argumentSuffixBeforeDescription` so a trailing
+  // `: description` ends the argument instead of being absorbed into its suffix; an entry without
+  // a description keeps the plain, greedy suffix.
   defaultPrecondition
-    = listItem stateReference defaultPreconditionDescription -- withDescription
-    | listItem stateReference comment? eol                   -- withoutDescription
+    = listItem stateReference<argumentSuffixBeforeDescription> defaultPreconditionDescription -- withDescription
+    | listItem stateReference<argumentSuffix> comment? eol                                    -- withoutDescription
 
   defaultPreconditionDescription
     = description<listItem>
@@ -156,7 +159,7 @@ StateMachine {
   // A comma-separated list of state references. Ordering and which entry
   // belongs to which machine is interpreted post-parse.
   stateCombination
-    = stateReference (comma stateReference)*
+    = stateReference<argumentSuffix> (comma stateReference<argumentSuffix>)*
 
   // --- State reference ---
 
@@ -164,16 +167,18 @@ StateMachine {
   // trigger share the same structure: a backticked `identifier` optionally
   // followed by one or more `Argument`s.
 
-  stateReference = identifier argument? (argumentSeparator argument)*
+  // The `suffix` parameter is the suffix rule the arguments use: it decides where an argument
+  // ends, which differs between a table cell and a described list entry.
+  stateReference<suffix> = identifier argument<suffix>? (argumentSeparator argument<suffix>)*
 
   argumentSeparator
     = literal<"and">
 
   // --- State argument ---
 
-  argument
-    = hsp? argumentPreQualifier? argumentModifier argumentPostQualifier? argumentExpression argumentSuffix? -- withModifier
-    | hsp? argumentQualifier? argumentExpression argumentSuffix?                                            -- noModifier
+  argument<suffix>
+    = hsp? argumentPreQualifier? argumentModifier argumentPostQualifier? argumentExpression suffix? -- withModifier
+    | hsp? argumentQualifier? argumentExpression suffix?                                            -- noModifier
 
   // Separate tokens for Qualifier position to keep that explicit in the AST.
   argumentPreQualifier
@@ -188,14 +193,21 @@ StateMachine {
     | literal<"through">
 
   argumentModifier
-    = literal<"not"> | literal<"different"> | literal<"unequal"> | literal<"other">
-    | literal<"next"> | literal<"previous"> | literal<"first"> | literal<"last">
+    = literal<"next"> | literal<"previous"> | literal<"first"> | literal<"last">
     | literal<"incremented"> | literal<"decremented">
 
   // Suffix literals that follow an argument expression and its optional condition.
   // Stops before the next argument, separator, or cell boundary.
   argumentSuffix
     = (~argumentSeparator ~comma ~pipe ~nl ~commentStart any)+
+
+  // As `argumentSuffix`, but also stopping before a `: description` tail, so the description of a
+  // list entry whose state reference carries arguments stays a description.
+  argumentSuffixBeforeDescription
+    = (~argumentSeparator ~comma ~pipe ~nl ~commentStart ~descriptionStart any)+
+
+  descriptionStart
+    = ":"
 
   // Argument expressions reference a backticked `identifier` directly.
   argumentExpression
@@ -207,16 +219,25 @@ StateMachine {
   // for the attribute is checked post-parse. A range or set condition only
   // ever takes literal values (a reference is never one of several values);
   // a scalar comparison takes an `attributeValue`, which may be a literal or
-  // a reference to another attribute. Shared with `resultAttributeExpression`
-  // below, since a result's value/reference is the same shape.
+  // a reference to another attribute, e.g. `` `attr1` as `attr2` ``, compared
+  // per example row against that attribute's own value. Shared with
+  // `resultAttributeExpression` below, since a result's value/reference is the
+  // same shape.
+  // A range keeps its bracket characters, since they carry each bound's inclusivity. `(` is also
+  // the set delimiter and both forms share the `in` operator, so the brackets are what tells them
+  // apart: a range needs at least one square bracket, leaving the symmetric `( … )` to the set
+  // form. `rangeLeftOpen` is therefore tried before `set`, and falls through to it on `)`.
   conditionalAttributeExpression
-    = identifier rangeOperator literal<"["> value literal<","> value literal<"]"> -- range
+    = identifier rangeOperator literal<"["> value literal<","> value rangeClose   -- range
+    | identifier rangeOperator literal<"("> value literal<","> value literal<"]"> -- rangeLeftOpen
     | identifier setCompare literal<"("> value (comma value)* literal<")">        -- set
     | identifier numericOperator attributeValue                                  -- numericComparison
     | identifier textCompare attributeValue                                      -- textComparison
     | identifier undefinedCompare                                                -- undefined
     | identifier definedCompare                                                  -- defined
 
+  // A literal (a quoted string or a bare number) or — by the backtick delimiter alone, with no
+  // name-matching involved — a reference naming another attribute to resolve the value from.
   attributeValue
     = value      -- literal
     | identifier -- reference
@@ -233,6 +254,11 @@ StateMachine {
   rangeOperator
       = literal<"in">     -- in
       | literal<"not in"> -- notIn
+
+  // A square-bracketed range closes either way: `[a, b]` (inclusive upper) or `[a, b)`
+  // (exclusive upper).
+  rangeClose
+    = literal<"]"> | literal<")">
 
   textCompare
     = literal<"as"> | literal<"is"> | literal<"are">             -- is
@@ -263,7 +289,7 @@ StateMachine {
   // represented by the same grammar rule; post-parse processing distinguishes
   // the trigger kind.
   trigger
-    = stateReference
+    = stateReference<argumentSuffix>
 
   // --- Impossible / Irrelevant subsections ---
 

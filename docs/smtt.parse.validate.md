@@ -37,12 +37,14 @@ values are only guaranteed once the AST is complete.
    - Classify condition/result value references (backtick vs. quote/number)
 2. Validate raw AST
 3. Classify triggers
-4. Complete AST
+4. Complete AST (specified in `smtt.parse.complete.md`)
    a. Infer data attributes from every usage site
    b. Synthesise undefined example rows for attributes with no values
    c. Augment the example table with condition/result-referenced value
       combinations
 5. Validate the complete AST
+6. Annotate state triggers with their resolved expansion chains
+   (specified in `smtt.parse.complete.md`)
 ```
 
 Reference classification is not a separate pipeline step: a condition or
@@ -67,6 +69,13 @@ unaffected by completion.
 - [REQ-402] State names shall be globally unique across all state machines in
   the AST.
 
+- [REQ-409] The state machine owning a state name shall be the one whose
+  `states` array holds an entry with that name, matched case-insensitively.
+  A name declared by more than one machine shall not resolve to either of
+  them: the lookup shall report the ambiguity instead. REQ-402 makes such a
+  name an error, so an ambiguity reaching the lookup is an internal
+  inconsistency, not an authoring case.
+
 - [REQ-403] Every precondition state reference (explicit transition state or
   default precondition state) shall resolve to a declared state in the AST.
 
@@ -76,9 +85,17 @@ unaffected by completion.
 - [REQ-405] Every transition result state shall be declared in the same machine
   that owns the transition.
 
-- [REQ-406] A state-trigger transition shall resolve to at least one candidate
-  source transition from another state machine, and that source transition's
-  result arguments shall satisfy the trigger argument contract.
+- [REQ-406] A state trigger naming a state that transitions do produce shall
+  have at least one producing transition able to act as its source: one whose
+  result satisfies the trigger's arguments and whose own precondition states do
+  not conflict with the referring transition's (REQ-430). Otherwise nothing in
+  the model can make the transition fire. This holds along the whole chain: a
+  trigger that resolves only through a source whose own trigger is unresolvable
+  is unresolvable itself.
+
+  A trigger naming a state no transition produces at all is not covered here —
+  it then has no source rather than an incompatible one, which a consumer
+  reports as it sees fit.
 
 - [REQ-407] Within one transition precondition list (`states`), each state
   name shall appear at most once, regardless of arguments.
@@ -96,19 +113,41 @@ unaffected by completion.
 
 - [REQ-416] State-triggers shall not resolve via a cyclic definition.
 
-- [REQ-424] A value classified as an attribute reference (`valueIsReference`)
-  shall only appear on a result argument's `result`. State implied
-  conditions, default-precondition arguments, transition state arguments, and
-  transition trigger arguments reject a reference-classified condition value.
+- [REQ-145] A range condition's `value` shall be a single string holding both
+  bounds with the bracket characters the author wrote, e.g. `[1, 4)`. The
+  brackets carry each bound's inclusivity — `[` and `]` include the bound, `(`
+  and `)` exclude it — which nothing else in the condition records. A range
+  shall carry at least one square bracket: `[low, high]`, `[low, high)` and
+  `(low, high]` are ranges, while the symmetric `(low, high)` is the set form
+  (`in` with a list of values), since both forms share the `in` operator and
+  the brackets are what tell them apart.
+
+- [REQ-424] A value shall be classified as an attribute reference
+  (`valueIsReference`) by its delimiter alone: a backticked condition or
+  result value names another
+  data attribute, a double-quoted or bare numeric value is a literal. No name
+  matching is involved. A reference shall denote the value the named attribute
+  holds in the same `dataExampleValues` row: a result assigns its attribute
+  that value, a condition compares its attribute against it. A reference shall
+  only appear where a single example-values row can resolve it: on a result
+  argument's `result`, or on a condition using a scalar comparison operator
+  (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`, `not as`). A set (`in`, `not in`),
+  range (`in range`, `not in range`), or unary (`undefined`, `defined`)
+  condition rejects a reference-classified value: it compares against a fixed
+  list of literals, or against no value at all, which a dynamically resolved
+  reference cannot provide.
 
 ## Complete AST validation
 
-The following requirements describe the guarantees that hold of the complete
-AST: every attribute used anywhere is declared, every declared attribute has
-at least one example value, and every condition-referenced value is present
-among an attribute's example values. These constraints are about the `data`
-map and `dataExampleValues` table, both of which raw AST authors may leave
-partially or entirely unspecified.
+The following requirements shall hold on the complete AST. They constrain the
+`data` map and the `dataExampleValues` table, both of which raw AST authors
+may leave partially or entirely unspecified.
+
+What the completion step itself adds to reach that state — attribute
+inference (REQ-419), synthesised undefined rows (REQ-420), and augmented
+value combinations (REQ-421, REQ-426) — is specified separately, in
+`smtt.parse.complete.md`. The requirements below are checks on the result,
+whether it was produced by that step or supplied ready-made.
 
 - [REQ-417] Every `dataExampleValues` row in the complete AST shall include a
   column for every attribute present in the machine's `data` map.
@@ -117,40 +156,43 @@ partially or entirely unspecified.
   (argument condition, argument result, or implied state condition) shall be
   present in the example data values table for that attribute.
 
+- [REQ-429] A condition shall be evaluated against a single attribute value:
+  `=` and `as` hold when the two values are equal — numerically when both are
+  numeric, textually otherwise — and `<>` and `not as` when they are not; the
+  ordering operators `<`, `>`, `<=` and `>=` hold only between numeric values;
+  `in` and `not in` test membership of the listed values; `in range` and
+  `not in range` test the bounds and their inclusivity (REQ-145); `defined` and
+  `undefined` test presence. An absent value — an empty cell or a missing
+  column — shall satisfy `undefined` only, and never any comparison.
+
+- [REQ-430] A state trigger shall resolve to those transitions whose result
+  state name equals the trigger's state name and whose result is compatible
+  with the trigger's arguments: per shared attribute the modifiers shall be
+  equal, and where the source assigns a value and the
+  trigger carries a condition, that value shall satisfy the condition
+  (REQ-429). A trigger argument the source's result does not declare is
+  satisfied when the source references that attribute anywhere else — in its
+  own precondition states or its own trigger. A candidate whose own
+  precondition states pin a different state of a machine the referring
+  transition also pins is not a resolution, unless the candidate's own trigger
+  reaches that machine again. Resolution is structural: it never consults
+  example values.
+
 - [REQ-411] When a transition references one or more arguments, at least one
   contributing machine in that transition context shall provide one or more
   example data rows for these argument(s).
 
-- [REQ-413] For modifiers `not`, `other`, `different`, `unequal`, `next`, and
-  `previous`, the attribute's example values pool shall contain at least two
-  distinct values.
+- [REQ-413] For the `next` and `previous` modifiers, the attribute's example
+  values pool shall contain at least two distinct values.
 
 - [REQ-414] For modifiers `incremented` and `decremented`, each value for the
   referenced attribute in the example values pool shall be a finite numeric
   value.
 
-- [REQ-419] The complete AST shall declare a data attribute for every
-  attribute referenced anywhere in the machine: `dataExampleValues` column
-  names, state implied-condition attribute names, default-precondition
-  argument names, and transition state/event-trigger/result argument names.
-  State-trigger arguments are excluded because they belong to the triggering
-  machine, not the current one. A result argument whose result is an
-  attribute reference (REQ-423/REQ-424) is likewise excluded for that
-  occurrence: its value is never drawn from its own example values, only
-  resolved dynamically from the referenced attribute. An attribute declared
-  only through inference carries an empty description.
-
-- [REQ-420] Every declared data attribute shall have at least one example
-  value. When an attribute has no example values, the complete AST shall
-  provide a row representing an undefined/absent value (`""`) for every
-  attribute. Every row in the table shall include every declared attribute as
-  a column, with `""` standing in for any attribute absent from that row.
-
-- [REQ-421] Every value referenced by a condition or result (argument
-  condition, argument result, or implied state condition) shall be present
-  among the example values for that attribute. When a context (e.g. a single
-  transition) constrains multiple attributes at once, each required
-  combination of values across those attributes shall be satisfied by at
-  least one row. A condition or result classified as an attribute reference
-  (REQ-423) contributes no required value: it pins no literal, so the
-  referenced attribute name is never mistaken for one.
+- [REQ-425] Every attribute-reference value — a condition's as well as a
+  result's — shall name a data attribute declared in some state machine of
+  the AST. The declaring machine need not be the one owning the
+  reference: a reference is resolved against whichever machine declares that
+  name. Naming an attribute that exists nowhere is an error. The check runs on
+  the complete AST, so an attribute declared only by inference (REQ-419)
+  counts as declared.

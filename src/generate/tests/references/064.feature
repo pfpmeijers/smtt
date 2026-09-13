@@ -18,7 +18,7 @@
 #          name: s
 #          arguments:
 #            - preQualifier: under
-#              modifier: different
+#              modifier: next
 #              name: a
 #        notes: ""
 # Covers requirements:
@@ -28,11 +28,11 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s under "<different a>"; when e
+  Scenario Outline: [] s "<a>" → s under "<next a>"; when e
     Given initially s "<a>"
     When e
-    Then expect s under "<different a>"
+    Then expect s under "<next a>"
     Examples:
-      | a | different a |
-      | 1 | 2           |
-      | 2 | 1           |
+      | a | next a |
+      | 1 | 2      |
+      | 2 | 1      |

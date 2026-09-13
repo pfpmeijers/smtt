@@ -3,6 +3,9 @@ import * as path from "path"
 import { fileURLToPath } from "url"
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv"
 import type { Argument, Condition, DefaultPrecondition, Result, StateMachine, Transition } from "./sm.ast.d"
+import { buildTaggedTransitions, collectChainStateMachineNames, findUnresolvableTrigger } from "./expand"
+import { effectiveExampleValues } from "./examples"
+import { buildStateOwnership } from "./ownership"
 
 /**
  * JSON Schema validation for the parsed state-machine AST, checked against
@@ -165,12 +168,15 @@ export function validateStateMachines(data: unknown): void {
     validateStructuralRefs(stateMachines)
     validateModifierBaseReferences(stateMachines)
     validateModifierValuePoolSize(stateMachines)
-    validateConditionReferenceScope(stateMachines)
-    validateResultReferenceTargets(stateMachines)
+    validateReferenceOperators(stateMachines)
+    validateReferenceTargets(stateMachines)
 
-    // [REQ-163] Business-rule check performed after schema validation
-    // succeeds, since it relies on `data` actually conforming to the
-    // `StateMachine[]` shape.
+    // [REQ-406/REQ-411] Business-rule checks performed after schema validation
+    // succeeds, since they rely on `data` actually conforming to the
+    // `StateMachine[]` shape. Trigger resolution runs first: a transition whose
+    // trigger has no cause would otherwise be reported for the example values it
+    // could not reach.
+    validateStateTriggerResolution(stateMachines)
     validateExampleValuesPresence(stateMachines)
 }
 
@@ -256,23 +262,6 @@ function transitionReferencesArguments(
         || hasArguments(transition.trigger.arguments)
         || hasArguments(transition.result.arguments)
     )
-}
-
-/**
- * Maps each state name (lower-cased) to the name of the machine that declares it.
- *
- * @param stateMachines Parsed state-machine AST nodes.
- * @returns Ownership map keyed by lower-cased state name.
- */
-function buildOwnership(stateMachines: StateMachine[]): Record<string, string> {
-    const ownership: Record<string, string> = {}
-    for (const stateMachine of stateMachines) {
-        for (const state of stateMachine.states) {
-            const key = state.name.toLowerCase()
-            if (!(key in ownership)) ownership[key] = stateMachine.name
-        }
-    }
-    return ownership
 }
 
 /**
@@ -393,7 +382,7 @@ export function validateStateNameUniqueness(stateMachines: StateMachine[]): void
  * @throws Error When a state reference violates structural ownership rules.
  */
 export function validateStructuralRefs(stateMachines: StateMachine[]): void {
-    const ownership = buildOwnership(stateMachines)
+    const ownership = buildStateOwnership(stateMachines)
 
     for (const stateMachine of stateMachines) {
         const ownStateNames = buildOwnStateSet(stateMachine)
@@ -473,7 +462,7 @@ export function validateStructuralRefs(stateMachines: StateMachine[]): void {
  * @throws Error When a modified argument has no unmodified base in the same transition context.
  */
 export function validateModifierBaseReferences(stateMachines: StateMachine[]): void {
-    const ownership = buildOwnership(stateMachines)
+    const ownership = buildStateOwnership(stateMachines)
 
     for (const stateMachine of stateMachines) {
         const defaultPreconditions = stateMachine.defaultPreconditions ?? []
@@ -508,9 +497,10 @@ export function validateModifierBaseReferences(stateMachines: StateMachine[]): v
  * @throws Error When modifier constraints are not satisfiable by the available value pools.
  */
 export function validateModifierValuePoolSize(stateMachines: StateMachine[]): void {
-    const ownership = buildOwnership(stateMachines)
+    const ownership = buildStateOwnership(stateMachines)
+    const taggedTransitions = buildTaggedTransitions(stateMachines)
     const machineByName = new Map(stateMachines.map((stateMachine) => [stateMachine.name, stateMachine]))
-    const requiresTwoDistinctValues = new Set(["not", "other", "different", "unequal", "next", "previous"])
+    const requiresTwoDistinctValues = new Set(["next", "previous"])
     const requiresNumericValues = new Set(["incremented", "decremented"])
 
     for (const stateMachine of stateMachines) {
@@ -522,12 +512,12 @@ export function validateModifierValuePoolSize(stateMachines: StateMachine[]): vo
             const modifiedArguments = transitionArguments.filter((argument) => Boolean(argument.modifier))
             if (modifiedArguments.length === 0) continue
 
-            const contributingNames = collectContributingMachineNames(
+            const contributingNames = collectChainStateMachineNames(
                 stateMachine,
                 transition,
                 effectiveDefaults,
                 ownership,
-                stateMachines,
+                taggedTransitions,
             )
 
             const valuePoolByAttribute = new Map<string, Set<string | undefined>>()
@@ -573,27 +563,33 @@ export function validateModifierValuePoolSize(stateMachines: StateMachine[]): vo
     }
 }
 
+/** Condition operators that compare against a single scalar value, and therefore accept an
+ *  attribute reference as that value (REQ-424). The set (`in`, `not in`) and range (`in range`,
+ *  `not in range`) operators take a fixed list of literals instead, and the unary `undefined` /
+ *  `defined` operators take no value at all. */
+const SCALAR_CONDITION_OPERATORS = new Set<Condition["operator"]>([
+    "=", "<>", "<", ">", "<=", ">=", "as", "not as",
+])
+
 /**
- * [REQ-424] Restricts attribute-reference values (`valueIsReference`) to transition result
- * arguments (`Argument.result`): every condition site (state implied conditions,
- * default-precondition arguments, transition state arguments, transition trigger arguments) can
- * only filter rows against a fixed literal, never resolve dynamically against another attribute's
- * row value.
+ * Visits every value expression in the AST — each condition (state implied conditions,
+ * default-precondition arguments, transition state arguments, transition trigger arguments) and
+ * each transition result argument's result — so the reference-value checks below traverse the
+ * AST once, in one place, rather than each repeating the same walk.
  *
  * @param stateMachines Parsed state-machine AST nodes.
- * @returns Nothing. Validation succeeds by not throwing.
- * @throws Error When a reference-valued condition appears outside a result argument.
+ * @param visit Callback invoked per value expression, with a human-readable context, the
+ *   constrained attribute's name, and the condition or result carrying the value.
  */
-export function validateConditionReferenceScope(stateMachines: StateMachine[]): void {
-    const rejectReference = (context: string, attributeName: string, condition: Condition | undefined): void => {
-        if (!condition?.valueIsReference) return
-        throw new Error(
-            `${context}: Argument \`${attributeName}\` references attribute \`${condition.value}\`, but attribute ` +
-            `references are only supported in transition result arguments' \`result\` (REQ-424).`,
-        )
-    }
-    const rejectReferenceInArguments = (context: string, args: Argument[] | undefined): void => {
-        for (const argument of args ?? []) rejectReference(context, argument.name, argument.condition)
+function forEachValueExpression(
+    stateMachines: StateMachine[],
+    visit: (context: string, attributeName: string, expression: Condition | Result) => void,
+): void {
+    const visitArguments = (context: string, args: Argument[] | undefined): void => {
+        for (const argument of args ?? []) {
+            const expression = argument.condition ?? argument.result
+            if (expression) visit(context, argument.name, expression)
+        }
     }
 
     for (const stateMachine of stateMachines) {
@@ -601,41 +597,66 @@ export function validateConditionReferenceScope(stateMachines: StateMachine[]): 
 
         for (const state of stateMachine.states) {
             for (const implied of state.impliedConditions ?? []) {
-                rejectReference(
-                    `${machineContext}: State \`${state.name}\` implied condition`, implied.attribute, implied.condition,
-                )
+                const stateContext = `${machineContext}: State \`${state.name}\` implied condition`
+                visit(stateContext, implied.attribute, implied.condition)
             }
         }
 
         for (const precondition of stateMachine.defaultPreconditions ?? []) {
-            rejectReferenceInArguments(
-                `${machineContext}: Default precondition \`${precondition.state}\``, precondition.arguments,
-            )
+            visitArguments(`${machineContext}: Default precondition \`${precondition.state}\``, precondition.arguments)
         }
 
         for (const transition of stateMachine.transitions ?? []) {
             const transitionContext = formatTransitionContext(stateMachine.name, transition)
             for (const stateRef of transition.states ?? []) {
-                rejectReferenceInArguments(transitionContext, stateRef.arguments)
+                visitArguments(transitionContext, stateRef.arguments)
             }
-            rejectReferenceInArguments(transitionContext, transition.trigger.arguments)
+            visitArguments(transitionContext, transition.trigger.arguments)
+            visitArguments(transitionContext, transition.result.arguments)
         }
     }
 }
 
 /**
- * [REQ-425] Ensures every attribute-reference result value (`result.valueIsReference`) names
- * a data attribute declared somewhere in the AST — in any state machine, not only the one owning the
- * result, since a reference is resolved against whichever machine actually declares that name.
+ * [REQ-424] Restricts attribute-reference values (`valueIsReference`) to the sites that can carry
+ * one: a transition result argument's `result`, and a condition using a scalar comparison
+ * operator. A set, range, or unary condition compares against a fixed list of literals (or
+ * against no value at all), which a reference — a name standing for another attribute's value —
+ * cannot provide.
+ *
+ * @param stateMachines Parsed state-machine AST nodes.
+ * @returns Nothing. Validation succeeds by not throwing.
+ * @throws Error When a reference value appears on a non-scalar condition operator.
+ */
+export function validateReferenceOperators(stateMachines: StateMachine[]): void {
+    forEachValueExpression(stateMachines, (context, attributeName, expression) => {
+        if (!expression.valueIsReference) return
+        // A `Result` carries no operator at all (REQ-415: always a plain equality assignment).
+        if (!("operator" in expression)) return
+        const operator = expression.operator
+        if (SCALAR_CONDITION_OPERATORS.has(operator)) return
+        throw new Error(
+            `${context}: Argument \`${attributeName}\` references attribute \`${expression.value}\`, but operator ` +
+            `\`${operator}\` compares against fixed literal value(s), which an attribute reference ` +
+            `cannot provide (REQ-424).`,
+        )
+    })
+}
+
+/**
+ * [REQ-425] Ensures every attribute-reference value — a condition's as well as a result's — names
+ * a data attribute declared somewhere in the AST: in any state machine, not only the one owning
+ * the reference, since a reference resolves against whichever machine actually declares that
+ * name.
  *
  * Runs on the complete AST (after `completeStateMachines`), so every attribute inferred from usage
  * is already present in each machine's `data` map.
  *
  * @param stateMachines Parsed state-machine AST nodes.
  * @returns Nothing. Validation succeeds by not throwing.
- * @throws Error When a reference-valued result names an attribute declared nowhere in the AST.
+ * @throws Error When a reference value names an attribute declared nowhere in the AST.
  */
-export function validateResultReferenceTargets(stateMachines: StateMachine[]): void {
+export function validateReferenceTargets(stateMachines: StateMachine[]): void {
     const allAttributeNames = new Set<string>()
     for (const stateMachine of stateMachines) {
         for (const attributeName of Object.keys(stateMachine.data ?? {})) {
@@ -648,190 +669,80 @@ export function validateResultReferenceTargets(stateMachines: StateMachine[]): v
         }
     }
 
-    const checkReference = (context: string, attributeName: string, result: Result | undefined): void => {
-        if (!result?.valueIsReference) return
-        const referencedName = typeof result.value === "string" ? result.value : ""
+    forEachValueExpression(stateMachines, (context, attributeName, expression) => {
+        if (!expression.valueIsReference) return
+        const referencedName = typeof expression.value === "string" ? expression.value : ""
         if (allAttributeNames.has(referencedName.toLowerCase())) return
         throw new Error(
-            `${context}: Argument \`${attributeName}\` references attribute \`${result.value}\`, but no state ` +
-            `machine declares a data attribute by the name \`${result.value}\` (REQ-425).`,
+            `${context}: Argument \`${attributeName}\` references attribute \`${expression.value}\`, but no state ` +
+            `machine declares a data attribute by the name \`${expression.value}\` (REQ-425).`,
         )
-    }
-    const checkReferenceInArguments = (context: string, args: Argument[] | undefined): void => {
-        for (const argument of args ?? []) checkReference(context, argument.name, argument.result)
-    }
-
-    for (const stateMachine of stateMachines) {
-        for (const transition of stateMachine.transitions ?? []) {
-            checkReferenceInArguments(formatTransitionContext(stateMachine.name, transition), transition.result.arguments)
-        }
-    }
-}
-
-/**
- * Returns `true` when two argument arrays are structurally identical.
- *
- * @param a First argument array.
- * @param b Second argument array.
- * @returns `true` when both arrays are equivalent by item order and JSON structure.
- */
-function argumentsMatch(a: Argument[] | undefined, b: Argument[] | undefined): boolean {
-    const left = a ?? []
-    const right = b ?? []
-    if (left.length !== right.length) return false
-    return left.every((arg, index) => JSON.stringify(arg) === JSON.stringify(right[index]))
-}
-
-/**
- * [REQ-161] Collects the names of every state machine that may contribute
- * `dataExampleValues` rows for `transition`: the owning machine itself, the
- * owning machines of any referenced default-precondition / explicit
- * transition states, and — for state-trigger transitions — the machines
- * reached by following the expansion chain (mirroring the generator's own
- * REQ-108/REQ-118 expansion-source resolution). This is a coarser,
- * approximate mirror of the generator's chain-following logic — it is meant
- * as an early, best-effort check; the generator's own REQ-157 check remains
- * the authoritative one.
- *
- * [REQ-164] Also raises an error when a state trigger has one or more
- * candidate source transitions matching by result state name, but none of
- * them satisfies the REQ-118 argument-matching rule — the trigger is
- * unresolvable, and this dedicated error takes precedence over the (possibly
- * unrelated/misleading) REQ-157/REQ-163 "missing dataExampleValues" error
- * that would otherwise surface for a different machine.
- *
- * @param stateMachine Owning machine for `transition`.
- * @param transition Transition whose contributing machines are being resolved.
- * @param defaultPreconditions Effective default preconditions for `transition`.
- * @param ownership Map of lower-cased state names to owning machine names.
- * @param stateMachines All available machines used for trigger-chain expansion.
- * @param visited Transitions already traversed to avoid recursion loops.
- * @param depth Current recursion depth guard.
- * @returns Set of machine names that may contribute value rows.
- */
-function collectContributingMachineNames(
-    stateMachine: StateMachine,
-    transition: Transition,
-    defaultPreconditions: DefaultPrecondition[],
-    ownership: Record<string, string>,
-    stateMachines: StateMachine[],
-    visited: Set<Transition> = new Set(),
-    depth = 0,
-): Set<string> {
-    const names = new Set<string>([stateMachine.name])
-    for (const precondition of defaultPreconditions) {
-        const owner = ownership[precondition.state.toLowerCase()]
-        if (owner) names.add(owner)
-    }
-    for (const ref of transition.states ?? []) {
-        const owner = ownership[ref.name.toLowerCase()]
-        if (owner) names.add(owner)
-    }
-
-    if (transition.trigger.type === "state" && depth <= 10) {
-        for (const source of stateMachines) {
-            for (const sourceTransition of source.transitions ?? []) {
-                if (sourceTransition === transition || visited.has(sourceTransition)) continue
-                if (sourceTransition.result.name.toLowerCase() !== transition.trigger.name.toLowerCase()) continue
-                if (!argumentsMatch(sourceTransition.result.arguments, transition.trigger.arguments)) continue
-                visited.add(sourceTransition)
-                names.add(source.name)
-                const nested = collectContributingMachineNames(
-                    source,
-                    sourceTransition,
-                    source.defaultPreconditions ?? [],
-                    ownership,
-                    stateMachines,
-                    visited,
-                    depth + 1,
-                )
-                nested.forEach((name) => names.add(name))
-            }
-        }
-    }
-    return names
-}
-
-/**
- * [REQ-164] Detects whether `transition`'s state-trigger expansion chain
- * contains an unresolvable state trigger — i.e. one or more candidate source
- * transitions match by result state name, but none of them satisfies the
- * REQ-118 argument-matching rule. When this is the case, the REQ-157/REQ-163
- * "missing dataExampleValues" check must defer to the generator's own,
- * dedicated REQ-164 error instead of raising a possibly-unrelated error here.
- *
- * @param transition Transition being analyzed.
- * @param stateMachines All available machines used for trigger-chain expansion.
- * @param visited Transitions already traversed to avoid recursion loops.
- * @param depth Current recursion depth guard.
- * @returns `true` when at least one state trigger in the chain is unresolvable.
- */
-function hasUnresolvableStateTrigger(
-    transition: Transition,
-    stateMachines: StateMachine[],
-    visited: Set<Transition> = new Set(),
-    depth = 0,
-): boolean {
-    if (transition.trigger.type !== "state" || depth > 10) return false
-
-    const nameMatches: Transition[] = []
-    for (const source of stateMachines) {
-        for (const sourceTransition of source.transitions ?? []) {
-            if (sourceTransition === transition || visited.has(sourceTransition)) continue
-            if (sourceTransition.result.name.toLowerCase() !== transition.trigger.name.toLowerCase()) continue
-            nameMatches.push(sourceTransition)
-        }
-    }
-    if (nameMatches.length === 0) return false
-
-    const sources = nameMatches.filter((sourceTransition) =>
-        argumentsMatch(sourceTransition.result.arguments, transition.trigger.arguments),
-    )
-    if (sources.length === 0) return true
-
-    return sources.some((sourceTransition) => {
-        visited.add(sourceTransition)
-        return hasUnresolvableStateTrigger(sourceTransition, stateMachines, visited, depth + 1)
     })
 }
 
 /**
- * [REQ-163] Raises an internal-assertion error when a transition references
- * argument(s) but none of the machines in its references/expansion chain
- * (REQ-161) defines a non-empty `dataExampleValues` table — mirroring the
- * generator's own REQ-157 check, but performed as an earlier parser-side
- * validation pass.
+ * [REQ-406] Ensures every state trigger resolves to a source transition. A trigger naming a state
+ * that transitions do produce, but whose arguments none of those transitions satisfies, leaves
+ * the transition without a cause: nothing in the model can make it fire.
+ *
+ * The check follows the whole expansion chain, so a trigger that resolves only through a source
+ * whose own trigger is unresolvable is reported too.
+ *
+ * @param stateMachines Parsed state-machine AST nodes.
+ * @returns Nothing. Validation succeeds by not throwing.
+ * @throws Error When a state trigger names a produced state but no producing transition can act
+ *   as its source.
+ */
+export function validateStateTriggerResolution(stateMachines: StateMachine[]): void {
+    const ownership = buildStateOwnership(stateMachines)
+    const taggedTransitions = buildTaggedTransitions(stateMachines)
+
+    for (const tagged of taggedTransitions) {
+        const unresolvable = findUnresolvableTrigger(tagged.transition, taggedTransitions, ownership)
+        if (!unresolvable) continue
+
+        const owner = taggedTransitions.find((candidate) => candidate.transition === unresolvable.transition)
+        const attributeNames = (unresolvable.trigger.arguments ?? []).map((argument) => `\`${argument.name}\``)
+        const argumentWord = attributeNames.length === 1 ? "argument" : "arguments"
+        const attributeList = attributeNames.length > 0 ? attributeNames.join(", ") : "its arguments"
+        throw new Error(
+            `${formatTransitionContext(owner?.stateMachineName ?? "<unknown>", unresolvable.transition)}: ` +
+            `State trigger \`${unresolvable.trigger.name}\` names a state that is produced elsewhere, but no ` +
+            `producing transition satisfies the trigger's ${argumentWord} ${attributeList} (REQ-406).`,
+        )
+    }
+}
+
+/**
+ * [REQ-411] Raises an error when a transition references argument(s) but no state machine taking
+ * part in its context — its own, those owning its precondition states, and those reached along
+ * its state-trigger expansion chain — defines a non-empty `dataExampleValues` table.
+ *
+ * The participating machines and the chain resolution come from the shared expansion resolver
+ * (`expand.ts`), so this check and every consumer agree on which machines a transition draws on.
  *
  * @param stateMachines Parsed state-machine AST nodes.
  * @returns Nothing. Validation succeeds by not throwing.
  * @throws Error When an argument-bearing transition has no reachable `dataExampleValues` rows.
  */
 export function validateExampleValuesPresence(stateMachines: StateMachine[]): void {
-    const ownership = buildOwnership(stateMachines)
-    const byName = new Map(stateMachines.map((stateMachine) => [stateMachine.name, stateMachine]))
+    const ownership = buildStateOwnership(stateMachines)
+    const taggedTransitions = buildTaggedTransitions(stateMachines)
 
     for (const stateMachine of stateMachines) {
         const defaultPreconditions = stateMachine.defaultPreconditions ?? []
         for (const transition of stateMachine.transitions ?? []) {
             if (!transitionReferencesArguments(transition, defaultPreconditions)) continue
 
-            // [REQ-164] An unresolvable state trigger takes precedence over
-            // this check — defer to the generator's dedicated error rather
-            // than raising a misleading REQ-157 error for a different machine.
-            if (hasUnresolvableStateTrigger(transition, stateMachines)) continue
-
-            const contributingNames = collectContributingMachineNames(
-                stateMachine, transition, defaultPreconditions, ownership, stateMachines,
+            const exampleValues = effectiveExampleValues(
+                stateMachines, stateMachine, transition, defaultPreconditions, ownership, taggedTransitions,
             )
-            const hasExampleValues = [...contributingNames].some(
-                (name) => (byName.get(name)?.dataExampleValues ?? []).length > 0,
-            )
-            if (hasExampleValues) continue
+            if (exampleValues.length > 0) continue
 
             throw new Error(
                 `State machine \`${stateMachine.name}\`: ` +
                     `${transition.id ? `transition \`${transition.id}\`` : "Anonymous transition"} references argument(s), but the machine's ` +
-                    `dataExampleValues table is empty or absent (REQ-157/REQ-163).`,
+                    `dataExampleValues table is empty or absent (REQ-411).`,
             )
         }
     }

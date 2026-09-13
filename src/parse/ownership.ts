@@ -1,16 +1,22 @@
-import type { ImpliedCondition, StateMachine, StateRef } from "../parse"
+/**
+ * State ownership lookup: which state machine declares a given state name.
+ *
+ * Part of the parse step's semantic model, not of any consumer: a state name identifies one
+ * machine's state across the whole set of parsed machines, independent of what a consumer does
+ * with that fact.
+ */
 
-// --- State ownership ---
+import type { ImpliedCondition, StateMachine, StateRef } from "./sm.ast.d"
 
-/** Maps a lower cased state name to the name of the state machine declaring it (REQ-150). */
+/** Maps a lower cased state name to the name of the state machine declaring it (REQ-409). */
 export type StateOwnershipIndex = Record<string, string>
 
-/** Marker owner for a state name declared by more than one state machine (REQ-154). */
+/** Marker owner for a state name declared by more than one state machine (REQ-409). */
 const AMBIGUOUS_OWNER = "__AMBIGUOUS_OWNER__"
 
 /**
  * Build the state ownership index over all state machines. State names declared by multiple
- * machines are marked as ambiguous rather than resolved (REQ-154).
+ * machines are marked as ambiguous rather than resolved (REQ-409).
  *
  * @param stateMachines State machines to index.
  * @returns The ownership index keyed by lower-cased state name.
@@ -31,7 +37,7 @@ export function buildStateOwnership(stateMachines: StateMachine[]): StateOwnersh
 }
 
 /**
- * All state names that are declared by more than one state machine (REQ-154).
+ * All state names that are declared by more than one state machine (REQ-409).
  *
  * @param ownership State ownership index to inspect.
  * @returns The lower-cased state names that are ambiguous.
@@ -46,13 +52,13 @@ export function ambiguousStateNames(ownership: StateOwnershipIndex): string[] {
  * Resolve the state machine owning a state name.
  *
  * @returns The owning state machine name, or `undefined` for an unmodeled/foreign state name.
- * @throws Error When the state name is declared by multiple state machines (REQ-154).
+ * @throws Error When the state name is declared by multiple state machines (REQ-409).
  */
 export function ownerOfStateName(stateName: string, ownership: StateOwnershipIndex): string | undefined {
     const owner = ownership[stateName.toLowerCase()]
     if (owner === AMBIGUOUS_OWNER) {
         throw new Error(
-            `Ambiguous state name lookup \`${stateName}\`: the same state name appears in multiple state machines (REQ-154).`,
+            `Ambiguous state name lookup \`${stateName}\`: the same state name appears in multiple state machines (REQ-409).`,
         )
     }
     return owner
@@ -95,4 +101,3 @@ export function buildImpliedConditionsIndex(stateMachines: StateMachine[]): Impl
     }
     return index
 }
-

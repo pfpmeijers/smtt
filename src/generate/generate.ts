@@ -3,13 +3,8 @@ import { join as joinPath } from "path"
 import { buildFeatures, writeFeatureFiles } from "./features"
 import { writeStepFiles } from "./steps"
 import { writeFixtureFiles } from "./fixtures"
-import { writeGenerateDebugFile } from "./debug"
 import { loadStateMachines } from "../parse"
 import { FEATURES_DIR, STEPS_DIR, FIXTURES_DIR } from "../common/dirs"
-
-export interface GenerateOptions {
-    debug?: boolean
-}
 
 /**
  * Reads the parsed AST JSON at `jsonPath`, generates feature files,
@@ -22,15 +17,10 @@ export interface GenerateOptions {
  *
  * @param jsonPath Path to the parsed AST JSON file.
  * @param outputDir Base directory that receives the generated artifacts.
- * @param options Optional generation flags.
  */
-export function generate(jsonPath: string, outputDir: string, options: GenerateOptions = {}): void {
+export function generate(jsonPath: string, outputDir: string): void {
     const stateMachines = loadStateMachines(jsonPath)
     mkdirSync(outputDir, { recursive: true })
-
-    if (options.debug) {
-        writeGenerateDebugFile(stateMachines, outputDir)
-    }
 
     const features = buildFeatures(stateMachines)
 

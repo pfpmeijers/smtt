@@ -15,7 +15,7 @@
 #          type: event
 #          name: e
 #          arguments:
-#            - modifier: different
+#            - modifier: next
 #              name: a
 #        result:
 #          name: s
@@ -28,11 +28,11 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s; when e "<different a>"
+  Scenario Outline: [] s "<a>" → s; when e "<next a>"
     Given initially s "<a>"
-    When e "<different a>"
+    When e "<next a>"
     Then expect s
     Examples:
-      | a | different a |
-      | 1 | 2           |
-      | 2 | 1           |
+      | a | next a |
+      | 1 | 2      |
+      | 2 | 1      |
