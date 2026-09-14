@@ -55,9 +55,15 @@ export interface StateMachine {
     [k: string]: string;
   };
   /**
+   * The values each attribute may take, as declared in the `### Values` subsection. Keyed by attribute name. Present only when the source declares these lists instead of a `### Value combinations` table, in which case the complete step derives the rows as the full cartesian product of these values; a source that spells its rows out in a table carries no `dataValues` at all.
+   */
+  dataValues?: {
+    [k: string]: string[];
+  };
+  /**
    * Examples of data combinations, either synthesized from inline examples or explicitly defined in a combination table. By schema convention, an empty string value encodes an undefined/absent value for that attribute.
    */
-  dataExampleValues?: {
+  dataValueCombinations?: {
     [k: string]: string;
   }[];
   /**
@@ -222,7 +228,7 @@ export interface Result {
    */
   value?: string;
   /**
-   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal: the attribute takes the value that the same `dataExampleValues` row holds for the named attribute. Set directly by the grammar: a backticked result value is a reference, a quoted or numeric one is a literal. A condition value may be a reference too, as its own `valueIsReference` describes.
+   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal: the attribute takes the value that the same `dataValueCombinations` row holds for the named attribute. Set directly by the grammar: a backticked result value is a reference, a quoted or numeric one is a literal. A condition value may be a reference too, as its own `valueIsReference` describes.
    */
   valueIsReference?: boolean;
 }

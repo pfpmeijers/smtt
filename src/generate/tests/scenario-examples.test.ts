@@ -6,7 +6,7 @@ test("[TST-057] → [REQ-064/151]: Examples table columns in first-encounter ord
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s1"}],
-        dataExampleValues: [
+        dataValueCombinations: [
             {b4: "1", b3: "2", b2: "3", b1: "4"},
         ],
         defaultPreconditions: [{
@@ -29,11 +29,11 @@ test("[TST-057] → [REQ-064/151]: Examples table columns in first-encounter ord
     assertMatchesReference(stateMachines, feature)
 })
 
-test("[TST-058] → [REQ-063/067/068]: Examples table rows from dataExampleValues", () => {
+test("[TST-058] → [REQ-063/067/068]: Examples table rows from dataValueCombinations", () => {
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{"a": "1"}],
+        dataValueCombinations: [{"a": "1"}],
         transitions: [{
             states: [{name: "s", arguments: [{qualifier: "as", name: "a"}]}],
             trigger: {type: "event", name: "e"},
@@ -51,7 +51,7 @@ test("[TST-100] → [REQ-160]: Examples table removes rendered duplicate rows", 
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [
+        dataValueCombinations: [
             {a1: "V1", a2: "0"},
             {a1: "V1", a2: "1"},
             {a1: "V2", a2: "0"},

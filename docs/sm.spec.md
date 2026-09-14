@@ -22,7 +22,11 @@ Each state machine file must follow this general structure:
 3.  **States (H2)**: A bulleted list of possible states, and implied data
     conditions.
 4.  **Initial State**: The state in which the state machine starts.
-5.  **Data (H2, Optional)**: Data associated with the state machine.
+5.  **Data (H2, Optional)**: Data associated with the state machine, with
+    optional subsections — either one of:
+    1. **Values (H3)**: The values each attribute may take, standing for every
+       combination of them.
+    2. **Value combinations (H3)**: The value combinations, as a table.
 6.  **Transitions (H2)**: The rules governing state changes, with optional
     subsections:
     1. **Default preconditions (H3, Optional)**: Default precondition states.
@@ -152,25 +156,26 @@ Example:
 
 ---
 
-### Data values
+### Value combinations
 
-Provide example values using a combination table inside `## Data`, placed after
-the attribute list.
+Provide explicit example values combinations as a `### Value combinations` 
+heading with a table below, inside the `## Data` section,
+placed after the attribute list.
 
 - **Format**: Use column headers matching attribute names. Each row represents
   one complete combination of values across all referenced attributes:
 
-- **Optional**: The example values table is optional. When an attribute is
+- **Optional**: The value combinations table is optional. When an attribute is
   used in transitions or implied conditions but has no explicit example row,
   the attribute implicitly has `undefined` value as example value.
   The table is only needed to specify concrete value _combinations_.
 
-- **Attribute list also optional**: The example values table may appear
+- **Attribute list also optional**: The value combinations table may appear
   inside `## Data` without any preceding `- \`attr\`: ...` declarations.
   The column headers in the table serve as the attribute declarations in that case.
 
    ```markdown
-   Example values:
+   ### Value combinations
 
    | `email address`     | `associated user name` |
    |---------------------|------------------------|
@@ -185,6 +190,58 @@ the attribute list.
 - **Numeric versus text attributes** — Numeric attributes only have
   numerical values, unquoted. Text attributes only have text values,
   always double-quoted.
+
+---
+
+### Values
+
+Declare the values an attribute may take, one bullet per attribute, as a
+`### Values` subsection inside `## Data`. Leaving the `### Value combinations`
+table out then says that *every* combination of the declared values is a valid
+one — the rows are derived rather than written by hand.
+
+- **Format**: Use a bulleted list, one entry per attribute: the backticked
+  attribute name, a `:`, then its values separated by `,`. Values follow the
+  same quoting rules as a table cell — text double-quoted, numbers bare.
+- **Attribute list optional**: A `### Values` entry declares its attribute, the
+  way a table column header does, so the `- \`attr\`: ...` list above it is
+  only needed to attach descriptions or fix the ordering.
+- **Alternative to the table**: `### Values` and a `### Value combinations`
+  table are alternatives, not a pair. Use `### Values` when every combination
+  is valid; use the table when the values have to be paired into rows by hand.
+  Declaring both is an error.
+- **Derived rows**: Combinations are laid out with the last-declared attribute
+  varying fastest. At most 1000 combinations may be derived; beyond that,
+  reduce the values or write the table out.
+
+Example:
+
+```markdown
+## Data
+
+- `language`: The language the document is written in.
+- `revision`: The document's revision number.
+
+### Values
+
+- `language`: "en", "nl", "de"
+- `revision`: 1, 2
+```
+
+This is the same as writing all six combinations out:
+
+```markdown
+### Value combinations
+
+| `language` | `revision` |
+|------------|------------|
+| "en"       | 1          |
+| "en"       | 2          |
+| "nl"       | 1          |
+| "nl"       | 2          |
+| "de"       | 1          |
+| "de"       | 2          |
+```
 
 ---
 
@@ -426,7 +483,7 @@ Example:
 - `email address`: The address the user is signed in under.
 - `new email address`: The address the user re-signs in under.
 
-Example values:
+### Value combinations
 
 | `email address`   | `new email address` |
 |-------------------|---------------------|
@@ -695,12 +752,9 @@ Example:
 
 - `list price`
 
-Example values:
+### Values 
 
-| `list price` |
-|--------------|
-| 10           |
-| 20           |
+- `list price`: 10, 20
 
 ## Transitions
 

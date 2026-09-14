@@ -29,7 +29,7 @@ test("[TST-060] → [REQ-028/047/048/057/058/061/062]: Scenario label lower case
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s1"}, {name: "s2"}],
-        dataExampleValues: [{"a": "A"}],
+        dataValueCombinations: [{"a": "A"}],
         transitions: [{
             id: "001",
             states: [{name: "s1"}],

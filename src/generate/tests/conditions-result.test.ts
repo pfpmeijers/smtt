@@ -5,7 +5,7 @@ test("[TST-016] → [REQ-066/088/101]: Result value adds resulting column", () =
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: "2"}],
+        dataValueCombinations: [{a: "1"}, {a: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "=", value: "1"}}]}],
             trigger: {type: "event", name: "e"},
@@ -23,7 +23,7 @@ test("[TST-017] → [REQ-089]: Attribute result values are always used for assig
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: "2"}, {a: "3"}],
+        dataValueCombinations: [{a: "1"}, {a: "2"}, {a: "3"}],
         transitions: [{
             trigger: {type: "event", name: "e"},
             result: {name: "s", arguments: [{name: "a", result: {value: "2"}}]}
@@ -44,7 +44,7 @@ test("[TST-108] → [REQ-169]: Result value attribute with no other reference dr
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a1: "x", a2: "1"}, {a1: "y", a2: "2"}],
+        dataValueCombinations: [{a1: "x", a2: "1"}, {a1: "y", a2: "2"}],
         transitions: [{
             trigger: {type: "event", name: "e"},
             result: {name: "s", arguments: [{name: "a1"}, {name: "a2", result: {value: "2"}}]},
@@ -66,7 +66,7 @@ test("[TST-109] → [REQ-423]: Result value referencing another attribute resolv
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: "2"}],
+        dataValueCombinations: [{a: "1"}, {a: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},

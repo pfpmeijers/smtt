@@ -8,11 +8,11 @@ import {
 } from "./utils"
 import { type StateMachines, validateStateMachines } from "../../parse"
 
-test("[TST-019] → [REQ-073/074/075]: Empty string in dataExampleValues treated as undefined", () => {
+test("[TST-019] → [REQ-073/074/075]: Empty string in dataValueCombinations treated as undefined", () => {
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: ""}],
+        dataValueCombinations: [{a: "1"}, {a: ""}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "=", value: "1"}}]}],
             trigger: {type: "event", name: "e"},
@@ -31,7 +31,7 @@ test("[TST-020] → [REQ-073/074/075]: Empty string matches undefined operator",
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: ""}, {a: "1"}],
+        dataValueCombinations: [{a: ""}, {a: "1"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "undefined"}}]}],
             trigger: {type: "event", name: "e"},
@@ -50,7 +50,7 @@ test("[TST-021] → [REQ-073/074]: Empty string in modifier lookup is treated as
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: "2"}],
+        dataValueCombinations: [{a: "1"}, {a: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e", arguments: [{modifier: "next", name: "a"}]},
@@ -64,7 +64,7 @@ test("[TST-021] → [REQ-073/074]: Empty string in modifier lookup is treated as
     assertMatchesReference(stateMachines, feature)
 })
 
-test("[TST-022] → [REQ-157]: Arguments referenced with no dataExampleValues table raises error", () => {
+test("[TST-022] → [REQ-157]: Arguments referenced with no dataValueCombinations table raises error", () => {
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
@@ -76,7 +76,7 @@ test("[TST-022] → [REQ-157]: Arguments referenced with no dataExampleValues ta
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
         "State machine `m`: Anonymous transition references argument(s), " +
-        "but the state machine's dataExampleValues table is empty or absent (REQ-157/REQ-163).",
+        "but the state machine's dataValueCombinations table is empty or absent (REQ-157/REQ-163).",
     )
 })
 

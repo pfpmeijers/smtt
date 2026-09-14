@@ -72,9 +72,10 @@ StateMachine {
     = h2 literal<"Data"> eol dataSectionBody notesSubSection?
 
   dataSectionBody
-    = none eol                                                          -- none
-    | attributeValuesTable<"Example values:">                           -- valuesOnly
-    | attribute+ attributeValuesTable<"Example values:">?               -- withEntries
+    = none eol                                                   -- none
+    | valuesSection valueCombinationsSection?                    -- valuesOnly
+    | valueCombinationsSection                                   -- combinationsOnly
+    | attribute+ valuesSection? valueCombinationsSection?        -- withEntries
 
   attribute
     = listItem identifier attributeDescription -- withDescription
@@ -83,8 +84,24 @@ StateMachine {
   attributeDescription
     = description<listItem>
 
-  attributeValuesTable<caption>
-    = literal<caption> eol attributeValuesTableHeader tableSeparatorRow attributeValuesTableRow+ ignoredLine*
+  // --- Values subsection (optional) ---
+
+  // Per-attribute value lists, standing in for a combinations table: leaving the table out says
+  // every combination of these values is a valid one. Pairing values into rows by hand is what
+  // the table is for, so the two are mutually exclusive; that is enforced post-parse, not here.
+  valuesSection
+    = h3 literal<"Values"> eol attributeValues+
+
+  attributeValues
+    = listItem identifier ":" hsp? value (comma value)* comment? eol
+
+  // --- Value combinations subsection (optional) ---
+
+  valueCombinationsSection
+    = h3 literal<"Value combinations"> eol attributeValuesTable
+
+  attributeValuesTable
+    = attributeValuesTableHeader tableSeparatorRow attributeValuesTableRow+ ignoredLine*
 
   // A trailing `comment?` lets a row be annotated after its closing pipe, the way any other line
   // can be. An `inlineComment` inside a cell stops at the next pipe; this one runs to end of line.

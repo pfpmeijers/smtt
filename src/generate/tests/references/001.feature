@@ -4,7 +4,7 @@
 #    states:
 #      - name: s1
 #      - name: s2
-#    dataExampleValues:
+#    dataValueCombinations:
 #      - a1: "1"
 #        a2: "2"
 #        a3: "3"

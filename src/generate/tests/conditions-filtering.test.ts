@@ -12,7 +12,7 @@ test("[TST-002] → [REQ-069/086/087/090/097/098]: Equality condition filters ro
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "0"}, {a: "1"}, {a: "2"}],
+        dataValueCombinations: [{a: "0"}, {a: "1"}, {a: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "=", value: "1"}}]}],
             trigger: {type: "event", name: "e"},
@@ -29,7 +29,7 @@ test("[TST-003] → [REQ-086/087/090]: Greater-than-or-equal condition filters r
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "0"}, {a: "1"}, {a: "2"}],
+        dataValueCombinations: [{a: "0"}, {a: "1"}, {a: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: ">=", value: "1"}}]}],
             trigger: {type: "event", name: "e"},
@@ -48,7 +48,7 @@ test("[TST-004] → [REQ-086/087/090]: Not-equal condition filters rows", () => 
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: "2"}],
+        dataValueCombinations: [{a: "1"}, {a: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "<>", value: "1"}}]}],
             trigger: {type: "event", name: "e"},
@@ -66,7 +66,7 @@ test("[TST-005] → [REQ-086/087/091]: In-set condition filters rows", () => {
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: "2"}, {a: "3"}, {a: "4"}],
+        dataValueCombinations: [{a: "1"}, {a: "2"}, {a: "3"}, {a: "4"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "in", value: ["1", "4"]}}]}],
             trigger: {type: "event", name: "e"},
@@ -86,7 +86,7 @@ test("[TST-006] → [REQ-086/087/091]: Not-in-set condition filters rows", () =>
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: "2"}, {a: "3"}],
+        dataValueCombinations: [{a: "1"}, {a: "2"}, {a: "3"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "not in", value: ["2"]}}]}],
             trigger: {type: "event", name: "e"},
@@ -105,7 +105,7 @@ test("[TST-007] → [REQ-086/087/092/093]: In-range inclusive both bounds", () =
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "0"}, {a: "1"}, {a: "2"}, {a: "3"}, {a: "4"}, {a: "5"}],
+        dataValueCombinations: [{a: "0"}, {a: "1"}, {a: "2"}, {a: "3"}, {a: "4"}, {a: "5"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "in range", value: "[1, 4]"}}]}],
             trigger: {type: "event", name: "e"},
@@ -125,7 +125,7 @@ test("[TST-008] → [REQ-086/087/093/094]: In-range exclusive upper bound", () =
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "0"}, {a: "1"}, {a: "2"}, {a: "3"}, {a: "4"}, {a: "5"}],
+        dataValueCombinations: [{a: "0"}, {a: "1"}, {a: "2"}, {a: "3"}, {a: "4"}, {a: "5"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "in range", value: "[1, 4)"}}]}],
             trigger: {type: "event", name: "e"},
@@ -143,7 +143,7 @@ test("[TST-009] → [REQ-086/087/093/094]: In-range exclusive lower bound", () =
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "0"}, {a: "1"}, {a: "2"}, {a: "3"}, {a: "4"}, {a: "5"}],
+        dataValueCombinations: [{a: "0"}, {a: "1"}, {a: "2"}, {a: "3"}, {a: "4"}, {a: "5"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "in range", value: "(0, 4]"}}]}],
             trigger: {type: "event", name: "e"},
@@ -162,7 +162,7 @@ test("[TST-010] → [REQ-086/087/092]: Not-in-range condition excludes matching 
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "0"}, {a: "1"}, {a: "2"}, {a: "3"}],
+        dataValueCombinations: [{a: "0"}, {a: "1"}, {a: "2"}, {a: "3"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "not in range", value: "[1, 2]"}}]}],
             trigger: {type: "event", name: "e"},
@@ -182,7 +182,7 @@ test("[TST-011] → [REQ-086/087/432]: As binds the attribute to its literal val
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "a1"}, {a: "a2"}],
+        dataValueCombinations: [{a: "a1"}, {a: "a2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "as", value: "a1"}}]}],
             trigger: {type: "event", name: "e"},
@@ -200,7 +200,7 @@ test("[TST-012] → [REQ-095]: Text inequality condition filters out the matchin
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "a1"}, {a: "a2"}],
+        dataValueCombinations: [{a: "a1"}, {a: "a2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "<>", value: "a1"}}]}],
             trigger: {type: "event", name: "e"},
@@ -218,7 +218,7 @@ test("[TST-013] → [REQ-086/087/096]: Undefined condition filters to empty/abse
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: ""}],
+        dataValueCombinations: [{a: "1"}, {a: ""}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "undefined"}}]}],
             trigger: {type: "event", name: "e"},
@@ -236,7 +236,7 @@ test("[TST-014] → [REQ-099/100]: All rows filtered out raises error", () => {
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "0"}],
+        dataValueCombinations: [{a: "0"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: ">", value: "5"}}]}],
             trigger: {type: "event", name: "e"},
@@ -254,7 +254,7 @@ test("[TST-015] → [REQ-075] Empty value on a non-undefined operator is rejecte
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: ""}],
+        dataValueCombinations: [{a: "1"}, {a: ""}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a", condition: {operator: "=", value: ""}}]}],
             trigger: {type: "event", name: "e"},
@@ -270,7 +270,7 @@ test("[TST-175] → [REQ-427]: Reference condition compares two attributes of th
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a1: "1", a2: "1"}, {a1: "2", a2: "9"}],
+        dataValueCombinations: [{a1: "1", a2: "1"}, {a1: "2", a2: "9"}],
         transitions: [{
             states: [{name: "s", arguments: [
                 {name: "a1"},
@@ -292,7 +292,7 @@ test("[TST-176] → [REQ-427]: Reference condition on an attribute absent from t
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a1: "1"}],
+        dataValueCombinations: [{a1: "1"}],
         transitions: [{
             states: [{
                 name: "s", arguments: [{name: "a1", condition: {operator: "as", value: "a9", valueIsReference: true}}],

@@ -6,7 +6,7 @@
 #  - name: m2
 #    states:
 #      - name: s2
-#    dataExampleValues:
+#    dataValueCombinations:
 #      - count: "1"
 #      - count: "2"
 #    defaultPreconditions:

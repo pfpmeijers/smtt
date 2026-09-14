@@ -17,7 +17,7 @@
         "a1": "The identifier associated with the active M1 instance.",
         "new a1": "The identifier M1 is re-activated under."
       },
-      "dataExampleValues": [
+      "dataValueCombinations": [
         {
           "a1": "V1",
           "new a1": "V2"
@@ -170,7 +170,15 @@
       "data": {
         "a2": "The current item count."
       },
-      "dataExampleValues": [
+      "dataValues": {
+        "a2": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ]
+      },
+      "dataValueCombinations": [
         {
           "a2": "0"
         },
@@ -548,7 +556,7 @@
         "a3": "The label assigned to this workflow instance.",
         "a4": "The progress score accumulated during the workflow."
       },
-      "dataExampleValues": [
+      "dataValueCombinations": [
         {
           "a3": "P1",
           "a4": "0"

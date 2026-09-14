@@ -18,7 +18,7 @@ Initial state: `Phase one`
 - `Score`: Numeric score.
   ... extra description ...
 
-Example values: 
+### Value combinations
 
 | `Count` | `Label` | `Score` |
 |---------|---------|---------|

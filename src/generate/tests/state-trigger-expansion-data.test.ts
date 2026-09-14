@@ -6,7 +6,7 @@ test("[TST-069] → [REQ-161]: Expanded state trigger uses the combined data tab
         {
             name: "m1",
             states: [{name: "s1"}, {name: "s2"}],
-            dataExampleValues: [{a1: "1"}, {a1: "2"}],
+            dataValueCombinations: [{a1: "1"}, {a1: "2"}],
             transitions: [{
                 trigger: {
                     type: "event",
@@ -19,7 +19,7 @@ test("[TST-069] → [REQ-161]: Expanded state trigger uses the combined data tab
         {
             name: "m2",
             states: [{name: "s3"}],
-            dataExampleValues: [{a2: "3"}, {a2: "4"}],
+            dataValueCombinations: [{a2: "3"}, {a2: "4"}],
             transitions: [{
                 trigger: {type: "state", name: "s2", arguments: [{name: "a1"}]},
                 result: {name: "s3", arguments: [{name: "a2"}]}
@@ -39,7 +39,7 @@ test("[TST-070] → [REQ-162]: Conditions across an expansion chain merge as a c
         {
             name: "m1",
             states: [{name: "s1"}, {name: "s2"}],
-            dataExampleValues: [{a: "1"}, {a: "2"}],
+            dataValueCombinations: [{a: "1"}, {a: "2"}],
             transitions: [{
                 states: [{name: "s1"}],
                 trigger: {
@@ -55,7 +55,7 @@ test("[TST-070] → [REQ-162]: Conditions across an expansion chain merge as a c
         {
             name: "m2",
             states: [{name: "s3"}, {name: "s4"}],
-            dataExampleValues: [{a: "1"}, {a: "2"}],
+            dataValueCombinations: [{a: "1"}, {a: "2"}],
             transitions: [{
                 states: [{name: "s3"}],
                 trigger: {type: "state", name: "s2", arguments: [{qualifier: "as", name: "a"}]},
@@ -75,7 +75,7 @@ test("[TST-110] → [REQ-423]: A reference-valued result does not satisfy a stat
     const stateMachines: StateMachines = [{
         name: "m1",
         states: [{name: "s1"}, {name: "s2"}],
-        dataExampleValues: [{b: "5"}],
+        dataValueCombinations: [{b: "5"}],
         transitions: [{
             states: [{name: "s1", arguments: [{name: "b"}]}],
             trigger: {type: "event", name: "e"},
@@ -103,7 +103,7 @@ test("[TST-177] → [REQ-428]: A reference-valued trigger condition disqualifies
     const stateMachines: StateMachines = [{
         name: "m1",
         states: [{name: "s1"}, {name: "s2"}],
-        dataExampleValues: [{a: "1", b: "1"}, {a: "2", b: "9"}],
+        dataValueCombinations: [{a: "1", b: "1"}, {a: "2", b: "9"}],
         transitions: [{
             states: [{name: "s1", arguments: [{name: "a"}, {name: "b"}]}],
             trigger: {type: "event", name: "e"},

@@ -3,7 +3,7 @@
 #  - name: m
 #    states:
 #      - name: s1
-#    dataExampleValues:
+#    dataValueCombinations:
 #      - b4: "1"
 #        b3: "2"
 #        b2: "3"

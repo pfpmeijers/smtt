@@ -187,7 +187,7 @@ test("[TST-077] → [REQ-116]: Expanded scenario deduplicates same state with sa
     const stateMachines: StateMachines = [{
         name: "m1",
         states: [{name: "s1"}],
-        dataExampleValues: [{a: "1"}],
+        dataValueCombinations: [{a: "1"}],
         transitions: [{
             states: [{name: "s1", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},
@@ -216,7 +216,7 @@ test("[TST-078] → [REQ-118/164]: Source transition not matched when result arg
     const stateMachines: StateMachines = [{
         name: "m1",
         states: [{name: "s1"}],
-        dataExampleValues: [{a: "1"}],
+        dataValueCombinations: [{a: "1"}],
         transitions: [{
                         trigger: {type: "event", name: "e"},
             result: {name: "s1", arguments: [{name: "a", result: {value: "1"}}]},
@@ -241,7 +241,7 @@ test("[TST-183] → [REQ-431]: An annotated AST renders exactly as the same AST 
     const build = (): StateMachines => [{
         name: "m1",
         states: [{name: "s1"}, {name: "s2"}],
-        dataExampleValues: [{a: "1"}, {a: "2"}],
+        dataValueCombinations: [{a: "1"}, {a: "2"}],
         transitions: [{
             id: "001",
             states: [{name: "s1", arguments: [{name: "a"}]}],

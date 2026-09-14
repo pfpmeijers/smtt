@@ -197,8 +197,8 @@ export function validateDataValueTableColumns(stateMachines: StateMachine[]): vo
 
         validateDataRowsContainDeclaredAttributes(
             stateMachine,
-            "Example values",
-            stateMachine.dataExampleValues ?? [],
+            "Value combinations",
+            stateMachine.dataValueCombinations ?? [],
             declaredAttributes,
         )
     }
@@ -526,7 +526,7 @@ export function validateModifierValuePoolSize(stateMachines: StateMachine[]): vo
                 const contributingMachine = machineByName.get(contributingName)
                 if (!contributingMachine) continue
 
-                const rows = contributingMachine.dataExampleValues ?? []
+                const rows = contributingMachine.dataValueCombinations ?? []
                 for (const row of rows) {
                     for (const [attributeName, attributeValue] of Object.entries(row as Record<string, string | undefined>)) {
                         if (typeof attributeValue !== "string" && attributeValue !== undefined) continue
@@ -663,7 +663,7 @@ export function validateReferenceTargets(stateMachines: StateMachine[]): void {
         for (const attributeName of Object.keys(stateMachine.data ?? {})) {
             allAttributeNames.add(attributeName.toLowerCase())
         }
-        for (const row of stateMachine.dataExampleValues ?? []) {
+        for (const row of stateMachine.dataValueCombinations ?? []) {
             for (const attributeName of Object.keys(row)) {
                 allAttributeNames.add(attributeName.toLowerCase())
             }
@@ -717,14 +717,14 @@ export function validateStateTriggerResolution(stateMachines: StateMachine[]): v
 /**
  * [REQ-411] Raises an error when a transition references argument(s) but no state machine taking
  * part in its context — its own, those owning its precondition states, and those reached along
- * its state-trigger expansion chain — defines a non-empty `dataExampleValues` table.
+ * its state-trigger expansion chain — defines a non-empty `dataValueCombinations` table.
  *
  * The participating machines and the chain resolution come from the shared expansion resolver
  * (`expand.ts`), so this check and every consumer agree on which machines a transition draws on.
  *
  * @param stateMachines Parsed state-machine AST nodes.
  * @returns Nothing. Validation succeeds by not throwing.
- * @throws Error When an argument-bearing transition has no reachable `dataExampleValues` rows.
+ * @throws Error When an argument-bearing transition has no reachable `dataValueCombinations` rows.
  */
 export function validateExampleValuesPresence(stateMachines: StateMachine[]): void {
     const ownership = buildStateOwnership(stateMachines)
@@ -743,7 +743,7 @@ export function validateExampleValuesPresence(stateMachines: StateMachine[]): vo
             throw new Error(
                 `State machine \`${stateMachine.name}\`: ` +
                     `${transition.id ? `transition \`${transition.id}\`` : "Anonymous transition"} references argument(s), but the machine's ` +
-                    `dataExampleValues table is empty or absent (REQ-411).`,
+                    `dataValueCombinations table is empty or absent (REQ-411).`,
             )
         }
     }

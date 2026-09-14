@@ -339,7 +339,7 @@ Derived attribute columns are described in next sections.
   filtering and before the final table is emitted.
 
 - [REQ-068] The `$example-data-values` shall be taken from AST path
-  `[i].dataExampleValues`. This table may contain both author-defined rows and
+  `[i].dataValueCombinations`. This table may contain both author-defined rows and
   rows synthesised by the `complete` step (REQ-420/REQ-421); both kinds are
   treated identically by the generator.
 
@@ -356,7 +356,7 @@ Derived attribute columns are described in next sections.
 Example — given:
 
 ```markdown
-  Example values:
+  ### Value combinations
 
   | `email address`     | `associated user name` |
   |---------------------|------------------------|

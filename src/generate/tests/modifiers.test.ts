@@ -5,7 +5,7 @@ test("[TST-050] → [REQ-053/065/070/076/077/078/079/137/152]: Incremented modif
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: "3"}, {a: "2"}],
+        dataValueCombinations: [{a: "1"}, {a: "3"}, {a: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},
@@ -29,7 +29,7 @@ test("[TST-051] → [REQ-065/077/078]: Decremented modifier adds derived column"
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "0"}, {a: "2"}, {a: "1"}],
+        dataValueCombinations: [{a: "0"}, {a: "2"}, {a: "1"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},
@@ -53,7 +53,7 @@ test("[TST-052] → [REQ-054/065/081/082]: Next modifier uses circular next valu
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "a0"}, {a: "a1"}, {a: "a2"}],
+        dataValueCombinations: [{a: "a0"}, {a: "a1"}, {a: "a2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e", arguments: [{modifier: "next", name: "a"}]},
@@ -77,7 +77,7 @@ test("[TST-053] → [REQ-065/081/082]: Previous modifier uses circular previous 
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "a0"}, {a: "a1"}, {a: "a2"}],
+        dataValueCombinations: [{a: "a0"}, {a: "a1"}, {a: "a2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e", arguments: [{modifier: "previous", name: "a"}]},

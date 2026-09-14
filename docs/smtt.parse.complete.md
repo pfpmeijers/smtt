@@ -22,22 +22,27 @@ declared by the author, and never changes a transition's *target* state. It
 only adds or fills in data attributes and example value rows — plus, for one
 narrow case, a transition's own result arguments (REQ-434) — in this order:
 
-1. Infer a result argument for every transition whose target state pins an
+1. Derive the example value rows from the per-attribute value lists a source
+   declares in place of a combinations table (REQ-435).
+2. Infer a result argument for every transition whose target state pins an
    attribute to a concrete value — a literal via `=`, or absence via
    `undefined` — that the transition does not already assign or reference
    (REQ-434).
-2. Infer data attributes from every usage site (REQ-419).
-3. Synthesise undefined example rows for attributes with no values (REQ-420).
-4. Augment the example table with the value combinations that conditions and
+3. Infer data attributes from every usage site (REQ-419).
+4. Synthesise undefined example rows for attributes with no values (REQ-420).
+5. Augment the example table with the value combinations that conditions and
    results reference (REQ-421), including the combinations implied by an
    attribute reference (REQ-426).
 
-Step 1 runs first because it can introduce new result arguments that steps
-2-4 must treat exactly like author-written ones: the inferred value needs a
-declared attribute (REQ-419) and a place in the example table (REQ-421) just
-as much as an explicit one does.
+Step 1 runs first because every later step reads the example table: the derived
+rows must be in place before anything back-fills or augments them.
 
-A fifth step, the expansion annotation below, runs after validation and adds
+Step 2 runs before the data steps because it can introduce new result arguments
+that steps 3-5 must treat exactly like author-written ones: the inferred value
+needs a declared attribute (REQ-419) and a place in the example table (REQ-421)
+just as much as an explicit one does.
+
+A further step, the expansion annotation below, runs after validation and adds
 derived data rather than completing the model.
 
 Each step only ever adds: an attribute already declared keeps its
@@ -46,6 +51,27 @@ and a result argument already present — for any reason, including one an
 earlier author-written value assigns — is never replaced.
 
 ## Requirements
+
+- [REQ-435] The complete AST shall hold, as `dataValueCombinations`, the full
+  cartesian product of the per-attribute value lists in `dataValues`, when the
+  raw AST carries them.
+
+  Rationale: a `### Values` list with no `### Value combinations` table states
+  that every combination of the declared values is a valid one. Which rows that
+  amounts to is derived, not authored, so it belongs here rather than in the
+  grammar.
+
+  Remarks: the product is laid out with the last-declared attribute varying
+  fastest, so the rows read in the order the `### Values` list suggests.
+  Duplicate values within one attribute's list count once. `dataValues` is
+  itself left in place — it is what the source declared, and completion only
+  adds.
+
+  The product shall not exceed 1000 rows, and no attribute's value list shall
+  be empty; either is an error naming the offending machine. A handful of value
+  lists multiply into a scenario count no test run would finish, so an
+  over-large expansion is refused rather than attempted — the author reduces
+  the lists, or spells the rows out in a `### Value combinations` table.
 
 - [REQ-434] The complete AST shall assign, on a transition's own result, every
   attribute that the transition's target state pins to a concrete value via a
@@ -73,7 +99,7 @@ earlier author-written value assigns — is never replaced.
   gap this step should paper over.
 
 - [REQ-419] The complete AST shall declare a data attribute for every
-  attribute referenced anywhere in the machine: `dataExampleValues` column
+  attribute referenced anywhere in the machine: `dataValueCombinations` column
   names, state implied-condition attribute names, default-precondition
   argument names, and transition state/event-trigger/result argument names.
   State-trigger arguments are excluded because they belong to the triggering

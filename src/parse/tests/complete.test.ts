@@ -38,7 +38,7 @@ function makeWithData(): StateMachine {
         name: "m1",
         states: [{ name: "s1" }, { name: "s2" }],
         data: { a1: "v1", a2: "v2" },
-        dataExampleValues: [
+        dataValueCombinations: [
             { a1: "v1", a2: "1" },
             { a1: "v2", a2: "2" },
         ],
@@ -46,9 +46,88 @@ function makeWithData(): StateMachine {
     }
 }
 
+// --- Derived value combinations ---
+
+/** A machine declaring per-attribute value lists instead of explicit rows. */
+function makeWithDataValues(dataValues: Record<string, string[]>): StateMachine {
+    return {
+        name: "m1",
+        states: [{ name: "s1" }, { name: "s2" }],
+        data: Object.fromEntries(Object.keys(dataValues).map((attribute) => [attribute, ""])),
+        dataValues,
+        dataValueCombinations: [],
+        transitions: [],
+    }
+}
+
+describe("completeStateMachines — Step 0: derived value combinations (REQ-435)", () => {
+    it("[TST-196] → [REQ-435]: derives every combination, last attribute varying fastest", () => {
+        const stateMachines = [makeWithDataValues({ a1: ["x", "y"], a2: ["1", "2", "3"] })]
+        completeStateMachines(stateMachines)
+
+        assert.deepStrictEqual(stateMachines[0].dataValueCombinations, [
+            { a1: "x", a2: "1" },
+            { a1: "x", a2: "2" },
+            { a1: "x", a2: "3" },
+            { a1: "y", a2: "1" },
+            { a1: "y", a2: "2" },
+            { a1: "y", a2: "3" },
+        ])
+    })
+
+    it("[TST-197] → [REQ-435]: keeps `dataValues` in the completed AST", () => {
+        const stateMachines = [makeWithDataValues({ a1: ["x"] })]
+        completeStateMachines(stateMachines)
+
+        assert.deepStrictEqual(stateMachines[0].dataValues, { a1: ["x"] })
+    })
+
+    it("[TST-198] → [REQ-435]: counts a duplicated value once", () => {
+        const stateMachines = [makeWithDataValues({ a1: ["x", "x", "y"] })]
+        completeStateMachines(stateMachines)
+
+        assert.deepStrictEqual(stateMachines[0].dataValueCombinations, [{ a1: "x" }, { a1: "y" }])
+    })
+
+    it("[TST-199] → [REQ-435]: leaves a machine without `dataValues` untouched", () => {
+        const stateMachines = [makeWithData()]
+        const before = clone(stateMachines[0].dataValueCombinations)
+        completeStateMachines(stateMachines)
+
+        assert.deepStrictEqual(stateMachines[0].dataValueCombinations, before)
+    })
+
+    it("[TST-200] → [REQ-435]: rejects a product above the 1000-combination maximum", () => {
+        const tenValues = Array.from({ length: 10 }, (_, index) => String(index))
+        const stateMachines = [makeWithDataValues({ a1: tenValues, a2: tenValues, a3: tenValues, a4: tenValues })]
+
+        assert.throws(
+            () => completeStateMachines(stateMachines),
+            /would derive 10000 combinations, above the maximum of 1000\./,
+        )
+    })
+
+    it("[TST-201] → [REQ-435]: accepts a product exactly at the maximum", () => {
+        const tenValues = Array.from({ length: 10 }, (_, index) => String(index))
+        const stateMachines = [makeWithDataValues({ a1: tenValues, a2: tenValues, a3: tenValues })]
+        completeStateMachines(stateMachines)
+
+        assert.equal(stateMachines[0].dataValueCombinations?.length, 1000)
+    })
+
+    it("[TST-202] → [REQ-435]: rejects an attribute declared with no values", () => {
+        const stateMachines = [makeWithDataValues({ a1: ["x"], a2: [] })]
+
+        assert.throws(
+            () => completeStateMachines(stateMachines),
+            /`### Values` declares no value for `a2` \(REQ-435\)/,
+        )
+    })
+})
+
 // --- Inferred result assignments ---
 
-describe("completeStateMachines — Step 0: inferred result assignments (REQ-434)", () => {
+describe("completeStateMachines — Step 1: inferred result assignments (REQ-434)", () => {
     it("[TST-186] → [REQ-434]: infers a result assignment for a literal implied condition the transition leaves unset", () => {
         const stateMachines: StateMachine[] = [
             {
@@ -162,7 +241,7 @@ describe("completeStateMachines — Step 0: inferred result assignments (REQ-434
                     { name: "available", impliedConditions: [{ attribute: "assignee email", condition: { operator: "undefined" } }] },
                 ],
                 data: { "assignee email": "" },
-                dataExampleValues: [{ "assignee email": "a@example.com" }],
+                dataValueCombinations: [{ "assignee email": "a@example.com" }],
                 transitions: [
                     {
                         id: "043",
@@ -193,7 +272,7 @@ describe("completeStateMachines — Step 0: inferred result assignments (REQ-434
                     },
                 ],
                 data: { a2: "" },
-                dataExampleValues: [{ a2: "v1" }],
+                dataValueCombinations: [{ a2: "v1" }],
                 transitions: [
                     { id: "001", trigger: { type: "event", name: "e1" }, result: { name: "s2" } },
                 ],
@@ -218,7 +297,7 @@ describe("completeStateMachines — Step 0: inferred result assignments (REQ-434
         ]
         completeStateMachines(stateMachines)
         assert.ok("a1" in (stateMachines[0].data ?? {}), "`a1` must be declared")
-        const pool = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
+        const pool = (stateMachines[0].dataValueCombinations ?? []).map((r) => r["a1"])
         assert.ok(pool.includes("0"), "the inferred value `0` must reach the example table")
     })
 
@@ -257,7 +336,7 @@ describe("completeStateMachines — Step 0: inferred result assignments (REQ-434
                     { name: "empty", impliedConditions: [{ attribute: "count", condition: { operator: "=", value: "0" } }] },
                 ],
                 data: { count: "" },
-                dataExampleValues: [{ count: "1" }],
+                dataValueCombinations: [{ count: "1" }],
                 transitions: [
                     {
                         id: "004",
@@ -282,15 +361,15 @@ describe("completeStateMachines — Step A: attribute inference", () => {
         const stateMachines = [makeMinimal()]
         completeStateMachines(stateMachines)
         assert.deepEqual(stateMachines[0].data, {})
-        assert.deepEqual(stateMachines[0].dataExampleValues ?? [], [])
+        assert.deepEqual(stateMachines[0].dataValueCombinations ?? [], [])
     })
 
-    it("[TST-128]: infers attributes from dataExampleValues column names", () => {
+    it("[TST-128]: infers attributes from dataValueCombinations column names", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
                 states: [{ name: "s1" }],
-                dataExampleValues: [{ a1: "x", a2: "y" }],
+                dataValueCombinations: [{ a1: "x", a2: "y" }],
                 transitions: [],
             },
         ]
@@ -409,7 +488,7 @@ describe("completeStateMachines — Step A: attribute inference", () => {
                     },
                     { name: "s2" },
                 ],
-                dataExampleValues: [{ a1: "v1" }],
+                dataValueCombinations: [{ a1: "v1" }],
                 transitions: [
                     {
                         trigger: { type: "event", name: "e1", arguments: [{ name: "a2" }] },
@@ -437,29 +516,29 @@ describe("completeStateMachines — Step B: undefined row synthesis", () => {
             },
         ]
         completeStateMachines(stateMachines)
-        assert.strictEqual(stateMachines[0].dataExampleValues?.length, 1)
-        assert.deepEqual(stateMachines[0].dataExampleValues![0], { a1: "", a2: "" })
+        assert.strictEqual(stateMachines[0].dataValueCombinations?.length, 1)
+        assert.deepEqual(stateMachines[0].dataValueCombinations![0], { a1: "", a2: "" })
     })
 
-    it("[TST-137]: synthesizes a single all-empty row when dataExampleValues is an empty array", () => {
+    it("[TST-137]: synthesizes a single all-empty row when dataValueCombinations is an empty array", () => {
         const stateMachines: StateMachine[] = [
             {
                 name: "m1",
                 states: [{ name: "s1" }],
                 data: { a1: "v1" },
-                dataExampleValues: [],
+                dataValueCombinations: [],
                 transitions: [],
             },
         ]
         completeStateMachines(stateMachines)
-        assert.strictEqual(stateMachines[0].dataExampleValues?.length, 1)
-        assert.deepEqual(stateMachines[0].dataExampleValues![0], { a1: "" })
+        assert.strictEqual(stateMachines[0].dataValueCombinations?.length, 1)
+        assert.deepEqual(stateMachines[0].dataValueCombinations![0], { a1: "" })
     })
 
     it("[TST-138]: does not add a row for a machine that has no data attributes", () => {
         const stateMachines = [makeMinimal()]
         completeStateMachines(stateMachines)
-        assert.deepEqual(stateMachines[0].dataExampleValues ?? [], [])
+        assert.deepEqual(stateMachines[0].dataValueCombinations ?? [], [])
     })
 
     it("[TST-139]: back-fills missing attribute columns into existing rows", () => {
@@ -468,12 +547,12 @@ describe("completeStateMachines — Step B: undefined row synthesis", () => {
                 name: "m1",
                 states: [{ name: "s1" }],
                 data: { a1: "", a2: "", a3: "" },
-                dataExampleValues: [{ a1: "1", a2: "2" }], // `a3` is missing
+                dataValueCombinations: [{ a1: "1", a2: "2" }], // `a3` is missing
                 transitions: [],
             },
         ]
         completeStateMachines(stateMachines)
-        assert.strictEqual(stateMachines[0].dataExampleValues?.[0].a3, "", "`a3` should be back-filled with \"\"")
+        assert.strictEqual(stateMachines[0].dataValueCombinations?.[0].a3, "", "`a3` should be back-filled with \"\"")
     })
 
     it("[TST-140]: infers attributes and then synthesizes the undefined row in one pass", () => {
@@ -491,8 +570,8 @@ describe("completeStateMachines — Step B: undefined row synthesis", () => {
         ]
         completeStateMachines(stateMachines)
         assert.ok("a1" in (stateMachines[0].data ?? {}))
-        assert.strictEqual(stateMachines[0].dataExampleValues?.length, 1)
-        assert.deepEqual(stateMachines[0].dataExampleValues![0], { a1: "" })
+        assert.strictEqual(stateMachines[0].dataValueCombinations?.length, 1)
+        assert.deepEqual(stateMachines[0].dataValueCombinations![0], { a1: "" })
     })
 })
 
@@ -516,7 +595,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
             },
         ]
         completeStateMachines(stateMachines)
-        const pool = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
+        const pool = (stateMachines[0].dataValueCombinations ?? []).map((r) => r["a1"])
         assert.ok(pool.includes("unknown_val"), "synthesized row must contain the condition value")
     })
 
@@ -529,7 +608,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
             },
         ]
         completeStateMachines(stateMachines)
-        const pool = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
+        const pool = (stateMachines[0].dataValueCombinations ?? []).map((r) => r["a1"])
         assert.ok(pool.includes("v1"), "synthesized row must contain the trigger condition value")
     })
 
@@ -542,7 +621,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
             },
         ]
         completeStateMachines(stateMachines)
-        const pool = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
+        const pool = (stateMachines[0].dataValueCombinations ?? []).map((r) => r["a1"])
         assert.ok(pool.includes("v1"), "synthesized row must contain the result value")
     })
 
@@ -552,7 +631,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
             { attribute: "a1", condition: { operator: "=", value: "v1" } },
         ]
         completeStateMachines(stateMachines)
-        const pool = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
+        const pool = (stateMachines[0].dataValueCombinations ?? []).map((r) => r["a1"])
         assert.ok(pool.includes("v1"), "synthesized row must contain the implied condition value")
     })
 
@@ -561,7 +640,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
             name: "m2",
             states: [{ name: "s3" }],
             data: { a1: "" },
-            dataExampleValues: [{ a1: "v1" }, { a1: "v2" }],
+            dataValueCombinations: [{ a1: "v1" }, { a1: "v2" }],
             transitions: [],
         }
         const m1: StateMachine = {
@@ -575,7 +654,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         completeStateMachines([m1, m2])
         // Note: complete.ts operates per-machine and does not cross-resolve default precondition
         // ownership. m1's default precondition condition is synthesized into m1's own table.
-        const m1Pool = (m1.dataExampleValues ?? []).map((r) => r["a1"])
+        const m1Pool = (m1.dataValueCombinations ?? []).map((r) => r["a1"])
         assert.ok(m1Pool.includes("v3"), "`m1` synthesized row must contain the default precondition value")
     })
 
@@ -585,7 +664,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
                 data: { a: "", b: "" },
-                dataExampleValues: [{ a1: "v1", a2: "v2" }],
+                dataValueCombinations: [{ a1: "v1", a2: "v2" }],
                 transitions: [
                     {
                         trigger: {
@@ -602,7 +681,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
             },
         ]
         completeStateMachines(stateMachines)
-        const rows = stateMachines[0].dataExampleValues ?? []
+        const rows = stateMachines[0].dataValueCombinations ?? []
         const combined = rows.find((r) => r["a1"] === "v3" && r["a2"] === "v4")
         assert.ok(combined, "a single combined row {a1:'v3', a2:'v4'} must be synthesized")
         // The original row must still be present
@@ -622,10 +701,10 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
                 result: { name: "s2" },
             },
         ]
-        const before = stateMachines[0].dataExampleValues!.length
+        const before = stateMachines[0].dataValueCombinations!.length
         completeStateMachines(stateMachines)
         assert.strictEqual(
-            stateMachines[0].dataExampleValues!.length,
+            stateMachines[0].dataValueCombinations!.length,
             before,
             "no rows should be added when the value is already present",
         )
@@ -646,7 +725,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
             },
         ]
         completeStateMachines(stateMachines)
-        const pool = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
+        const pool = (stateMachines[0].dataValueCombinations ?? []).map((r) => r["a1"])
         assert.ok(pool.includes("v2"), "v2 must be synthesized")
         assert.ok(pool.includes("v3"), "v3 must be synthesized")
     })
@@ -657,7 +736,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
                 data: { a1: "" },
-                dataExampleValues: [{ a1: "5" }],
+                dataValueCombinations: [{ a1: "5" }],
                 transitions: [
                     {
                         trigger: {
@@ -671,7 +750,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
             },
         ]
         completeStateMachines(stateMachines)
-        const pool = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
+        const pool = (stateMachines[0].dataValueCombinations ?? []).map((r) => r["a1"])
         assert.ok(pool.includes("1"), "lower boundary 1 must be synthesized")
         assert.ok(pool.includes("99"), "upper boundary 99 must be synthesized")
     })
@@ -681,7 +760,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
             {
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
-                dataExampleValues: [{ a1: "v1", a2: "v2" }],
+                dataValueCombinations: [{ a1: "v1", a2: "v2" }],
                 transitions: [
                     {
                         trigger: {
@@ -695,7 +774,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
             },
         ]
         completeStateMachines(stateMachines)
-        const rows = stateMachines[0].dataExampleValues ?? []
+        const rows = stateMachines[0].dataValueCombinations ?? []
         const synthesized = rows.find((r) => r["a1"] === "v3")
         assert.ok(synthesized, "synthesized row must exist")
         assert.strictEqual(synthesized!["a2"], "v2", "unconstrained attribute `a2` should use first available value")
@@ -707,7 +786,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
                 data: { a1: "", a2: "" },
-                dataExampleValues: [],
+                dataValueCombinations: [],
                 transitions: [
                     {
                         trigger: {
@@ -721,7 +800,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
             },
         ]
         completeStateMachines(stateMachines)
-        const rows = stateMachines[0].dataExampleValues ?? []
+        const rows = stateMachines[0].dataValueCombinations ?? []
         assert.ok(rows.length >= 1, "at least one row should exist")
         const match = rows.find((r) => r["a1"] === "v1")
         assert.ok(match, "row with `a1=v1' must be synthesized")
@@ -747,7 +826,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
         ]
         completeStateMachines(stateMachines)
         assert.ok("a1" in (stateMachines[0].data ?? {}), "`a1` must be inferred")
-        const pool = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
+        const pool = (stateMachines[0].dataValueCombinations ?? []).map((r) => r["a1"])
         assert.ok(pool.includes("v1"), "`v1` must be synthesized")
     })
 
@@ -757,7 +836,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
                 data: { a1: "" },
-                dataExampleValues: [{ a1: "v1" }],
+                dataValueCombinations: [{ a1: "v1" }],
                 transitions: [
                     {
                         trigger: { type: "event", name: "e1", arguments: [{ name: "a1", condition: { operator: "=", value: "v2" } }] },
@@ -771,7 +850,7 @@ describe("completeStateMachines — Step C: condition-value augmentation", () =>
             },
         ]
         completeStateMachines(stateMachines)
-        const values = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
+        const values = (stateMachines[0].dataValueCombinations ?? []).map((r) => r["a1"])
         const sorted = [...values].sort((a, b) => a.localeCompare(b))
         assert.deepEqual(values, sorted, "rows should be sorted alphabetically by attribute value")
     })
@@ -786,7 +865,7 @@ describe("completeStateMachines — attribute-reference result values", () => {
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
                 data: { a1: "" },
-                dataExampleValues: [{ a1: "v1" }],
+                dataValueCombinations: [{ a1: "v1" }],
                 transitions: [
                     {
                         trigger: { type: "event", name: "e1" },
@@ -808,7 +887,7 @@ describe("completeStateMachines — attribute-reference result values", () => {
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
                 data: { a1: "" },
-                dataExampleValues: [{ a1: "v1" }],
+                dataValueCombinations: [{ a1: "v1" }],
                 transitions: [
                     {
                         trigger: { type: "event", name: "e1", arguments: [{ name: "a2" }] },
@@ -830,7 +909,7 @@ describe("completeStateMachines — attribute-reference result values", () => {
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
                 data: { a1: "" },
-                dataExampleValues: [{ a1: "v1" }],
+                dataValueCombinations: [{ a1: "v1" }],
                 transitions: [
                     {
                         trigger: { type: "event", name: "e1" },
@@ -843,7 +922,7 @@ describe("completeStateMachines — attribute-reference result values", () => {
             },
         ]
         completeStateMachines(stateMachines)
-        const pool = (stateMachines[0].dataExampleValues ?? []).map((r) => r["a1"])
+        const pool = (stateMachines[0].dataValueCombinations ?? []).map((r) => r["a1"])
         assert.deepEqual(pool, ["v1"], "no row synthesized for a reference's target attribute name")
     })
 })
@@ -867,7 +946,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
                 data: { a1: "" },
-                dataExampleValues: [{ a1: "v1" }],
+                dataValueCombinations: [{ a1: "v1" }],
                 transitions: [
                     {
                         trigger: {
@@ -890,7 +969,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
                 data: { a1: "" },
-                dataExampleValues: [{ a1: "1" }, { a1: "2" }],
+                dataValueCombinations: [{ a1: "1" }, { a1: "2" }],
                 transitions: [
                     {
                         states: [{ name: "s1", arguments: [{ name: "a2", condition: referenceCondition("a1", "=") }] }],
@@ -901,7 +980,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
             },
         ]
         completeStateMachines(stateMachines)
-        assert.deepEqual(stateMachines[0].dataExampleValues, [
+        assert.deepEqual(stateMachines[0].dataValueCombinations, [
             { a1: "1", a2: "" },
             { a1: "2", a2: "" },
             { a1: "1", a2: "1" },
@@ -915,7 +994,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
                 data: { a1: "" },
-                dataExampleValues: [{ a1: "1" }, { a1: "2" }],
+                dataValueCombinations: [{ a1: "1" }, { a1: "2" }],
                 transitions: [
                     {
                         states: [{
@@ -933,7 +1012,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
         ]
         completeStateMachines(stateMachines)
         // Only the combination satisfying both the literal condition and the reference is implied.
-        assert.deepEqual(stateMachines[0].dataExampleValues, [
+        assert.deepEqual(stateMachines[0].dataValueCombinations, [
             { a1: "1", a2: "" },
             { a1: "2", a2: "" },
             { a1: "2", a2: "2" },
@@ -949,12 +1028,12 @@ describe("completeStateMachines — attribute-reference condition values", () =>
                     { name: "s2", impliedConditions: [{ attribute: "a2", condition: referenceCondition("a1", "=") }] },
                 ],
                 data: { a1: "" },
-                dataExampleValues: [{ a1: "v1" }],
+                dataValueCombinations: [{ a1: "v1" }],
                 transitions: [],
             },
         ]
         completeStateMachines(stateMachines)
-        assert.deepEqual(stateMachines[0].dataExampleValues, [
+        assert.deepEqual(stateMachines[0].dataValueCombinations, [
             { a1: "v1", a2: "" },
             { a1: "v1", a2: "v1" },
         ])
@@ -966,7 +1045,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
                 data: { a1: "" },
-                dataExampleValues: [{ a1: "1" }, { a1: "2" }],
+                dataValueCombinations: [{ a1: "1" }, { a1: "2" }],
                 transitions: [
                     {
                         states: [{
@@ -980,7 +1059,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
         ]
         completeStateMachines(stateMachines)
         // `<>` states what the value must *not* be, so no single value follows from the reference.
-        assert.deepEqual(stateMachines[0].dataExampleValues, [
+        assert.deepEqual(stateMachines[0].dataValueCombinations, [
             { a1: "1", a2: "" },
             { a1: "2", a2: "" },
         ])
@@ -992,7 +1071,7 @@ describe("completeStateMachines — attribute-reference condition values", () =>
                 name: "m1",
                 states: [{ name: "s1" }, { name: "s2" }],
                 data: {},
-                dataExampleValues: [],
+                dataValueCombinations: [],
                 transitions: [
                     {
                         states: [{ name: "s1", arguments: [{ name: "a2", condition: referenceCondition("foreign", "=") }] }],
@@ -1004,6 +1083,6 @@ describe("completeStateMachines — attribute-reference condition values", () =>
         ]
         completeStateMachines(stateMachines)
         // `foreign` is declared by another machine, so this machine has no value to copy.
-        assert.deepEqual(stateMachines[0].dataExampleValues, [{ a2: "" }])
+        assert.deepEqual(stateMachines[0].dataValueCombinations, [{ a2: "" }])
     })
 })

@@ -81,14 +81,6 @@
           - Reservation confirmed using new email address
 
 
-- Define values per attribute and generate examples from all combinations.
-
-  ## Data
-  - attr1: Attribute 1. Examples: "value1", "value2"
-  - attr2: Attribute 2. Examples: "value3", "value4"
-  ### Data values
-  All combinations  (instead of table)
-
 - Implied states
     E.g. `user profile unavailable` implies `user unauthenticated`
          `(un)named profile available` with `profile email address`: `user authenticated` with `user email address` as `profile email address`
@@ -148,4 +140,3 @@
 
 - Allow plain text in a section to be just informational text. All real content in bulleted items or tables.
 
-- Replace "Example values:" with "### Data values:"

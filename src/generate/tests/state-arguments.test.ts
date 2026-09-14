@@ -5,7 +5,7 @@ test("[TST-063] → [REQ-050]: Multiple arguments appended comma separated in or
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1", b: "2"}],
+        dataValueCombinations: [{a: "1", b: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}, {name: "b"}]}],
             trigger: {type: "event", name: "e"},
@@ -23,7 +23,7 @@ test("[TST-064] → [REQ-051/052]: preQualifier rendered before modifier", () =>
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: "2"}],
+        dataValueCombinations: [{a: "1"}, {a: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},
@@ -41,7 +41,7 @@ test("[TST-065] → [REQ-055/056]: postQualifier rendered after modifier", () =>
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}, {a: "2"}],
+        dataValueCombinations: [{a: "1"}, {a: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},
@@ -59,7 +59,7 @@ test("[TST-066] → [REQ-059/060]: suffix rendered after attribute name", () => 
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}],
+        dataValueCombinations: [{a: "1"}],
         transitions: [{
             states: [{name: "s", arguments: [{qualifier: "with", name: "a", suffix: "prefilled"}]}],
             trigger: {type: "event", name: "e"},

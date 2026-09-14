@@ -4,7 +4,7 @@
 #    states:
 #      - name: s1
 #      - name: s2
-#    dataExampleValues:
+#    dataValueCombinations:
 #      - a: A
 #    transitions:
 #      - id: "001"

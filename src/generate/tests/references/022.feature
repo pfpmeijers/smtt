@@ -1,4 +1,4 @@
-# Results from: empty-attribute-values.test.ts, TST-022: Arguments referenced with no dataExampleValues table raises error
+# Results from: empty-attribute-values.test.ts, TST-022: Arguments referenced with no dataValueCombinations table raises error
 # State machines:
 #  - name: m
 #    states:
@@ -19,4 +19,4 @@
 #   machines is empty after row merging — i.e. no attribute columns exist to drive the `Examples:`
 #   block.
 
-# Throws: State machine `m`: Anonymous transition references argument(s), but the state machine's dataExampleValues table is empty or absent (REQ-157/REQ-163).
+# Throws: State machine `m`: Anonymous transition references argument(s), but the state machine's dataValueCombinations table is empty or absent (REQ-157/REQ-163).

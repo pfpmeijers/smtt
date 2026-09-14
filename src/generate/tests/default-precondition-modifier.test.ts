@@ -10,7 +10,7 @@ test("[TST-018] → [REQ-156]: Default precondition modifier references a base v
         {
             name: "m2",
             states: [{name: "s2"}],
-            dataExampleValues: [{count: "1"}, {count: "2"}],
+            dataValueCombinations: [{count: "1"}, {count: "2"}],
             defaultPreconditions: [{state: "s1", arguments: [{modifier: "incremented", name: "count"}]}],
             transitions: [{
                 states: [{name: "s2", arguments: [{name: "count"}]}],

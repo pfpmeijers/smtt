@@ -15,7 +15,7 @@ Initial state: `Listed idle`
 
 - `list count`: Running count.
 
-Example values:
+### Value combinations
 
 | `list count` |
 |---------------|

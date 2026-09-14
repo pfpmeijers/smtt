@@ -21,7 +21,7 @@ Initial state: `Painting listed`
 - `list price`: The painting's asking price.
 - `note`: Free-text annotation, unrelated to any attribute name.
 
-Example values:
+### Value combinations
 
 | `list price` | `note`    |
 |--------------|-----------|

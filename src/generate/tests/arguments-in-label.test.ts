@@ -5,7 +5,7 @@ test("[TST-001] → [REQ-026/027/049]: Arguments appear in scenario label state 
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s1"}, {name: "s2"}],
-        dataExampleValues: [{a1: "1", a2: "2", a3: "3"}],
+        dataValueCombinations: [{a1: "1", a2: "2", a3: "3"}],
         defaultPreconditions: [{
             state: "s3",
             arguments: [{qualifier: "on", name: "a3"}],

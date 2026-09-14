@@ -130,7 +130,7 @@ unaffected by completion.
   result value names another
   data attribute, a double-quoted or bare numeric value is a literal. No name
   matching is involved. A reference shall denote the value the named attribute
-  holds in the same `dataExampleValues` row: a result assigns its attribute
+  holds in the same `dataValueCombinations` row: a result assigns its attribute
   that value, a condition compares its attribute against it. A reference shall
   only appear where a single example-values row can resolve it: on a result
   argument's `result`, or on a condition using a scalar comparison operator
@@ -143,7 +143,7 @@ unaffected by completion.
 ## Complete AST validation
 
 The following requirements shall hold on the complete AST. They constrain the
-`data` map and the `dataExampleValues` table, both of which raw AST authors
+`data` map and the `dataValueCombinations` table, both of which raw AST authors
 may leave partially or entirely unspecified.
 
 What the completion step itself adds to reach that state — inferred result
@@ -153,7 +153,7 @@ specified separately, in `smtt.parse.complete.md`. The requirements below are
 checks on the result, whether it was produced by that step or supplied
 ready-made.
 
-- [REQ-417] Every `dataExampleValues` row in the complete AST shall include a
+- [REQ-417] Every `dataValueCombinations` row in the complete AST shall include a
   column for every attribute present in the machine's `data` map.
 
 - [REQ-418] Every attribute value referenced in a condition or result

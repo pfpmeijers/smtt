@@ -20,7 +20,7 @@ Initial state: `Awaiting payment`
 - `Quantity`: Ordered amount.
 - `Tier`: Customer level.
 
-Example values:
+### Value combinations
 
 | `Customer ID` | `Quantity` | `Tier`   |
 |---------------|------------|----------|

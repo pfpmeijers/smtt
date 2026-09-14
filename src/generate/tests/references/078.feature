@@ -3,7 +3,7 @@
 #  - name: m1
 #    states:
 #      - name: s1
-#    dataExampleValues:
+#    dataValueCombinations:
 #      - a: "1"
 #    transitions:
 #      - trigger:

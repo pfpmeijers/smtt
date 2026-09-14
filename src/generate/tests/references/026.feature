@@ -8,7 +8,7 @@
 #            condition:
 #              operator: ">"
 #              value: "5"
-#    dataExampleValues:
+#    dataValueCombinations:
 #      - a: "1"
 #      - a: "5"
 #      - a: "9"

@@ -4,7 +4,7 @@
 #    states:
 #      - name: s1
 #      - name: s2
-#    dataExampleValues:
+#    dataValueCombinations:
 #      - a1: "1"
 #      - a1: "2"
 #    transitions:
@@ -18,7 +18,7 @@
 #  - name: m2
 #    states:
 #      - name: s3
-#    dataExampleValues:
+#    dataValueCombinations:
 #      - a2: "3"
 #      - a2: "4"
 #    transitions:

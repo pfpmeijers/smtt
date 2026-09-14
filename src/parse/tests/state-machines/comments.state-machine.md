@@ -19,7 +19,7 @@ Initial state: `Idling` // Developer comment about initial state.
 
 - `count` // Developer comment about count.
 
-Example values:
+### Value combinations
 
 | `count`                |
 |------------------------|

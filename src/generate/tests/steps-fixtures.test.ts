@@ -42,7 +42,7 @@ test("[TST-088] → [REQ-214/215/216/217/218/219/227]: parameterized steps carry
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{ name: "sa bc" }],
-        dataExampleValues: [{ "aa bc": "A" }],
+        dataValueCombinations: [{ "aa bc": "A" }],
         transitions: [{
             trigger: { type: "event", name: "e", arguments: [{ name: "aa bc" }] },
             result: { name: "sa bc" },
@@ -94,7 +94,7 @@ test("[TST-090] → [REQ-214/215/216/217/313]: parameterized steps and fixtures 
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{ name: "s" }],
-        dataExampleValues: [{ "aa bc": "A", "ad ef": "D" }],
+        dataValueCombinations: [{ "aa bc": "A", "ad ef": "D" }],
         transitions: [{
             trigger: { type: "event", name: "e", arguments: [{ name: "aa bc" }, { name: "ad ef" }] },
             result: { name: "s" },
@@ -201,7 +201,7 @@ test("[TST-097] → [REQ-309/310]: fixture deduplicates stubs and keeps the wide
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{ name: "s1" }, { name: "s2" }],
-        dataExampleValues: [{ "a1": "A", "a2": "B" }],
+        dataValueCombinations: [{ "a1": "A", "a2": "B" }],
         transitions: [
             {
                 trigger: { type: "event", name: "e", arguments: [{ name: "a1" }] },

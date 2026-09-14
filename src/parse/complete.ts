@@ -6,14 +6,17 @@
  * succeed without requiring the author to declare every attribute explicitly.
  *
  * Operations performed for each state machine, in order:
+ *  - Derive `dataValueCombinations` from `dataValues` — the full cartesian product of the
+ *    per-attribute value lists a machine declares in place of a combinations table
+ *    (REQ-435).
  *  - Infer a result assignment for every transition landing in a state whose implied
  *    condition pins an attribute to a concrete value — a literal via `=`, or absence via
  *    `undefined` — when the transition's own result does not already assign or reference
  *    that attribute (REQ-434).
  *  - Infer data attributes from every usage site (example-value table columns,
  *    implied conditions, default-precondition / transition arguments).
- *  - Synthesise a single all-undefined row when `dataExampleValues` is empty.
- *  - Augment `dataExampleValues` so that every condition-referenced value
+ *  - Synthesise a single all-undefined row when `dataValueCombinations` is empty.
+ *  - Augment `dataValueCombinations` so that every condition-referenced value
  *    combination is satisfied by at least one row, including the rows implied by
  *    attribute-reference conditions (REQ-426).
  */
@@ -140,10 +143,59 @@ function referenceConstraint(
  * @returns The attribute's distinct defined values, in table order.
  */
 function definedExampleValues(stateMachine: StateMachine, attributeName: string): string[] {
-    const values = (stateMachine.dataExampleValues ?? [])
+    const values = (stateMachine.dataValueCombinations ?? [])
         .map((row) => row[attributeName])
         .filter((value): value is string => value !== undefined && value !== "")
     return [...new Set(values)]
+}
+
+// --- Derive value combinations ---
+
+/**
+ * [REQ-435] Upper bound on the rows a `### Values` list may derive. The product of a handful of
+ * per-attribute value lists grows fast enough that a plausible-looking list can ask for a scenario
+ * count no test run would finish, so the expansion is capped rather than attempted.
+ */
+export const MAX_DERIVED_VALUE_COMBINATIONS = 1000
+
+/**
+ * [REQ-435] Replaces `dataValueCombinations` with the full cartesian product of `dataValues` — the
+ * per-attribute value lists a source declares in place of a combinations table.
+ *
+ * The product is laid out with the last-declared attribute varying fastest, so the rows read in
+ * the order the `### Values` list suggests. `dataValues` is left in place: it is what the source
+ * declared, and the complete step only ever adds to the AST.
+ *
+ * @param stateMachine State machine to mutate. One without `dataValues` is left untouched.
+ * @throws Error When the product would exceed `MAX_DERIVED_VALUE_COMBINATIONS` rows, or when an
+ *   attribute's value list is empty (nothing to combine, which would collapse the product to
+ *   nothing at all).
+ */
+function deriveValueCombinations(stateMachine: StateMachine): void {
+    const dataValues = stateMachine.dataValues
+    if (!dataValues) return
+
+    const entries = Object.entries(dataValues)
+    const empty = entries.filter(([, values]) => values.length === 0).map(([attribute]) => attribute)
+    if (empty.length > 0) {
+        throw new Error(
+            `State machine \`${stateMachine.name}\`: \`### Values\` declares no value for ` +
+            `${empty.map((attribute) => `\`${attribute}\``).join(", ")} (REQ-435).`,
+        )
+    }
+
+    const total = entries.reduce((count, [, values]) => count * new Set(values).size, 1)
+    if (total > MAX_DERIVED_VALUE_COMBINATIONS) {
+        throw new Error(
+            `State machine \`${stateMachine.name}\`: \`### Values\` would derive ` +
+            `${total} combinations, above the maximum of ${MAX_DERIVED_VALUE_COMBINATIONS}. ` +
+            `Reduce the number of values, or spell the combinations out in a ` +
+            `\`### Value combinations\` table (REQ-435).`,
+        )
+    }
+
+    const product = cartesianProduct(new Map(entries))
+    stateMachine.dataValueCombinations = product.map((combination) => Object.fromEntries(combination))
 }
 
 // --- Infer implied result assignments ---
@@ -232,7 +284,7 @@ function inferImpliedResultAssignments(
 
 /**
  * Collects every attribute name referenced anywhere in the state machine:
- * - Column names in the existing `dataExampleValues` table.
+ * - Column names in the existing `dataValueCombinations` table.
  * - `implied.attribute` from state implied conditions.
  * - `argument.name` from default-precondition arguments, transition state
  *   arguments, trigger arguments, and result arguments.
@@ -249,7 +301,7 @@ export function collectUsedAttributeNames(stateMachine: StateMachine): string[] 
     const names = new Set<string>()
 
     // Example-value table column names.
-    for (const row of stateMachine.dataExampleValues ?? []) {
+    for (const row of stateMachine.dataValueCombinations ?? []) {
         for (const key of Object.keys(row)) {
             names.add(key.toLowerCase())
         }
@@ -328,7 +380,7 @@ function sortedDataAttributes(stateMachine: StateMachine): string[] {
 }
 
 /**
- * [REQ-420] Ensures `dataExampleValues` is non-empty for machines that declare
+ * [REQ-420] Ensures `dataValueCombinations` is non-empty for machines that declare
  * data attributes. When the table is empty, one row is synthesised with `""`
  * (the AST's encoding of an undefined/absent value) for every attribute.
  * When the table is non-empty, every attribute from `data` is back-filled with
@@ -340,17 +392,17 @@ function synthesiseUndefinedRows(stateMachine: StateMachine): boolean {
     const allAttributes = sortedDataAttributes(stateMachine)
     if (allAttributes.length === 0) return false
 
-    if (!stateMachine.dataExampleValues || stateMachine.dataExampleValues.length === 0) {
+    if (!stateMachine.dataValueCombinations || stateMachine.dataValueCombinations.length === 0) {
         const row: Record<string, string> = {}
         for (const attr of allAttributes) {
             row[attr] = ""
         }
-        stateMachine.dataExampleValues = [row]
+        stateMachine.dataValueCombinations = [row]
         return true
     }
 
     // Back-fill missing columns in existing rows.
-    for (const row of stateMachine.dataExampleValues) {
+    for (const row of stateMachine.dataValueCombinations) {
         for (const attr of allAttributes) {
             if (!(attr in row)) {
                 row[attr] = ""
@@ -587,7 +639,7 @@ function collectRequiredCombinations(stateMachine: StateMachine): Map<string, st
 }
 
 /**
- * [REQ-421] Augments `dataExampleValues` so that every condition-referenced
+ * [REQ-421] Augments `dataValueCombinations` so that every condition-referenced
  * value combination is covered by at least one row. For each missing
  * combination, a new row is synthesised: conditioned attributes receive their
  * required values; every other attribute receives the first value found in the
@@ -602,7 +654,7 @@ function augmentExampleTable(stateMachine: StateMachine, synthesizedUndefinedRow
     const required = collectRequiredCombinations(stateMachine)
     if (required.length === 0) return
 
-    const rows = stateMachine.dataExampleValues ?? []
+    const rows = stateMachine.dataValueCombinations ?? []
     const allAttributes = sortedDataAttributes(stateMachine)
 
     for (const combination of required) {
@@ -634,7 +686,7 @@ function augmentExampleTable(stateMachine: StateMachine, synthesizedUndefinedRow
         }
     }
 
-    stateMachine.dataExampleValues = rows
+    stateMachine.dataValueCombinations = rows
 }
 
 // --- Public API ---
@@ -645,14 +697,15 @@ function augmentExampleTable(stateMachine: StateMachine, synthesizedUndefinedRow
  * example-value row to be declared explicitly in the source Markdown.
  *
  * Mutates each machine by performing, in order:
+ *  - Derive `dataValueCombinations` from `dataValues` as their full cartesian product (REQ-435).
  *  - Infer a result assignment for every transition landing in a state whose implied
  *    condition pins an attribute to a concrete value — a literal via `=`, or absence via
  *    `undefined` — when the transition's own result does not already assign or reference
  *    that attribute (REQ-434).
  *  - Infer data attributes from usage (example columns, implied conditions,
  *    default-precondition / transition arguments).
- *  - Synthesise a single all-`""` row when `dataExampleValues` is empty.
- *  - Augment `dataExampleValues` so that every condition-referenced value
+ *  - Synthesise a single all-`""` row when `dataValueCombinations` is empty.
+ *  - Augment `dataValueCombinations` so that every condition-referenced value
  *    combination is satisfied by at least one row, including the rows implied by
  *    attribute-reference conditions (REQ-426).
  *
@@ -661,6 +714,7 @@ function augmentExampleTable(stateMachine: StateMachine, synthesizedUndefinedRow
 export function completeStateMachines(stateMachines: StateMachine[]): void {
     const impliedIndex = buildImpliedIndex(stateMachines)
     for (const stateMachine of stateMachines) {
+        deriveValueCombinations(stateMachine)
         inferImpliedResultAssignments(stateMachine, impliedIndex)
         inferDataAttributes(stateMachine)
         const synthesizedUndefinedRow = synthesiseUndefinedRows(stateMachine)

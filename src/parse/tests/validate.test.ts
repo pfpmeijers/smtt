@@ -22,7 +22,7 @@ function buildValidStateMachines(): StateMachine[] {
                     result: { name: "s2" },
                 },
             ],
-            dataExampleValues: [
+            dataValueCombinations: [
                 { a1: "v1", a2: "1" },
                 { a1: "v2", a2: "2" },
                 { a1: "v3", a2: "3" },
@@ -32,7 +32,7 @@ function buildValidStateMachines(): StateMachine[] {
             name: "m2",
             states: [{ name: "s3" }, { name: "s4" }],
             transitions: [],
-            dataExampleValues: [{ a1: "v1", a2: "1" }],
+            dataValueCombinations: [{ a1: "v1", a2: "1" }],
         },
     ]
 }
@@ -162,8 +162,8 @@ describe("validateStateMachines business rules", () => {
 
     it("[TST-120] → [REQ-413]: rejects sequence modifiers when value pool has fewer than 2 distinct values", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
-        stateMachines[0].dataExampleValues = [{ a1: "v1" }]
-        stateMachines[1].dataExampleValues = [{ a1: "v1" }]
+        stateMachines[0].dataValueCombinations = [{ a1: "v1" }]
+        stateMachines[1].dataValueCombinations = [{ a1: "v1" }]
         stateMachines[0].transitions = [
             {
                 id: "001",
@@ -185,8 +185,8 @@ describe("validateStateMachines business rules", () => {
 
     it("[TST-121] → [REQ-414]: rejects incremented-like modifiers when value pool contains non-numeric values", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
-        stateMachines[0].dataExampleValues = [{ a2: "1" }, { a2: "x" }]
-        stateMachines[1].dataExampleValues = []
+        stateMachines[0].dataValueCombinations = [{ a2: "1" }, { a2: "x" }]
+        stateMachines[1].dataValueCombinations = []
         stateMachines[0].transitions = [
             {
                 id: "001",
@@ -226,18 +226,18 @@ describe("validateStateMachines business rules", () => {
             /must NOT have additional properties/,
         )
     })
-    it("[TST-123] → [REQ-417]: rejects Example values tables missing columns for declared attributes", () => {
+    it("[TST-123] → [REQ-417]: rejects Value combinations tables missing columns for declared attributes", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].data = { a1: "", a2: "" }
-        stateMachines[0].dataExampleValues = [{ a1: "v1" }]
+        stateMachines[0].dataValueCombinations = [{ a1: "v1" }]
 
         assert.throws(
             () => validateStateMachines(stateMachines),
-            /Example values table is missing column\(s\) for declared attribute\(s\): `a2` \(REQ-417\)/,
+            /Value combinations table is missing column\(s\) for declared attribute\(s\): `a2` \(REQ-417\)/,
         )
     })
 
-    it("[TST-124] → [REQ-418]: accepts valid condition values from dataExampleValues, and undefined operator", () => {
+    it("[TST-124] → [REQ-418]: accepts valid condition values from dataValueCombinations, and undefined operator", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].states[0].impliedConditions = [
             { attribute: "a1", condition: { operator: "=", value: "v1" } },
@@ -380,7 +380,7 @@ describe("validateStateMachines business rules", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].data = { a1: "" }
         stateMachines[1].data = { a3: "" }
-        stateMachines[1].dataExampleValues = [{ a3: "v1" }]
+        stateMachines[1].dataValueCombinations = [{ a3: "v1" }]
         stateMachines[0].transitions![0].result = {
             name: "s2",
             arguments: [{ name: "a1", result: { value: "a3", valueIsReference: true } }],

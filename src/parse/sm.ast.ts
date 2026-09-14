@@ -31,12 +31,56 @@ type DataAttribute = {
 
 type DataSection = {
     data: Record<string, string>
-    dataExampleValues: Record<string, string>[]
+    dataValueCombinations: Record<string, string>[]
+    dataValues?: Record<string, string[]>
 }
 
 type DataTable = {
     columns: string[]
     rows: string[][]
+}
+
+/** One `### Values` entry: the values a single attribute may take. */
+type AttributeValues = {
+    name: string
+    values: string[]
+}
+
+/** Reported when a `## Data` section declares both spellings of its value rows. */
+const VALUES_WITH_VALUE_COMBINATIONS_TABLE =
+    "`### Values` and a `### Value combinations` table are alternatives, not a pair: " +
+    "drop the table to take every combination of the listed values, or drop `### Values` " +
+    "to pair values into rows by hand."
+
+/**
+ * Turns a `### Value combinations` table into example-value rows, one record per row keyed by
+ * column name. A row shorter than the header leaves the remaining columns undefined (`""`).
+ *
+ * @param table Parsed table, or `undefined` when the section declares no combinations at all.
+ * @returns One record per table row, or `[]` when there is no table.
+ */
+function rowsFromTable(table: DataTable | undefined): Record<string, string>[] {
+    if (!table) return []
+    return table.rows.map(row =>
+        Object.fromEntries(table.columns.map((column, index) => [column, (row[index] ?? "").trim()]))
+    )
+}
+
+/**
+ * Turns a `### Values` list into the `dataValues` map, and declares any attribute the list names
+ * but the `## Data` attribute list does not — a `### Values` entry doubles as a declaration, the
+ * way a combinations table's column header does.
+ *
+ * @param attributeValues Parsed `### Values` entries.
+ * @param data Attribute-to-description map to complete (mutated in place).
+ * @returns The values each attribute may take, keyed by attribute name.
+ */
+function dataValuesFromSection(
+    attributeValues: AttributeValues[],
+    data: Record<string, string>
+): Record<string, string[]> {
+    for (const { name } of attributeValues) if (!(name in data)) data[name] = ""
+    return Object.fromEntries(attributeValues.map(({ name, values }) => [name, values]))
 }
 
 type ImpliedCondition = {
@@ -290,7 +334,8 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
                 })(),
                 states,
                 data: dataSection?.data ?? {},
-                dataExampleValues: dataSection?.dataExampleValues ?? [],
+                ...(dataSection?.dataValues ? { dataValues: dataSection.dataValues } : {}),
+                dataValueCombinations: dataSection?.dataValueCombinations ?? [],
                 defaultPreconditions: transitions.defaultPreconditions ?? [],
                 transitions: transitions.transitions as unknown as Transition[],
                 impossible: { defined: transitions.impossible ?? [] },
@@ -395,31 +440,39 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
         },
 
         dataSectionBody_none(_none, _terminateLine) {
-            return { data: {}, dataExampleValues: [] }
+            return { data: {}, dataValueCombinations: [] }
         },
 
-        dataSectionBody_valuesOnly(tableNode) {
-            const table = tableNode.toAST() as DataTable
-            const dataExampleValues = table.rows.map(row =>
-                Object.fromEntries(table.columns.map((column, index) => [column, (row[index] ?? "").trim()]))
-            )
-            return { data: {}, dataExampleValues }
+        dataSectionBody_valuesOnly(valuesNode, combinationsNode) {
+            if (combinationsNode.children.length > 0) throw new Error(VALUES_WITH_VALUE_COMBINATIONS_TABLE)
+            const data: Record<string, string> = {}
+            const dataValues = dataValuesFromSection(valuesNode.toAST() as AttributeValues[], data)
+            return { data, dataValueCombinations: [], dataValues }
         },
 
-        dataSectionBody_withEntries(attributesNode, tableNode) {
+        dataSectionBody_combinationsOnly(combinationsNode) {
+            return { data: {}, dataValueCombinations: rowsFromTable(combinationsNode.toAST() as DataTable) }
+        },
+
+        dataSectionBody_withEntries(attributesNode, valuesNode, combinationsNode) {
             const dataAttributes = attributesNode.children.map(attribute => attribute.toAST()) as DataAttribute[]
-            const table = tableNode.children[0]?.toAST() as DataTable | undefined
+            const attributeValues = valuesNode.children[0]?.toAST() as AttributeValues[] | undefined
+            const table = combinationsNode.children[0]?.toAST() as DataTable | undefined
 
             const data: Record<string, string> = {}
             for (const dataAttribute of dataAttributes) {
                 data[dataAttribute.name] = dataAttribute.description ?? ""
             }
 
-            const dataExampleValues = table
-                ? table.rows.map(row => Object.fromEntries(table.columns.map((column, index) => [column, (row[index] ?? "").trim()])))
-                : []
+            if (attributeValues && table) throw new Error(VALUES_WITH_VALUE_COMBINATIONS_TABLE)
 
-            return { data, dataExampleValues }
+            // Deriving the rows from the value lists is left to the complete step, which owns every
+            // other example-value derivation (and the cap on how many rows may be derived).
+            if (attributeValues) {
+                return { data, dataValueCombinations: [], dataValues: dataValuesFromSection(attributeValues, data) }
+            }
+
+            return { data, dataValueCombinations: rowsFromTable(table) }
         },
 
         attribute_withoutDescription(_li, nameNode, _commentOpt, _terminateLine) {
@@ -430,7 +483,20 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             return { name: nameNode.toAST() as string, description: descriptionNode.toAST() as string }
         },
 
-        attributeValuesTable(_keyword, _terminateLine, headerNode, _sep, rows, _ignoredLineIter) {
+        valuesSection(_h3, _kw, _terminateLine, entriesNode) {
+            return entriesNode.children.map((entry: ohm.NonterminalNode) => entry.toAST() as AttributeValues)
+        },
+
+        attributeValues(_li, nameNode, _colon, _hsp, firstNode, _commaIter, restIter, _commentOpt, _terminateLine) {
+            const values = [firstNode, ...restIter.children].map(node => String(node.toAST()))
+            return { name: nameNode.toAST() as string, values } satisfies AttributeValues
+        },
+
+        valueCombinationsSection(_h3, _kw, _terminateLine, tableNode) {
+            return tableNode.toAST() as DataTable
+        },
+
+        attributeValuesTable(headerNode, _sep, rows, _ignoredLineIter) {
             return {
                 columns: headerNode.toAST() as string[],
                 rows: rows.children.map((row: ohm.NonterminalNode) => row.toAST() as string[])

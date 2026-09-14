@@ -1,9 +1,9 @@
-# Results from: empty-attribute-values.test.ts, TST-019: Empty string in dataExampleValues treated as undefined
+# Results from: empty-attribute-values.test.ts, TST-019: Empty string in dataValueCombinations treated as undefined
 # State machines:
 #  - name: m
 #    states:
 #      - name: s
-#    dataExampleValues:
+#    dataValueCombinations:
 #      - a: "1"
 #      - a: ""
 #    transitions:

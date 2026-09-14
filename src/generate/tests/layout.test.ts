@@ -83,7 +83,7 @@ test("[TST-037] → [REQ-119/125]: Examples keyword indented 4 spaces", () => {
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}],
+        dataValueCombinations: [{a: "1"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},
@@ -100,7 +100,7 @@ test("[TST-038] → [REQ-119/126]: Examples table rows indented 6 spaces", () =>
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}],
+        dataValueCombinations: [{a: "1"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},
@@ -172,7 +172,7 @@ test("[TST-042] → [REQ-130]: No blank line between Examples keyword and table"
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "1"}],
+        dataValueCombinations: [{a: "1"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},

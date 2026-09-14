@@ -5,7 +5,7 @@ test("[TST-047] → [REQ-142/143/144]: Modifier and condition co-exist; conditio
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{count: "1"}, {count: "2"}],
+        dataValueCombinations: [{count: "1"}, {count: "2"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "count"}]}],
             trigger: {

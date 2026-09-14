@@ -13,7 +13,7 @@
     label: Display label.
     score: Numeric score. ... extra description ...
     new label: ""
-  dataExampleValues:
+  dataValueCombinations:
     - count: "2"
       label: alpha
       score: "10"
@@ -321,7 +321,7 @@
       description: The machine is active.
   data:
     count: ""
-  dataExampleValues:
+  dataValueCombinations:
     - count: "0"
     - count: "1"
   defaultPreconditions: []
@@ -375,7 +375,7 @@
     quoted price: ""
     reserve price: ""
     sale price: ""
-  dataExampleValues:
+  dataValueCombinations:
     - list price: "10"
       note: default
       bid: ""
@@ -498,6 +498,72 @@
   irrelevant: []
   initialState: painting listed
   source: smtt/src/parse/tests/state-machines/condition-reference.state-machine.md
+- name: generated value combinations
+  overview: "Exercises the generated spelling of the data section: rather than
+    pairing values into rows by hand in a combinations table, the source lists
+    the values each attribute may take, which stands for every combination of
+    them. The parser records the lists as-is; deriving the rows is the complete
+    step's job."
+  states:
+    - name: article drafted
+      description: The document is being edited.
+    - name: article published
+      description: The document is visible to readers.
+  data:
+    language: The language the document is written in.
+    revision: The document's revision number.
+  dataValues:
+    language:
+      - en
+      - nl
+      - de
+    revision:
+      - "1"
+      - "2"
+  dataValueCombinations:
+    - language: en
+      revision: "1"
+    - language: en
+      revision: "2"
+    - language: nl
+      revision: "1"
+    - language: nl
+      revision: "2"
+    - language: de
+      revision: "1"
+    - language: de
+      revision: "2"
+  defaultPreconditions: []
+  transitions:
+    - states:
+        - name: article drafted
+          arguments:
+            - qualifier: with
+              name: language
+            - name: revision
+      trigger:
+        name: publish requested
+        type: event
+      result:
+        name: article published
+    - states:
+        - name: article published
+          arguments:
+            - qualifier: with
+              name: language
+              condition:
+                operator: =
+                value: nl
+      trigger:
+        name: withdrawal requested
+        type: event
+      result:
+        name: article drafted
+  impossible:
+    defined: []
+  irrelevant: []
+  initialState: article drafted
+  source: smtt/src/parse/tests/state-machines/generated-value-combinations.state-machine.md
 - name: list form transitions
   overview: "Exercises the bulleted list-form alternative for transition rules:
     mixed with the table form in the same Rules subsection, an inline id
@@ -509,7 +575,7 @@
       description: The counter is running.
   data:
     list count: Running count.
-  dataExampleValues:
+  dataValueCombinations:
     - list count: "0"
     - list count: "1"
   defaultPreconditions: []
@@ -566,7 +632,7 @@
     - name: idle
       description: The machine stays in a single valid state.
   data: {}
-  dataExampleValues: []
+  dataValueCombinations: []
   defaultPreconditions: []
   transitions:
     - states:
@@ -594,7 +660,7 @@
     - name: published
       description: Final state visible to users.
   data: {}
-  dataExampleValues: []
+  dataValueCombinations: []
   defaultPreconditions: []
   transitions:
     - id: "1"
@@ -642,7 +708,7 @@
     customer id: Stable customer identifier.
     quantity: Ordered amount.
     tier: Customer level.
-  dataExampleValues:
+  dataValueCombinations:
     - customer id: A-42
       quantity: "5"
       tier: gold
@@ -780,7 +846,7 @@
     - name: session active
     - name: user authenticated
   data: {}
-  dataExampleValues: []
+  dataValueCombinations: []
   defaultPreconditions: []
   transitions:
     - states:

@@ -47,7 +47,7 @@ function mergeInNewColumns(accumulated: ExampleRow[], table: ExampleRow[]): Exam
 }
 
 /**
- * Effective example value table of a transition: the owning state machine's own `dataExampleValues`
+ * Effective example value table of a transition: the owning state machine's own `dataValueCombinations`
  * (first and authoritative for every attribute it declares itself, REQ-168), extended only with
  * columns for attributes it does not declare, contributed by other state machines in its
  * state-trigger expansion chain (REQ-068/REQ-161). State machines without example values impose no
@@ -63,7 +63,7 @@ export function mergeExampleValues(
     stateMachineNames: Iterable<string>,
 ): ExampleRow[] {
     const tables = [...stateMachineNames]
-        .map((name) => stateMachines.find((stateMachine) => stateMachine.name === name)?.dataExampleValues ?? [])
+        .map((name) => stateMachines.find((stateMachine) => stateMachine.name === name)?.dataValueCombinations ?? [])
         .filter((table) => table.length > 0)
     if (tables.length === 0) return []
     return tables.reduce((accumulated, table) => mergeInNewColumns(accumulated, table))
@@ -231,7 +231,7 @@ export function derivedModifierValue(
     context: { sourceModifier?: string; sourceContext?: string; transitionLabel?: string },
 ): string {
     const sourceValue = row[attributeName]
-    const pool = stateMachines.find((stateMachine) => stateMachine.name === poolStateMachineName)?.dataExampleValues ?? []
+    const pool = stateMachines.find((stateMachine) => stateMachine.name === poolStateMachineName)?.dataValueCombinations ?? []
     if (pool.length === 0) {
         throw new Error(
             `State machine \`${poolStateMachineName}\`: ${context.transitionLabel ?? "Anonymous transition"}: ` +
@@ -420,8 +420,8 @@ export function transitionDescription(transition: Transition): string {
 export function describeEmptyExampleValues(stateMachineNames: Iterable<string>): string {
     const names = [...stateMachineNames]
     return names.length === 1
-        ? "the state machine's dataExampleValues table is empty or absent"
-        : `the dataExampleValues tables of state machines ${names.map((name) => `\`${name}\``).join(", ")} are empty or absent`
+        ? "the state machine's dataValueCombinations table is empty or absent"
+        : `the dataValueCombinations tables of state machines ${names.map((name) => `\`${name}\``).join(", ")} are empty or absent`
 }
 
 // --- Columns ---
@@ -455,7 +455,7 @@ export interface ExampleColumn {
      */
     valueIsReference?: boolean
     /**
-     * State machine whose own `dataExampleValues` a `modifier` column resolves against (REQ-168):
+     * State machine whose own `dataValueCombinations` a `modifier` column resolves against (REQ-168):
      * the machine that declared the modifier argument, which for a state-trigger expansion source
      * (REQ-161) is that source's own machine, not necessarily the transition being rendered.
      * Falls back to the rendering machine when absent.

@@ -5,7 +5,7 @@ test("[TST-043] → [REQ-080]: incremented modifier on a non-numeric value raise
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{a: "foo"}],
+        dataValueCombinations: [{a: "foo"}],
         transitions: [{
             states: [{name: "s", arguments: [{name: "a"}]}],
             trigger: {type: "event", name: "e"},
@@ -21,7 +21,7 @@ test("[TST-044] → [REQ-136]: Modifier without a prior base reference raises an
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataExampleValues: [{count: "1"}],
+        dataValueCombinations: [{count: "1"}],
         transitions: [{
             states: [{name: "s"}],
             trigger: {type: "event", name: "e"},
