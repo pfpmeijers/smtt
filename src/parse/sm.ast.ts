@@ -492,6 +492,15 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             return { name: nameNode.toAST() as string, values } satisfies AttributeValues
         },
 
+        declaredValue_literal(valueNode) {
+            return String(valueNode.toAST())
+        },
+
+        // `""` is how the AST encodes an absent value, the same as an empty combinations-table cell.
+        declaredValue_undefined(_keyword) {
+            return ""
+        },
+
         valueCombinationsSection(_h3, _kw, _terminateLine, tableNode) {
             return tableNode.toAST() as DataTable
         },

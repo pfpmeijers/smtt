@@ -63,7 +63,9 @@ earlier author-written value assigns — is never replaced.
 
   Remarks: the product is laid out with the last-declared attribute varying
   fastest, so the rows read in the order the `### Values` list suggests.
-  Duplicate values within one attribute's list count once. `dataValues` is
+  Duplicate values within one attribute's list count once. A list may name
+  `undefined`, which reaches `dataValues` as `""` and combines like any other
+  value. `dataValues` is
   itself left in place — it is what the source declared, and completion only
   adds.
 

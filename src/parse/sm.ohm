@@ -95,7 +95,14 @@ StateMachine {
     = h3 literal<"Values"> eol attributeValues+
 
   attributeValues
-    = listItem identifier ":" hsp? value (comma value)* comment? eol
+    = listItem identifier ":" hsp? declaredValue (comma declaredValue)* comment? eol
+
+  // A value an attribute may take. `undefined` is the list-form spelling of the empty cell a
+  // combinations table uses for an absent value; a bare word is otherwise not a value, so there
+  // is nothing for it to collide with.
+  declaredValue
+    = value                -- literal
+    | literal<"undefined"> -- undefined
 
   // --- Value combinations subsection (optional) ---
 

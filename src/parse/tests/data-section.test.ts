@@ -83,6 +83,17 @@ describe("## Data — generated value combinations", () => {
         assert.deepStrictEqual(stateMachine.dataValueCombinations, [])
     })
 
+    it("[TST-210] → [REQ-435]: reads `undefined` in a `### Values` list as the absent value", () => {
+        const stateMachine = parseSource(machineWithDataSection([
+            "### Values",
+            "",
+            "- `a1`: undefined, \"x\"",
+            "",
+        ].join("\n")))
+
+        assert.deepStrictEqual(stateMachine.dataValues, { a1: ["", "x"] })
+    })
+
     it("[TST-206] → [REQ-435]: declares an attribute named only by a `### Values` entry", () => {
         const stateMachine = parseSource(machineWithDataSection([
             "- `a1`: First attribute.",
