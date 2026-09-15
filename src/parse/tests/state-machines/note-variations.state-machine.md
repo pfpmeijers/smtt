@@ -1,25 +1,35 @@
-// This file exercises section ordering and optional section variants.
+// This file exercises section ordering, optional section variants, and free-form headings.
 
 # Note variations machine
 
 This state machine validates layout-oriented combinations. It includes notes
 subsections and plain trailing notes.
 
+#### Scope
+
 Dependencies are intentionally omitted.
 
 ## States
 
+#### Early states
+
 - `To be started`
 - `Draft`: First step before review.
   Extra state description line to exercise continuation parsing.
+
+#### Later states
+
 - `Review`: Intermediate state for confirmation.
 - `Published`: Final state visible to users.
+
+#### Starting point
 
 Initial state: `To be started`
 
 ### Notes
 
-States contain an indented continuation line.
+States contain an indented continuation line. Free-form `####` headings subdivide
+this file's sections without carrying any meaning of their own.
 
 ## Data
 
@@ -36,6 +46,8 @@ No data entities are needed for this machine.
 None
 
 ### Rules
+
+##### The whole lifecycle
 
 | # | States          | Trigger             | Result      |
 |---|-----------------|---------------------|-------------|

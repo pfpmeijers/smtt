@@ -47,8 +47,10 @@ StateMachine {
     | listItem identifier comment? nl impliedConditions       -- withoutDescription
     | listItem identifier comment? eol                        -- bare
 
+  // The trailing `ignoredLine*` mirrors `description<stopAt>`, so a blank, comment or heading
+  // line may follow a described state the way it may follow any other described entry.
   stateDescription
-    = ":" stateDescriptionLine+
+    = ":" stateDescriptionLine+ ignoredLine*
 
   stateDescriptionLine
     = ~(sublistItem | listItem | initialStateCaption) textChar+ comment? nl
@@ -468,10 +470,17 @@ StateMachine {
     = ~h3 "##" hsp+
 
   h3
-    = "###" hsp+
+    = ~h4 "###" hsp+
+
+  // Heading levels below `###` carry no meaning: an author's own subdivision of a section.
+  // Listing `h4` in `sectionStart` keeps such a heading out of the surrounding `text`; listing
+  // it in `ignoredLine` lets it stand wherever a blank or comment line may, and discards it
+  // along with them.
+  h4
+    = "####" "#"* hsp+
 
   sectionStart
-    = h2 | h3
+    = h2 | h3 | h4
 
   listItem
     = "- "
@@ -508,10 +517,15 @@ StateMachine {
   eol
     = nl ignoredLine*
 
-  // Blank or comment-only lines before a next rule begins.
+  // Blank, comment-only, or free-form heading lines before a next rule begins.
   ignoredLine
-    = comment nl -- comment
-    | blankLine  -- blank
+    = comment nl  -- comment
+    | blankLine   -- blank
+    | headingLine -- heading
+
+  // A free-form `####` heading, with whatever follows it on that line.
+  headingLine
+    = h4 (~nl any)* nl
 
   blankLine
     = hsp? nl

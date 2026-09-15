@@ -404,7 +404,7 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             }
         },
 
-        stateDescription(_colon, linesIter) {
+        stateDescription(_colon, linesIter, _ignoredLineIter) {
             const lines = linesIter.toAST() as (string | null)[]
             const joined = normalizeWhitespace(lines.filter((line): line is string => Boolean(line)).join(" "))
             return joined.length > 0 ? joined : null

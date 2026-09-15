@@ -41,6 +41,10 @@ Each state machine file must follow this general structure:
 Each main section (H2) may also contain an optional `### Notes` subsection for
 section-scoped annotations.
 
+Heading levels `#` through `###` are reserved for the structure above. Use
+`####` and deeper for [free-form headings](#free-form-headings) of your own,
+which subdivide a section for the reader without carrying any meaning.
+
 ---
 
 ## Title
@@ -69,8 +73,9 @@ List all valid states:
   - The first `:` separates the state name from the description.
   - Additional `:` characters are treated as literal text in the description
     part.
-  - Use indented continuation lines for longer descriptions that do not fit on a
-    single line.
+  - Continue a longer description on further lines by indenting them. A
+    continuation line must be indented; an unindented line is no longer part of
+    the description.
 - **Uniqueness**: Use unique state names across **all** state machines in
   the project.
 
@@ -857,6 +862,46 @@ token is always a literal text value.
   interpreted as a text value, and therefore only text-based conditions are
   valid for it. A *backticked* numeral (`` `42` ``) is instead an attribute
   reference naming an attribute called `42`.
+
+---
+
+## Free-form headings
+
+Subdivide a section with headings of your own, to group a long list of states or
+a large set of transition rules under labels that help the reader.
+
+- **Format**: Start the line with `####`, or more `#`, followed by any text.
+  Heading levels `#` through `###` are reserved by this notation; `####` and
+  deeper are yours.
+- **No semantics**: A free-form heading names nothing and groups nothing as far
+  as the model is concerned. Expect it to be discarded before any semantic
+  interpretation, exactly as a [developer comment](#developer-comments) is —
+  adding, renaming, moving or removing one never changes the generated output.
+- **Placement**: Place a free-form heading wherever a blank line is allowed —
+  before or after any section, between list items, between transition blocks.
+  The one exception is between a state declaration and its
+  [implied conditions](#implied-conditions): those sub-bullets must follow the
+  state's own line directly.
+- **In the overview**: A heading between overview paragraphs is dropped and the
+  text around it reads as one continuous overview.
+
+Example:
+
+```markdown
+### Rules
+
+#### Signing in
+
+| States                | Trigger     | Result                 |
+|-----------------------|-------------|------------------------|
+| `User unauthenticated`| `Signed in` | `User authenticated`   |
+
+#### Signing out
+
+| States                | Trigger      | Result                 |
+|-----------------------|--------------|------------------------|
+| `User authenticated`  | `Signed out` | `User unauthenticated` |
+```
 
 ---
 
