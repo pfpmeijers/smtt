@@ -203,6 +203,9 @@ one — the rows are derived rather than written by hand.
 - **Format**: Use a bulleted list, one entry per attribute: the backticked
   attribute name, a `:`, then its values separated by `,`. Values follow the
   same quoting rules as a table cell — text double-quoted, numbers bare.
+- **Undefined**: Write `undefined` for the absent value, where a combinations
+  table leaves the cell empty, e.g. `` - `email address`: undefined,
+  "info@domain.com" ``.
 - **Attribute list optional**: A `### Values` entry declares its attribute, the
   way a table column header does, so the `- \`attr\`: ...` list above it is
   only needed to attach descriptions or fix the ordering.
