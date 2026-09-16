@@ -89,8 +89,8 @@ describe("renderTransitionsReport", () => {
         const examplesIndex = entry.indexOf("Examples:")
 
         assert.deepEqual(entry.slice(examplesIndex + 1), [
-            "  | b | z | resulting y | resulting a | resulting x |",
-            "  | 5 | 9 | 5           | 5           | 5           |",
+            "| b | z | resulting y | resulting a | resulting x |",
+            "| 5 | 9 | 5           | 5           | 5           |",
         ])
     })
 
