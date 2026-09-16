@@ -132,8 +132,8 @@ function buildExamplesTable(
         })`
         const sampleRows = exampleValues.slice(0, 3).map((row) =>
             `{ ${Object.entries(row).map(([key, value]) => `${key}=${value === "" ? "<empty>" : value}`).join(", ")} }`,
-        ).join(", ")
-        const moreRowsSuffix = exampleValues.length > 3 ? `, … (${exampleValues.length} total)` : ""
+        ).join("\n")
+        const moreRowsSuffix = exampleValues.length > 3 ? `\n  … (${exampleValues.length} total)` : ""
         // Every collected condition is listed, bindings included: a sameness whose referenced
         // attribute resolves to nothing discards rows just as a filter does, so omitting it would
         // point the reader at the wrong cause.
@@ -143,7 +143,7 @@ function buildExamplesTable(
         throw new Error(
             `State machine \`${stateMachine.name}\`: Empty examples table for ` +
             `${transitionDescription(transition).toLowerCase()}${chainSuffix}.\n` +
-            `${exampleValues.length} candidate row(s) available: ${sampleRows}${moreRowsSuffix}.\n` +
+            `${exampleValues.length} candidate row(s) available:\n${sampleRows}${moreRowsSuffix}.\n` +
             `No row satisfied every condition:\n${conditionDescriptions}`,
         )
     }

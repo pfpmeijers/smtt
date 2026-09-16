@@ -187,6 +187,8 @@ ready-made.
   transition also pins is not a resolution, unless the candidate's own trigger
   reaches that machine again. Resolution is structural: it never consults
   example values.
+  What a resolved trigger's arguments then denote is REQ-438 in
+  `smtt.parse.complete.md`.
 
 - [REQ-411] When a transition references one or more arguments, at least one
   contributing machine in that transition context shall provide one or more

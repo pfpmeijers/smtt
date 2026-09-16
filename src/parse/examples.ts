@@ -8,7 +8,7 @@
  */
 
 import { type FilterCondition, evaluateCondition, resolveConditionReference } from "./conditions"
-import { collectChainStateMachineNames, type TaggedTransition } from "./expand"
+import { chainArgumentBindings, collectChainStateMachineNames, type ArgumentBindings, type TaggedTransition } from "./expand"
 import type { StateOwnershipIndex } from "./ownership"
 import { attributePlaceholderName, modifierColumnName, resultingColumnName } from "./arguments"
 import type { Argument, DefaultPrecondition, StateMachine, Transition } from "./sm.ast.d"
@@ -455,6 +455,12 @@ export interface ExampleColumn {
      */
     valueIsReference?: boolean
     /**
+     * Column a reference-valued `result` column is bound to (REQ-437/REQ-438): the `resulting`
+     * column of the source that resolved the owning transition's trigger. Its cell value is then
+     * that column's value rather than the referenced attribute's own, pre-event, value.
+     */
+    boundColumn?: ExampleColumn
+    /**
      * State machine whose own `dataValueCombinations` a `modifier` column resolves against (REQ-168):
      * the machine that declared the modifier argument, which for a state-trigger expansion source
      * (REQ-161) is that source's own machine, not necessarily the transition being rendered.
@@ -473,6 +479,8 @@ interface ArgumentGroup {
     poolStateMachineName: string
     /** Transition that declared this group's arguments, for error-message context. */
     sourceTransition: Transition
+    /** What the declaring transition's trigger arguments denote along the expansion path (REQ-438). */
+    bindings: ArgumentBindings
 }
 
 /**
@@ -486,14 +494,16 @@ interface ArgumentGroup {
  * @param stateMachineName State machine that declares `transition` and `defaultPreconditions`.
  * @param transition Transition being inspected.
  * @param defaultPreconditions Default preconditions attached to the owning state machine.
+ * @param bindings What `transition`'s trigger arguments denote along the expansion path (REQ-438).
  * @returns Argument groups in scan order, including result arguments flagged for result processing.
  */
 function argumentGroups(
     stateMachineName: string,
     transition: Transition,
     defaultPreconditions: DefaultPrecondition[],
+    bindings: ArgumentBindings = new Map(),
 ): ArgumentGroup[] {
-    const tag = { poolStateMachineName: stateMachineName, sourceTransition: transition }
+    const tag = { poolStateMachineName: stateMachineName, sourceTransition: transition, bindings }
     return [
         ...defaultPreconditions.map((precondition) => ({
             args: precondition.arguments ?? [], isResult: false,
@@ -583,6 +593,7 @@ function buildExampleColumns(groups: ArgumentGroup[]): ExampleColumn[] {
         if (!isKnown) derivedColumns.push(column)
     }
 
+    const boundColumnNames = new Map<ExampleColumn, string>()
     for (const group of groups) {
         const { args, isResult } = group
         for (const argument of args) {
@@ -595,17 +606,25 @@ function buildExampleColumns(groups: ArgumentGroup[]): ExampleColumn[] {
                 addBase(argument.name)
             }
             if (hasResultValue) {
-                addDerived({
+                const column: ExampleColumn = {
                     kind: "result",
                     name: resultingColumnName(argument.name),
                     sourceName: argument.name,
                     resultValue: resultValue(argument),
                     valueIsReference: argument.result!.valueIsReference,
-                })
+                }
+                const boundName = column.valueIsReference ? group.bindings.get(column.resultValue ?? "") : undefined
+                if (boundName !== undefined && boundName !== column.name) boundColumnNames.set(column, boundName)
+                addDerived(column)
             }
         }
     }
-    return [...baseColumns, ...derivedColumns]
+    const columns = [...baseColumns, ...derivedColumns]
+    // Linked once every column exists: a binding points at a column declared further down the chain.
+    for (const [column, boundName] of boundColumnNames) {
+        column.boundColumn = columns.find((candidate) => candidate.name === boundName)
+    }
+    return columns
 }
 
 /**
@@ -657,10 +676,11 @@ export function collectPathExampleColumns(
     transition: Transition,
     sourceChain: ExpansionSourceStep[],
 ): ExampleColumn[] {
+    const bindings = chainArgumentBindings(transition, sourceChain)
     const groups = [
-        ...argumentGroups(stateMachineName, transition, defaultPreconditions),
-        ...sourceChain.flatMap((step) =>
-            argumentGroups(step.stateMachineName, step.transition, step.defaultPreconditions),
+        ...argumentGroups(stateMachineName, transition, defaultPreconditions, bindings[sourceChain.length]),
+        ...sourceChain.flatMap((step, index) =>
+            argumentGroups(step.stateMachineName, step.transition, step.defaultPreconditions, bindings[index]),
         ),
     ]
     return buildExampleColumns(groups)
@@ -702,19 +722,14 @@ function resolveModifierValue(
 /**
  * Resolve the rendered cell value for any column kind from a single row.
  *
- * A reference-valued result column (REQ-423) normally resolves against this row's own raw value
- * for the referenced attribute. But when that attribute is itself produced elsewhere in this same
- * table by a state-trigger source's own result (i.e. a `resulting X` column exists for it), the
- * source's produced value is what the reference means — the raw base column instead holds that
- * attribute's *precondition* value (as filtered for the source's own `Given` state), a different
- * point in time. A transition whose trigger bare-references an attribute a matched expansion
- * source's result produces (REQ-118) is referring to the value the source produces, not to
- * whatever the attribute happened to hold beforehand, so the produced column takes precedence.
+ * A reference-valued result column (REQ-423) resolves against this row's own value for the
+ * referenced attribute, unless the reference is bound (REQ-437/REQ-438): the attribute is then one
+ * the owning transition's trigger receives from its expansion source, and the reference means the
+ * value that source's result produced, held by the bound `resulting` column, rather than the value
+ * the attribute held before the event.
  *
  * @param stateMachines All state machines for looking up example values.
  * @param stateMachineName Name of the state machine owning the transition, for error context.
- * @param columns All columns of the table being rendered, so a reference-valued result column can
- *   look up whether the attribute it names is itself produced elsewhere in the same table.
  * @param column Column definition to evaluate.
  * @param row Row containing the source values.
  * @param sourceRowIndex Index of the row in the original table.
@@ -724,7 +739,6 @@ function resolveModifierValue(
 export function resolveCellValue(
     stateMachines: StateMachine[],
     stateMachineName: string,
-    columns: ExampleColumn[],
     column: ExampleColumn,
     row: ExampleRow,
     sourceRowIndex: number,
@@ -735,14 +749,10 @@ export function resolveCellValue(
             return row[column.sourceName] ?? ""
         case "modifier":
             return resolveModifierValue(stateMachines, stateMachineName, column, row, sourceRowIndex, allRows)
-        case "result": {
+        case "result":
             if (!column.valueIsReference) return column.resultValue ?? ""
-            const producedColumn = columns.find((candidate) =>
-                candidate !== column && candidate.kind === "result" && candidate.sourceName === column.resultValue,
-            )
-            return producedColumn
-                ? resolveCellValue(stateMachines, stateMachineName, columns, producedColumn, row, sourceRowIndex, allRows)
+            return column.boundColumn
+                ? resolveCellValue(stateMachines, stateMachineName, column.boundColumn, row, sourceRowIndex, allRows)
                 : (row[column.resultValue ?? ""] ?? "")
-        }
     }
 }

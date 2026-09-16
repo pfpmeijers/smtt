@@ -30,8 +30,8 @@ notation.
 | [`conditions.ts`](./conditions.ts) | Condition evaluation and the row filters a transition's conditions impose. |
 | [`arguments.ts`](./arguments.ts) | Argument semantics: the name a value goes by, the signature two references share, and argument validity. |
 | [`examples.ts`](./examples.ts) | Example values of a transition: the merged table of every machine taking part in its context, the columns it holds, and the rows surviving its conditions. |
-| [`expand.ts`](./expand.ts) | State-trigger resolution: which transitions can causally explain a state trigger, which machines take part in a transition's context, and the annotation recording that resolution on the AST. |
-| [`transitions.ts`](./transitions.ts) | The `transitions.txt` report: how each transition resolves, with its preconditions, trigger and surviving example rows. |
+| [`expand.ts`](./expand.ts) | State-trigger resolution: which transitions can causally explain a state trigger, what the trigger's arguments are bound to along a chain, which machines take part in a transition's context, and the annotation recording that resolution on the AST. |
+| [`transitions.ts`](./transitions.ts) | The `transitions.txt` report: how each transition resolves, with its preconditions, trigger, the result of every transition along its chain and the example rows its scenario shows. |
 | [`update-schemas.cjs`](./update-schemas.cjs) | Regenerates `sm.ast.d.ts` from the schema. |
 | [`index.ts`](./index.ts) | Public surface of the parse step, re-exporting the modules above. |
 | [`tests/`](./tests/) | Parser snapshot tests plus completion and validation unit tests. |
