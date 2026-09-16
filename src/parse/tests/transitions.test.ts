@@ -88,7 +88,7 @@ describe("renderTransitionsReport", () => {
         const entry = finalEntryLines(renderTransitionsReport(buildChainedMachines()), "3.1")
         const examplesIndex = entry.indexOf("Examples:")
 
-        assert.deepEqual(entry.slice(examplesIndex + 1), [
+        assert.deepEqual(entry.slice(examplesIndex + 1).map((line) => line.trim()), [
             "| b | z | resulting y | resulting a | resulting x |",
             "| 5 | 9 | 5           | 5           | 5           |",
         ])
