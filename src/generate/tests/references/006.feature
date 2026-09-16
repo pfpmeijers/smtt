@@ -40,4 +40,3 @@ Feature: m
     Examples:
       | a |
       | 1 |
-      | 3 |

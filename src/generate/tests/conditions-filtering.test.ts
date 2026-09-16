@@ -96,8 +96,9 @@ test("[TST-006] → [REQ-086/087/091]: Not-in-set condition filters rows", () =>
     validateStateMachines(stateMachines)
     const feature = createFeatures(stateMachines)["m"]
     assertContains(feature, "| 1 |")
-    assertContains(feature, "| 3 |")
     assertNotContains(feature, "| 2 |")
+    // `3` survives the filter too, but renames `1` (REQ-440).
+    assertNotContains(feature, "| 3 |")
     assertMatchesReference(stateMachines, feature)
 })
 

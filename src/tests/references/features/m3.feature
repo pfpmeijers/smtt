@@ -74,4 +74,3 @@ Feature: m3
     Examples:
       | a1 |
       | V1 |
-      | V2 |

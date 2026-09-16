@@ -37,4 +37,3 @@ Feature: m
     Examples:
       | a | resulting b |
       | 1 | 1           |
-      | 2 | 2           |

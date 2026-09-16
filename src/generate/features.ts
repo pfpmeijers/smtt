@@ -20,6 +20,8 @@ import {
     type ExampleColumn,
     type FilterCondition,
     type ImpliedConditionsIndex,
+    collectDistinguishedValues,
+    type DistinguishedValues,
 } from "../parse"
 import { collectImpliedFilterConditions } from "./conditions"
 import {
@@ -69,6 +71,7 @@ interface RenderContext {
     taggedTransitions: TaggedTransition[]
     stateMachines: StateMachine[]
     impliedIndex: ImpliedConditionsIndex
+    distinguished: DistinguishedValues
 }
 
 // --- Examples table ---
@@ -147,7 +150,7 @@ function buildExamplesTable(
             `No row satisfied every condition:\n${conditionDescriptions}`,
         )
     }
-    return formatExamplesTable(stateMachines, stateMachine.name, columns, rows, boundValues)
+    return formatExamplesTable(stateMachines, stateMachine.name, columns, rows, boundValues, context.distinguished)
 }
 
 // --- Scenario rendering ---
@@ -509,6 +512,7 @@ export function renderFeatures(stateMachines: StateMachine[]): Map<string, strin
 
     const impliedIndex = buildImpliedConditionsIndex(stateMachines)
     const taggedTransitions = buildTaggedTransitions(stateMachines)
+    const distinguished = collectDistinguishedValues(stateMachines)
     const features = new Map<string, string>()
     for (const stateMachine of stateMachines) {
         const context: RenderContext = {
@@ -518,6 +522,7 @@ export function renderFeatures(stateMachines: StateMachine[]): Map<string, strin
             taggedTransitions,
             stateMachines,
             impliedIndex,
+            distinguished,
         }
         features.set(slugify(stateMachine.name), renderFeatureFile(context))
     }

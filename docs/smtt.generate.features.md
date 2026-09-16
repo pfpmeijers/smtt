@@ -346,6 +346,42 @@ Derived attribute columns are described in next sections.
   removed, keeping the first occurrence. Duplicate rows shall be eliminated after
   filtering and before the final table is emitted.
 
+- [REQ-440] A rendered examples table row shall be pruned when renaming its
+  interchangeable values turns it into an earlier row, keeping the first row.
+
+  Rationale: a state machine tells values apart in three ways only. It can
+  name a literal in a condition, implied condition or result. It can compare a
+  value with another value of the same row (`as`, reference conditions and
+  results, bindings, `not`/`different` columns). And it can relate values by
+  order, pool position or arithmetic. Renaming values the model tells apart in
+  none of these ways is a symmetry of the model: the renamed row runs the same
+  scenario with other data, so it adds no coverage.
+
+  Remarks:
+  - A cell is *significant*, and so kept as it is, when:
+    - it is empty (undefined);
+    - it belongs to a literal result column;
+    - its value is a literal named anywhere in the model;
+    - its attribute is *concrete*, meaning an ordering or range operator
+      (`<`, `>`, `<=`, `>=`, `in range`, `not in range`) or an
+      `incremented`/`decremented`/`first`/`last`/`next`/`previous` modifier
+      applies to it anywhere in the model.
+  - Every other cell is replaced by the position of its value's first
+    occurrence among the row's interchangeable values. All columns share one
+    numbering, so equalities between cells, such as a result copying a trigger
+    value, survive the renaming.
+  - Two rows are equivalent when these canonical forms match. Pruning runs
+    after the de-duplication of REQ-160 and always applies.
+  - A value that only fixtures or helpers treat specially is invisible to the
+    model. To keep it distinguished, name it in a condition or implied
+    condition.
+
+  Example: with no prior identity, rows `user1/User A`, `user1/User B`,
+  `user2/User A` and `user2/User B`, each copied into the results, all read
+  `$0/$1` and collapse into the first row. Once a precondition names `user1`,
+  the `user1` and `user2` rows are no longer equivalent: one matches the named
+  value and the other does not.
+
 - [REQ-068] The `$example-data-values` shall be taken from AST path
   `[i].dataValueCombinations`. This table may contain both author-defined rows and
   rows synthesised by the `complete` step (REQ-420/REQ-421); both kinds are

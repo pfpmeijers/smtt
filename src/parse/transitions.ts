@@ -36,6 +36,7 @@ import {
     type ExampleColumn,
     type ExampleRow,
 } from "./examples"
+import { collectDistinguishedValues, groupEquivalentRows, type DistinguishedValues } from "./equivalence"
 import {
     buildImpliedConditionsIndex,
     buildStateOwnership,
@@ -382,16 +383,22 @@ function renderCandidateLines(
 interface ExampleDebugContext {
     stateMachines: StateMachine[]
     impliedIndex: ImpliedConditionsIndex
+    distinguished: DistinguishedValues
 }
 
 /**
  * Render the values a set of columns takes over a set of rows, as an aligned text table.
+ *
+ * Rows equivalent to each other (REQ-440) are listed together, bracketed by `┌`, `│` and `└`
+ * (REQ-441): the row the generated scenario keeps is marked `►`, each row it prunes `X`, so the
+ * rows without an `X` are exactly the scenario's own.
  *
  * @param stateMachines All state machines, for resolving derived cell values.
  * @param stateMachineName State machine the rows belong to, for error context.
  * @param columns Columns to render, in order.
  * @param rows Rows to render.
  * @param allRows Rows the table was filtered from, used for positional derivations.
+ * @param distinguished Values and attributes the model distinguishes.
  * @returns The table's lines: a header, then one line per row.
  */
 function formatValueTable(
@@ -400,6 +407,7 @@ function formatValueTable(
     columns: ExampleColumn[],
     rows: ExampleRow[],
     allRows: ExampleRow[],
+    distinguished: DistinguishedValues,
 ): string[] {
     const rendered = rows.map((row) => {
         const rowIndex = Math.max(allRows.indexOf(row), 0)
@@ -416,7 +424,13 @@ function formatValueTable(
     const headers = columns.map((column) => column.name)
     const widths = headers.map((header, index) => Math.max(header.length, ...cells.map((cell) => (cell[index] ?? "").length)))
     const line = (values: string[]): string => `|${values.map((value, index) => ` ${value.padEnd(widths[index])} `).join("|")}|`
-    return ["Examples:", line(headers), ...cells.map(line)]
+    const groups = groupEquivalentRows(cells, columns, distinguished)
+    const rowLines = groups.flatMap((group) => group.map(({ cells: groupCells, kept }, index) => {
+        const bracket = group.length === 1 ? " " : index === 0 ? "┌" : index === group.length - 1 ? "└" : "│"
+        const marker = kept ? (group.length > 1 && index === 0 ? "►" : " ") : "X"
+        return `  ${bracket}${marker}${line(groupCells)}`
+    }))
+    return ["  Examples:", `    ${line(headers)}`, ...rowLines]
 }
 
 /**
@@ -474,7 +488,7 @@ function renderExamplesLines(
         ]
     }
 
-    return formatValueTable(context.stateMachines, rootStateMachine.name, columns, rows, boundValues)
+    return formatValueTable(context.stateMachines, rootStateMachine.name, columns, rows, boundValues, context.distinguished)
         .map((line) => `${pad}${line}`)
 }
 
@@ -702,7 +716,9 @@ export function renderTransitionsReport(stateMachines: StateMachine[]): string {
     const taggedTransitions = buildTaggedTransitions(stateMachines)
     const ownership = buildStateOwnership(stateMachines)
     const impliedIndex = buildImpliedConditionsIndex(stateMachines)
-    const exampleContext: ExampleDebugContext = { stateMachines, impliedIndex }
+    const exampleContext: ExampleDebugContext = {
+        stateMachines, impliedIndex, distinguished: collectDistinguishedValues(stateMachines),
+    }
     const lines: string[] = [
         "# SMTT Transitions",
         "",
@@ -719,6 +735,9 @@ export function renderTransitionsReport(stateMachines: StateMachine[]): string {
         "- ➡️: trigger (`When`)",
         "- ⏩: result (`Then`); in a final expanded transition one per transition along the chain, innermost first, prefixed with that transition's ID",
         "- 🢂️: final (fully-expanded) transition",
+        "- ┌►: example rows equivalent to each other; this one selected",
+        "- │X: pruned from the generated scenario",
+        "- └X: ...",
         "",
     ]
 

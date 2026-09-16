@@ -8,7 +8,6 @@ Feature: m1
     Examples:
       | a1 |
       | V1 |
-      | V2 |
 
   Scenario Outline: [002] m1 active with "<a1>" → m1 active with "<new a1>"; when e1 with "<new a1>"
     Given initially m1 active with "<a1>"
@@ -18,7 +17,6 @@ Feature: m1
     Examples:
       | a1 | new a1 |
       | V1 | V2     |
-      | V2 | V1     |
 
   Scenario: [003] m1 active → m1 inactive; when e2
     Given initially m1 active

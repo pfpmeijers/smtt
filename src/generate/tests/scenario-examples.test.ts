@@ -50,7 +50,11 @@ test("[TST-058] → [REQ-063/067/068]: Examples table rows from dataValueCombina
 test("[TST-100] → [REQ-160]: Examples table removes rendered duplicate rows", () => {
     const stateMachines: StateMachines = [{
         name: "m",
-        states: [{name: "s"}],
+        // `s2` names `V1` and `V2` as literals, so neither renames the other (REQ-440).
+        states: [
+            {name: "s"},
+            {name: "s2", impliedConditions: [{attribute: "a1", condition: {operator: "in", value: ["V1", "V2"]}}]},
+        ],
         dataValueCombinations: [
             {a1: "V1", a2: "0"},
             {a1: "V1", a2: "1"},

@@ -142,8 +142,7 @@ export function parseSource(source: string, sourceFile = "<unknown>"): StateMach
 
 /** Flags of a parse run. */
 export interface ParseOptions {
-    /** Also write the transition report next to the AST file. */
-    debug?: boolean
+    // No options currently
 }
 
 /**
@@ -151,7 +150,7 @@ export interface ParseOptions {
  *
  * @param inputDir The directory path containing `.state-machine.md` files.
  * @param astFile Optional file path to write the combined JSON AST result.
- * @param options Optional flags: `debug` also writes the transition report beside `astFile`.
+ * @param options Optional flags (currently unused).
  * @returns Array of parsed and validated `StateMachine` objects, sorted by source file path.
  */
 export function parse(inputDir: string, astFile?: string, options: ParseOptions = {}): StateMachine[] {
@@ -172,7 +171,7 @@ export function parse(inputDir: string, astFile?: string, options: ParseOptions 
         const astDir = path.dirname(astFile)
         fs.mkdirSync(astDir, { recursive: true })
         saveStateMachines(astFile, stateMachines)
-        if (options.debug) writeTransitionsReport(stateMachines, astDir)
+        writeTransitionsReport(stateMachines, astDir)
     }
     return stateMachines
 }

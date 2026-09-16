@@ -1,48 +1,48 @@
 # Results from: equivalent-rows.test.ts, TST-224: Rows that only rename values are pruned to the first
 # State machines:
-#  - name: m
+#  - name: m1
 #    states:
-#      - name: unavailable
-#      - name: available
+#      - name: s1
+#      - name: s2
 #    dataValueCombinations:
-#      - email: user1
-#        name: User A
-#      - email: user1
-#        name: User B
-#      - email: user2
-#        name: User A
-#      - email: user2
-#        name: User B
+#      - a1: v1
+#        a2: v3
+#      - a1: v1
+#        a2: v4
+#      - a1: v2
+#        a2: v3
+#      - a1: v2
+#        a2: v4
 #    transitions:
 #      - states:
-#          - name: unavailable
+#          - name: s1
 #        trigger:
 #          type: event
-#          name: confirmed
+#          name: e
 #          arguments:
-#            - name: email
-#            - name: name
+#            - name: a1
+#            - name: a2
 #        result:
-#          name: available
+#          name: s2
 #          arguments:
-#            - name: owner
+#            - name: a3
 #              result:
-#                value: email
+#                value: a1
 #                valueIsReference: true
-#            - name: label
+#            - name: a4
 #              result:
-#                value: name
+#                value: a2
 #                valueIsReference: true
 # Covers requirements:
 # - [REQ-440] A rendered examples table row shall be pruned when renaming its interchangeable values
 #   turns it into an earlier row, keeping the first row.
 
-Feature: m
+Feature: m1
 
-  Scenario Outline: [] unavailable → available "<resulting owner>", "<resulting label>"; when confirmed "<email>", "<name>"
-    Given initially unavailable
-    When confirmed "<email>", "<name>"
-    Then expect available "<resulting owner>", "<resulting label>"
+  Scenario Outline: [] s1 → s2 "<resulting a3>", "<resulting a4>"; when e "<a1>", "<a2>"
+    Given initially s1
+    When e "<a1>", "<a2>"
+    Then expect s2 "<resulting a3>", "<resulting a4>"
     Examples:
-      | email | name   | resulting owner | resulting label |
-      | user1 | User A | user1           | User A          |
+      | a1 | a2 | resulting a3 | resulting a4 |
+      | v1 | v3 | v1           | v3           |

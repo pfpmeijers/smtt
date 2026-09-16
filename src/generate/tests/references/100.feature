@@ -3,6 +3,14 @@
 #  - name: m
 #    states:
 #      - name: s
+#      - name: s2
+#        impliedConditions:
+#          - attribute: a1
+#            condition:
+#              operator: in
+#              value:
+#                - V1
+#                - V2
 #    dataValueCombinations:
 #      - a1: V1
 #        a2: "0"

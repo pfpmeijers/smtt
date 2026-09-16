@@ -1,4 +1,4 @@
-import { assertContains, assertMatchesReference, createFeatures, test, } from "./utils"
+import { assertContains, assertMatchesReference, assertNotContains, createFeatures, test, } from "./utils"
 import { type StateMachines, validateStateMachines } from "../../parse"
 
 test("[TST-016] → [REQ-066/088/101]: Result value adds resulting column", () => {
@@ -54,11 +54,11 @@ test("[TST-108] → [REQ-169]: Result value attribute with no other reference dr
     const feature = createFeatures(stateMachines)["m"]
     // `a2` is only ever referenced via the result value — always rendered as `<resulting a2>`
     // — so its base column is dropped. `a1` is a plain result reference (no result value), so it
-    // does render as `<a1>` and keeps its base column.
+    // does render as `<a1>` and keeps its base column. Row `y` renames row `x` (REQ-440).
     assertContains(feature,
         "      | a1 | resulting a2 |\n" +
-        "      | x  | 2            |\n" +
-        "      | y  | 2            |\n")
+        "      | x  | 2            |\n")
+    assertNotContains(feature, "| y ")
     assertMatchesReference(stateMachines, feature)
 })
 
@@ -77,9 +77,10 @@ test("[TST-109] → [REQ-423]: Result value referencing another attribute resolv
     validateStateMachines(stateMachines)
     const feature = createFeatures(stateMachines)["m"]
     // `resulting b` tracks each row's own `a` value dynamically, rather than one fixed literal.
+    // Row `2` renames row `1` (REQ-440), so the `b = a` shape shows once.
     assertContains(feature,
         "      | a | resulting b |\n" +
-        "      | 1 | 1           |\n" +
-        "      | 2 | 2           |\n")
+        "      | 1 | 1           |\n")
+    assertNotContains(feature, "| 2 | 2 ")
     assertMatchesReference(stateMachines, feature)
 })

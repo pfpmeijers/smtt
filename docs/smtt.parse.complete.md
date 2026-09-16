@@ -243,6 +243,28 @@ transition with the expansion tree that reaches it.
       ⏩ [008] `default user identity available` with `resulting default email address` set to `resulting user email address`
   ```
 
+- [REQ-441] The report's `Examples:` table shall list every surviving row, with
+  rows that are equivalent under REQ-440 (`smtt.generate.features.md`) grouped
+  together and marked by what the generated scenario does with them.
+
+  Remarks:
+  - Groups are listed in order of their first row, and the rows in a group keep
+    table order.
+  - A group of two or more rows is bracketed by `┌`, `│` and `└`. Its first row
+    is kept and marked `►`, and every other row is pruned and marked `X`.
+  - A row equivalent to no other row gets no mark.
+  - The rows without an `X` are exactly the rows of the generated scenario.
+
+  Example:
+  ```text
+      Examples:
+        | email | name   |
+      ┌►| user1 | User A |
+      │X| user1 | User B |
+      │X| user2 | User A |
+      └X| user2 | User B |
+  ```
+
 ## Related specifications
 
 - `smtt.parse.validate.md` — the constraints that shall hold of the raw AST

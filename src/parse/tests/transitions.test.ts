@@ -53,13 +53,24 @@ function buildChainedMachines(): StateMachine[] {
     ]
 }
 
-/** The trimmed lines of the final entry `[id]` in `report`, up to the next bullet. */
+/**
+ * The lines of the final entry `[id]` in `report`, up to the next bullet: trimmed, except that the
+ * lines of its `Examples:` table only lose the indentation of `Examples:` itself, so the table's
+ * group gutter (REQ-441) stays visible.
+ */
 function finalEntryLines(report: string, id: string): string[] {
     const lines = report.split("\n")
     const start = lines.findIndex((line) => line.trim() === `🢂️ [${id}]`)
     assert.ok(start >= 0, `no final entry [${id}] in:\n${report}`)
     const end = lines.findIndex((line, index) => index > start && /^\s*(- |🢂️ )/.test(line))
-    return lines.slice(start + 1, end < 0 ? undefined : end).map((line) => line.trim()).filter((line) => line !== "")
+    let examplesIndent: number | undefined
+    return lines.slice(start + 1, end < 0 ? undefined : end)
+        .filter((line) => line.trim() !== "")
+        .map((line) => {
+            if (examplesIndent !== undefined) return line.slice(examplesIndent).trimEnd()
+            if (line.trim() === "Examples:") examplesIndent = line.indexOf("Examples:")
+            return line.trim()
+        })
 }
 
 describe("renderTransitionsReport", () => {
@@ -78,8 +89,39 @@ describe("renderTransitionsReport", () => {
         const examplesIndex = entry.indexOf("Examples:")
 
         assert.deepEqual(entry.slice(examplesIndex + 1), [
-            "| b | z | resulting y | resulting a | resulting x |",
-            "| 5 | 9 | 5           | 5           | 5           |",
+            "  | b | z | resulting y | resulting a | resulting x |",
+            "  | 5 | 9 | 5           | 5           | 5           |",
+        ])
+    })
+
+    it("[TST-218] → [REQ-441]: groups equivalent example rows and marks the pruned ones", () => {
+        const machines: StateMachine[] = [{
+            name: "m1",
+            states: [{ name: "s1" }, { name: "s2" }],
+            dataValueCombinations: [
+                { a1: "v1", a2: "v3" },
+                { a1: "v1", a2: "v4" },
+                { a1: "v2", a2: "v3" },
+                { a1: "", a2: "v3" },
+                { a1: "v2", a2: "v4" },
+            ],
+            transitions: [{
+                id: "1",
+                states: [{ name: "s1" }],
+                trigger: { type: "event", name: "e", arguments: [{ name: "a1" }, { name: "a2" }] },
+                result: { name: "s2" },
+            }],
+        }]
+        const entry = finalEntryLines(renderTransitionsReport(machines), "1")
+        const examplesIndex = entry.indexOf("Examples:")
+
+        assert.deepEqual(entry.slice(examplesIndex + 1), [
+            "  | a1 | a2 |",
+            "┌►| v1 | v3 |",
+            "│X| v1 | v4 |",
+            "│X| v2 | v3 |",
+            "└X| v2 | v4 |",
+            "  |    | v3 |",
         ])
     })
 })

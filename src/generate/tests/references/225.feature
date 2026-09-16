@@ -1,41 +1,41 @@
 # Results from: equivalent-rows.test.ts, TST-225: A literal the model names keeps rows apart
 # State machines:
-#  - name: m
+#  - name: m1
 #    states:
-#      - name: s
+#      - name: s1
 #    dataValueCombinations:
-#      - current: user1
-#        email: user1
-#      - current: user1
-#        email: user2
-#      - current: user1
-#        email: user3
+#      - a1: v1
+#        a2: v1
+#      - a1: v1
+#        a2: v2
+#      - a1: v1
+#        a2: v3
 #    transitions:
 #      - states:
-#          - name: s
+#          - name: s1
 #            arguments:
-#              - name: current
+#              - name: a1
 #                condition:
 #                  operator: =
-#                  value: user1
+#                  value: v1
 #        trigger:
 #          type: event
 #          name: e
 #          arguments:
-#            - name: email
+#            - name: a2
 #        result:
-#          name: s
+#          name: s1
 # Covers requirements:
 # - [REQ-440] A rendered examples table row shall be pruned when renaming its interchangeable values
 #   turns it into an earlier row, keeping the first row.
 
-Feature: m
+Feature: m1
 
-  Scenario Outline: [] s "<current>" → s; when e "<email>"
-    Given initially s "<current>"
-    When e "<email>"
-    Then expect s
+  Scenario Outline: [] s1 "<a1>" → s1; when e "<a2>"
+    Given initially s1 "<a1>"
+    When e "<a2>"
+    Then expect s1
     Examples:
-      | current | email |
-      | user1   | user1 |
-      | user1   | user2 |
+      | a1 | a2 |
+      | v1 | v1 |
+      | v1 | v2 |

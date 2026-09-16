@@ -1,7 +1,9 @@
 import type { Argument, DefaultPrecondition, StateMachine, Transition } from "../parse"
 import {
     deduplicateRows,
+    type DistinguishedValues,
     mergeExampleValues,
+    pruneEquivalentRows,
     resolveCellValue,
     type ExampleColumn,
     type ExampleRow,
@@ -51,6 +53,8 @@ function formatTableRow(cells: string[], widths: number[]): string {
  * @param columns Columns to render.
  * @param rows Surviving rows to render.
  * @param allRows Original, unfiltered table used for positional modifier derivation (REQ-158).
+ * @param distinguished Values and attributes the model distinguishes; rows equivalent under
+ *   renaming of all other values are pruned (REQ-440).
  * @returns The rendered `Examples:` block.
  */
 export function formatExamplesTable(
@@ -59,13 +63,15 @@ export function formatExamplesTable(
     columns: ExampleColumn[],
     rows: ExampleRow[],
     allRows: ExampleRow[],
+    distinguished: DistinguishedValues,
 ): string {
     const uniqueRows = deduplicateRows(rows)
-    const rowCells = deduplicateRenderedRows(uniqueRows.map((row, rowIndex) => {
+    const renderedCells = deduplicateRenderedRows(uniqueRows.map((row, rowIndex) => {
         const originalRowIndex = allRows.indexOf(row)
         const sourceRowIndex = originalRowIndex >= 0 ? originalRowIndex : rowIndex
         return columns.map((column) => resolveCellValue(stateMachines, stateMachineName, column, row, sourceRowIndex, allRows))
     }))
+    const rowCells = pruneEquivalentRows(renderedCells, columns, distinguished)
 
     const headerCells = columns.map((column) => column.name)
     const widths = headerCells.map((header, columnIndex) =>
