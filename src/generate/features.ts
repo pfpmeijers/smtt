@@ -247,16 +247,22 @@ function renderScenarios(context: RenderContext, transition: Transition): string
     const expansionPaths = resolveExpansionPaths(context, transition)
 
     return expansionPaths.map((path, pathIndex) => {
+        const effectiveGivens = buildEffectiveGivens(
+            transition, defaultPreconditions, ownership, stateMachine, path.injectedGivenStates,
+        )
+        const steps = buildScenarioSteps(stateMachine.name, transition, path, effectiveGivens)
+
+        // Only columns whose placeholder is rendered in one of the steps are kept (REQ-436).
+        const referencedNames = new Set(
+            steps.flatMap((step) => [...step.matchAll(/<([^<>]+)>/g)].map((match) => match[1])),
+        )
         const columns = collectPathExampleColumns(
             stateMachine.name, defaultPreconditions, transition, path.sourceChain,
-        )
+        ).filter((column) => referencedNames.has(column.name))
         const isOutline = columns.length > 0
         const examplesTable = isOutline ? buildExamplesTable(context, transition, columns, path) : null
         const keyword = isOutline ? "Scenario Outline" : "Scenario"
 
-        const effectiveGivens = buildEffectiveGivens(
-            transition, defaultPreconditions, ownership, stateMachine, path.injectedGivenStates,
-        )
         const ownGiven = effectiveGivens.find(
             (stateRef) => ownerOfStateRef(stateRef, ownership) === stateMachine.name,
         )
@@ -265,7 +271,7 @@ function renderScenarios(context: RenderContext, transition: Transition): string
 
         const lines = [
             buildScenarioLabel(stateMachine.name, transition, keyword, ownGiven, contextGivens, idSuffix),
-            ...buildScenarioSteps(stateMachine.name, transition, path, effectiveGivens),
+            ...steps,
         ]
         if (transition.notes) lines.push(`    # Notes: ${transition.notes}`)
         if (examplesTable) lines.push(examplesTable)

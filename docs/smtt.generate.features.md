@@ -328,6 +328,14 @@ definition as follows:
     remaining column; these are collapsed to one by the existing row
     de-duplication (REQ-160).
 
+- [REQ-436] A column shall be dropped from the table when its
+  `<$column-name>` placeholder is not rendered in any of the scenario's steps,
+  e.g. an argument of a default precondition that the transition overrides
+  with an explicit state of the same machine. When no column remains, a plain
+  `Scenario` is rendered without an `Examples:` block (REQ-047).
+  - Rows that become identical after dropping columns are collapsed by the
+    row de-duplication (REQ-160).
+
 Derived attribute columns are described in next sections.
 
 - [REQ-067] Row construction shall use `$example-data-values` as starting

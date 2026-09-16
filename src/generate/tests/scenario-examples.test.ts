@@ -71,3 +71,32 @@ test("[TST-100] → [REQ-160]: Examples table removes rendered duplicate rows", 
     assert.ok((feature.match(/\| V2 \|/g) ?? []).length === 1, "duplicate rendered row for V2 must be removed")
     assertMatchesReference(stateMachines, feature)
 })
+
+test("[TST-210] → [REQ-436]: Examples table drops columns not referenced in any step", () => {
+    const stateMachines: StateMachines = [{
+        name: "m",
+        states: [{name: "s1"}],
+        dataValueCombinations: [
+            {a1: "1", b1: "2"},
+            {a1: "3", b1: "2"},
+        ],
+        defaultPreconditions: [{
+            state: "s2",
+            arguments: [{name: "a1"}],
+        }],
+        transitions: [{
+            states: [{name: "s1", arguments: [{name: "b1"}]}, {name: "s3"}],
+            trigger: {type: "event", name: "e"},
+            result: {name: "s1"},
+            notes: "",
+        }],
+    }, {
+        name: "m0",
+        states: [{name: "s2"}, {name: "s3"}],
+    }]
+    validateStateMachines(stateMachines)
+    const feature = createFeatures(stateMachines)["m"]
+    assertContains(feature, "      | b1 |\n      | 2  |\n")
+    assert.ok(!feature.includes("a1"), "unreferenced column a1 must be dropped")
+    assertMatchesReference(stateMachines, feature)
+})
