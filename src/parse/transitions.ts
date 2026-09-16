@@ -399,7 +399,7 @@ function formatValueTable(
 ): string[] {
     const rendered = rows.map((row) => {
         const rowIndex = Math.max(allRows.indexOf(row), 0)
-        return columns.map((column) => resolveCellValue(stateMachines, stateMachineName, column, row, rowIndex, allRows))
+        return columns.map((column) => resolveCellValue(stateMachines, stateMachineName, columns, column, row, rowIndex, allRows))
     })
     // Two rows differing only in a column this table doesn't hold render identically.
     const seen = new Set<string>()

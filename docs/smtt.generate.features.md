@@ -805,6 +805,42 @@ Supported operators:
   *row's own value* for the referenced attribute, instead of the fixed literal
   REQ-089 otherwise takes it from.
 
+- [REQ-437] REQ-423's "row's own value" shall prefer another `resulting
+  $attribute-name` column already present in the same table over the
+  referenced attribute's raw base-column value, when one exists for that
+  attribute name. This matters for a state-triggered transition (REQ-104)
+  whose own result references, by name, an attribute that a source along its
+  expansion chain (REQ-118) itself produces with a result value: the base
+  column for that attribute (if any survives REQ-169) holds the attribute's
+  *precondition* value — filtered for the source's own `Given` state
+  (REQ-148), a different point in time — while the chain-produced `resulting
+  $attribute-name` column holds the value the expansion is actually about.
+  Resolution recurses when the preferred column is itself a reference to a
+  further `resulting $attribute-name` column, terminating at a base column or
+  literal.
+  ```markdown
+  m1: state `s1` with `b`, trigger `e`, result `s2` with `a` set to `b`
+  m2: state `s3`, trigger (state) `s2` with `a`, result `s4` with `c` set to `a`
+  ```
+  `m2`'s own trigger argument `a` is never itself rendered (a state trigger's
+  `When` step comes from the resolved event, REQ-107), so its base column
+  holds only whatever `m1`'s own declared values for `a` happen to be — here,
+  none, since `m1` never declares `a` as its own data, only as a `resulting a`
+  produced by its result. Resolving `c`'s reference to `a` against that empty
+  base column would render `c` blank; preferring `m1`'s `resulting a` column
+  instead resolves it to `b`'s value, matching what the expansion chain
+  actually produced.
+  ```gherkin
+    Scenario Outline: [REQ-002] s3 → s4 "<resulting c>"; when e
+      Given initially s3
+      When e with "<b>"
+      Then expect s2 with "<resulting a>"
+      Then expect s4 with "<resulting c>"
+      Examples:
+        | b | resulting a | resulting c |
+        | 5 | 5           | 5           |
+  ```
+
 - Data example table in state machine spec:
   ```markdown
     | p  |

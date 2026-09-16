@@ -140,3 +140,10 @@
 
 - Allow plain text in a section to be just informational text. All real content in bulleted items or tables.
 
+- Replace scenario label by just ID plus transition description.
+    Add description column to the transition tables
+
+- For states with a certain condition, add this condition to the generated Given line in the scenario as a comment.
+    E.g. And initially cart non-empty with "<painting count>" # Restricted to: painting count = 1
+
+- Put the note based comments in the scenario directly after the scenario label line.

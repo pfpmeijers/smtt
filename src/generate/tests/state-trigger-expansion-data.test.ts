@@ -99,6 +99,40 @@ test("[TST-110] → [REQ-423]: A reference-valued result does not satisfy a stat
     )
 })
 
+test("[TST-211] → [REQ-437]: A chain-produced result value takes precedence over a stale base column", () => {
+    const stateMachines: StateMachines = [
+        {
+            name: "m1",
+            states: [{name: "s1"}, {name: "s2"}],
+            dataValueCombinations: [{b: "5"}],
+            transitions: [{
+                states: [{name: "s1"}],
+                trigger: {type: "event", name: "e", arguments: [{name: "b"}]},
+                result: {name: "s2", arguments: [{name: "a", result: {value: "b", valueIsReference: true}}]},
+            }],
+        },
+        {
+            name: "m2",
+            // `a` is declared here only so REQ-425's name-existence check accepts the reference
+            // below — no `dataValueCombinations` means m2 contributes no actual rows for it.
+            data: {a: ""},
+            states: [{name: "s3"}, {name: "s4"}],
+            transitions: [{
+                states: [{name: "s3"}],
+                trigger: {type: "state", name: "s2", arguments: [{name: "a"}]},
+                result: {name: "s4", arguments: [{name: "c", result: {value: "a", valueIsReference: true}}]},
+            }],
+        },
+    ]
+    validateStateMachines(stateMachines)
+    const feature = createFeatures(stateMachines)["m2"]
+    // `a` is never m1's own declared data — only a `resulting a` its result produces — so a
+    // resolution that fell back to the raw (undeclared, empty) base column for `a` would render
+    // `resulting c` blank instead of `5`.
+    assertContains(feature, "| 5 | 5           | 5           |")
+    assertMatchesReference(stateMachines, feature)
+})
+
 test("[TST-177] → [REQ-428]: A reference-valued trigger condition disqualifies no expansion source", () => {
     const stateMachines: StateMachines = [{
         name: "m1",

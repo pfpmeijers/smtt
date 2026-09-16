@@ -702,8 +702,19 @@ function resolveModifierValue(
 /**
  * Resolve the rendered cell value for any column kind from a single row.
  *
+ * A reference-valued result column (REQ-423) normally resolves against this row's own raw value
+ * for the referenced attribute. But when that attribute is itself produced elsewhere in this same
+ * table by a state-trigger source's own result (i.e. a `resulting X` column exists for it), the
+ * source's produced value is what the reference means — the raw base column instead holds that
+ * attribute's *precondition* value (as filtered for the source's own `Given` state), a different
+ * point in time. A transition whose trigger bare-references an attribute a matched expansion
+ * source's result produces (REQ-118) is referring to the value the source produces, not to
+ * whatever the attribute happened to hold beforehand, so the produced column takes precedence.
+ *
  * @param stateMachines All state machines for looking up example values.
  * @param stateMachineName Name of the state machine owning the transition, for error context.
+ * @param columns All columns of the table being rendered, so a reference-valued result column can
+ *   look up whether the attribute it names is itself produced elsewhere in the same table.
  * @param column Column definition to evaluate.
  * @param row Row containing the source values.
  * @param sourceRowIndex Index of the row in the original table.
@@ -713,6 +724,7 @@ function resolveModifierValue(
 export function resolveCellValue(
     stateMachines: StateMachine[],
     stateMachineName: string,
+    columns: ExampleColumn[],
     column: ExampleColumn,
     row: ExampleRow,
     sourceRowIndex: number,
@@ -723,9 +735,14 @@ export function resolveCellValue(
             return row[column.sourceName] ?? ""
         case "modifier":
             return resolveModifierValue(stateMachines, stateMachineName, column, row, sourceRowIndex, allRows)
-        case "result":
-            // REQ-423: a reference resolves against this same row's own value for the referenced
-            // attribute, dynamically, rather than the fixed literal the result was set to.
-            return column.valueIsReference ? (row[column.resultValue ?? ""] ?? "") : (column.resultValue ?? "")
+        case "result": {
+            if (!column.valueIsReference) return column.resultValue ?? ""
+            const producedColumn = columns.find((candidate) =>
+                candidate !== column && candidate.kind === "result" && candidate.sourceName === column.resultValue,
+            )
+            return producedColumn
+                ? resolveCellValue(stateMachines, stateMachineName, columns, producedColumn, row, sourceRowIndex, allRows)
+                : (row[column.resultValue ?? ""] ?? "")
+        }
     }
 }
