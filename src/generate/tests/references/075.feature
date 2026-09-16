@@ -32,7 +32,8 @@
 #   source until an event trigger is reached.
 # - [REQ-146] When expansion recurses (state trigger → state trigger → event trigger), intermediate
 #   `Then` steps shall be emitted in chronological causal order: innermost expansion result first,
-#   with the top-level result last.
+#   with the top-level result last. Each step renders the result of its own transition, whose
+#   references resolve through the bindings of that transition's trigger (REQ-437).
 
 Feature: m3
 

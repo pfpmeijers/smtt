@@ -2,6 +2,7 @@
  * Tests for the expansion annotation step (`expand.ts`).
  *
  * Covers:
+ *  - What a state trigger's arguments are bound to by the source resolving it.
  *  - Which transitions carry an annotation, and which are left without one.
  *  - The chain order and the references it records.
  *  - A state trigger that nothing explains.
@@ -11,7 +12,7 @@ import { describe, it } from "node:test"
 import * as assert from "node:assert/strict"
 
 import type { StateMachine } from "../sm.ast.d"
-import { annotateExpansions } from "../expand"
+import { annotateExpansions, bindResult, chainArgumentBindings, triggerArgumentBindings } from "../expand"
 
 /** Two machines: `m1` produces `s2` on an event, `m2` reacts to `s2` with a state trigger. */
 function buildChainedMachines(): StateMachine[] {
@@ -92,5 +93,61 @@ describe("annotateExpansions", () => {
         assert.deepEqual(stateMachines[1].transitions?.[0].expansion, [
             { sources: [{ stateMachine: "m1", transitionIndex: 0, transitionId: "a" }] },
         ])
+    })
+})
+
+describe("trigger argument bindings", () => {
+    /** `m1` sets `a` from `b` on an event; `m2` reacts to `s2` with `a` and `b`, and sets `c` from `a`. */
+    function buildBindingMachines(): StateMachine[] {
+        return [
+            {
+                name: "m1",
+                states: [{ name: "s1" }, { name: "s2" }],
+                transitions: [{
+                    id: "a",
+                    states: [{ name: "s1" }],
+                    trigger: { type: "event", name: "e", arguments: [{ name: "b" }] },
+                    result: { name: "s2", arguments: [{ name: "a", result: { value: "b", valueIsReference: true } }] },
+                }],
+            },
+            {
+                name: "m2",
+                states: [{ name: "s3" }, { name: "s4" }],
+                transitions: [{
+                    id: "b",
+                    states: [{ name: "s3" }],
+                    trigger: { type: "state", name: "s2", arguments: [{ name: "a" }, { name: "b" }] },
+                    result: { name: "s4", arguments: [{ name: "c", result: { value: "a", valueIsReference: true } }] },
+                }],
+            },
+        ]
+    }
+
+    it("[TST-212] → [REQ-438]: binds a trigger argument the source's result sets to its resulting column", () => {
+        const [m1, m2] = buildBindingMachines()
+        const bindings = triggerArgumentBindings(m2.transitions![0].trigger, m1.transitions![0])
+
+        // `b` is only referenced by the source's own trigger, so its value carries over unbound.
+        assert.deepEqual([...bindings], [["a", "resulting a"]])
+    })
+
+    it("[TST-213] → [REQ-438]: binds each link of a chain through the link before it", () => {
+        const [m1, m2] = buildBindingMachines()
+        const sourceChain = [{ stateMachineName: "m1", transition: m1.transitions![0], defaultPreconditions: [] }]
+        const bindings = chainArgumentBindings(m2.transitions![0], sourceChain)
+
+        assert.equal(bindings.length, 2)
+        assert.equal(bindings[0].size, 0)
+        assert.deepEqual([...bindings[1]], [["a", "resulting a"]])
+    })
+
+    it("[TST-214] → [REQ-438]: a bound result reads the column its reference is bound to", () => {
+        const [, m2] = buildBindingMachines()
+        const result = m2.transitions![0].result
+        const bound = bindResult(result, new Map([["a", "resulting a"]]))
+
+        assert.equal(bound.arguments?.[0].result?.value, "resulting a")
+        assert.equal(result.arguments?.[0].result?.value, "a")
+        assert.equal(bindResult(result, new Map()), result)
     })
 })

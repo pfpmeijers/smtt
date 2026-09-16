@@ -805,31 +805,26 @@ Supported operators:
   *row's own value* for the referenced attribute, instead of the fixed literal
   REQ-089 otherwise takes it from.
 
-- [REQ-437] REQ-423's "row's own value" shall prefer another `resulting
-  $attribute-name` column already present in the same table over the
-  referenced attribute's raw base-column value, when one exists for that
-  attribute name. This matters for a state-triggered transition (REQ-104)
-  whose own result references, by name, an attribute that a source along its
-  expansion chain (REQ-118) itself produces with a result value: the base
-  column for that attribute (if any survives REQ-169) holds the attribute's
-  *precondition* value — filtered for the source's own `Given` state
-  (REQ-148), a different point in time — while the chain-produced `resulting
-  $attribute-name` column holds the value the expansion is actually about.
-  Resolution recurses when the preferred column is itself a reference to a
-  further `resulting $attribute-name` column, terminating at a base column or
-  literal.
+- [REQ-437] A bound result reference (REQ-438 in `smtt.parse.complete.md`)
+  shall take its cell value from the `resulting $attribute-name` column it is
+  bound to, instead of from REQ-423's row value of the referenced attribute.
+
+  Rationale: along an expansion chain one attribute name has a value before
+  the event and one after each link that sets it. The base column holds the
+  former (filtered for the `Given` states, REQ-148); a trigger argument means
+  the latter, the value its source produced. An unbound reference, one to an
+  attribute the transition's trigger did not receive from its source's result,
+  keeps REQ-423's row value. Resolution recurses when the bound column is
+  itself a bound reference, and ends at a base column or a literal.
+
+  Example:
   ```markdown
   m1: state `s1` with `b`, trigger `e`, result `s2` with `a` set to `b`
   m2: state `s3`, trigger (state) `s2` with `a`, result `s4` with `c` set to `a`
   ```
-  `m2`'s own trigger argument `a` is never itself rendered (a state trigger's
-  `When` step comes from the resolved event, REQ-107), so its base column
-  holds only whatever `m1`'s own declared values for `a` happen to be — here,
-  none, since `m1` never declares `a` as its own data, only as a `resulting a`
-  produced by its result. Resolving `c`'s reference to `a` against that empty
-  base column would render `c` blank; preferring `m1`'s `resulting a` column
-  instead resolves it to `b`'s value, matching what the expansion chain
-  actually produced.
+  `m1`'s result sets `a`, so `m2`'s trigger argument `a` is bound to
+  `resulting a`, and `c` takes `b`'s value through it. Were `m2`'s trigger
+  `s2` without `a`, `c` would take `a`'s own value from before the event.
   ```gherkin
     Scenario Outline: [REQ-002] s3 → s4 "<resulting c>"; when e
       Given initially s3
@@ -911,7 +906,8 @@ For each source found:
 - [REQ-146] When expansion recurses (state trigger → state trigger → event
   trigger), intermediate `Then` steps shall be emitted in chronological
   causal order: innermost expansion result first, with the top-level result
-  last.
+  last. Each step renders the result of its own transition, whose references
+  resolve through the bindings of that transition's trigger (REQ-437).
 
 Example: trigger state `user authenticated as "<email address>"`, expanded via
 event `signed in with "<email address>"` whose result is `user authenticated as

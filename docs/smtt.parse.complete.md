@@ -43,7 +43,9 @@ needs a declared attribute (REQ-419) and a place in the example table (REQ-421)
 just as much as an explicit one does.
 
 A further step, the expansion annotation below, runs after validation and adds
-derived data rather than completing the model.
+derived data rather than completing the model. The trigger argument binding
+(REQ-438) and the transitions report (REQ-439) are derived from that same
+resolution.
 
 Each step only ever adds: an attribute already declared keeps its
 description, an example row already present is never rewritten or removed,
@@ -180,6 +182,66 @@ validating.
   The annotation is derived data. An AST carrying it and the same AST without
   it describe the same state machines: a consumer that finds no annotation
   resolves the trigger itself (REQ-430) and reaches the same answer.
+
+  The annotation references sources rather than copying them: each source's
+  result is the intermediate result the chain passes through (REQ-146 in
+  `smtt.generate.features.md`), so a transition keeps its single `result`.
+
+- [REQ-438] A state trigger's argument shall denote the value its resolving
+  source's result sets it to, when that result sets the attribute: the
+  argument is then *bound* to the source's `resulting $attribute-name` column.
+
+  Rationale: an expansion chain spans several moments, and a single attribute
+  name holds a value before the event and one after each link that sets it.
+  The trigger fires on the state the source *produces*, so its argument means
+  the produced value, not the one the attribute held before.
+
+  Remarks:
+  - An argument the source's result does not set carries its value over
+    (REQ-430) and stays unbound, as does a modified argument, which resolves
+    against its own derived column.
+  - The binding applies per link: a source's own trigger is bound by the
+    source before it in the chain, and the innermost source, driven by an
+    event, binds nothing.
+  - A result reference to a bound attribute reads the bound column (REQ-437 in
+    `smtt.generate.features.md`); a precondition on the attribute still tests
+    the value before the event.
+  - Like the annotation, the binding is derived: it follows from the chain and
+    the sources' results, so it is not recorded in the AST.
+
+  Example: `Default user identity available` with `default email address` set
+  to `user email address`, triggered by `User authenticated` with `user email
+  address`, resolved by a source whose result sets `user email address` to
+  `reservation email address`. The trigger argument is bound to `resulting user
+  email address`, so the default email address becomes the reservation email
+  address, even though the scenario starts with the user unauthenticated and
+  `user email address` undefined.
+
+## Transitions report
+
+With `--debug`, the parse step writes `transitions.txt` beside the AST: every
+transition with the expansion tree that reaches it.
+
+- [REQ-439] A fully expanded path in the report shall show what its generated
+  scenario asserts: the merged `Given` states, the resolved event, one result
+  per transition along the chain — innermost first, prefixed with that
+  transition's id, and with references read through its bindings (REQ-438) —
+  and the `Examples:` table with only the columns the scenario's steps render
+  (REQ-436 in `smtt.generate.features.md`).
+
+  Rationale: the report explains why a scenario came out the way it did, so it
+  shall not show a result or a column the scenario lacks, nor omit one it has.
+
+  Example:
+  ```text
+  🢂️ [008.2]
+      ✅ `default user identity unavailable`
+      ...
+      ➡️ `painting reservation confirmed` using `reservation email address`, `reservation contact name`
+      ⏩ [039a] `painting reserved` with `resulting painting assignee email address` set to `reservation email address`, ...
+      ⏩ [074] `user authenticated` with `resulting user email address` set to `reservation email address`
+      ⏩ [008] `default user identity available` with `resulting default email address` set to `resulting user email address`
+  ```
 
 ## Related specifications
 

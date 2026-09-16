@@ -17,7 +17,9 @@ import {
     describeFilterCondition,
 } from "./conditions"
 import {
+    bindResult,
     buildTaggedTransitions,
+    chainArgumentBindings,
     findExpansionSources,
     MAX_EXPANSION_DEPTH,
     type ExpansionSourceStep,
@@ -41,7 +43,9 @@ import {
     type ImpliedConditionsIndex,
     type StateOwnershipIndex,
 } from "./ownership"
-import type { Argument, Condition, Result, StateMachine, StateRef, Transition, Trigger } from "./sm.ast.d"
+import type {
+    Argument, Condition, DefaultPrecondition, Result, StateMachine, StateRef, Transition, Trigger,
+} from "./sm.ast.d"
 
 /** Name of the file the report is written to. */
 const REPORT_FILE_NAME = "transitions.txt"
@@ -399,7 +403,7 @@ function formatValueTable(
 ): string[] {
     const rendered = rows.map((row) => {
         const rowIndex = Math.max(allRows.indexOf(row), 0)
-        return columns.map((column) => resolveCellValue(stateMachines, stateMachineName, columns, column, row, rowIndex, allRows))
+        return columns.map((column) => resolveCellValue(stateMachines, stateMachineName, column, row, rowIndex, allRows))
     })
     // Two rows differing only in a column this table doesn't hold render identically.
     const seen = new Set<string>()
@@ -429,6 +433,8 @@ function formatValueTable(
  * @param mergedGivens The path's full merged `Given` context, for implied-condition filters.
  * @param context Shared state machines list and implied-conditions index.
  * @param indent Leading spaces for the rendered block.
+ * @param renderedNames Placeholder names the scenario's steps render; only those columns are kept
+ *   (REQ-436), exactly as the generated feature keeps them.
  * @returns Rendered lines describing the resolved rows, or precisely why there are none.
  */
 function renderExamplesLines(
@@ -438,9 +444,11 @@ function renderExamplesLines(
     mergedGivens: StateRef[],
     context: ExampleDebugContext,
     indent: number,
+    renderedNames: ReadonlySet<string>,
 ): string[] {
     const pad = " ".repeat(indent)
     const columns = collectPathExampleColumns(rootStateMachine.name, rootStateMachine.defaultPreconditions ?? [], root, sourceChain)
+        .filter((column) => renderedNames.has(column.name))
     if (columns.length === 0) return [`${pad}Examples: (none — plain Scenario)`]
 
     const contributingStateMachines = new Set([
@@ -474,15 +482,16 @@ function renderExamplesLines(
  * Render the resolved leaf entry of one of the root transition's own fully-resolved expansion
  * paths: its merged `Given` context (the accumulated precondition states along this path, each
  * marked with the check prefix since the path is fully resolved), the innermost `When` event that
- * terminates the path, the root transition's own result, and the actual `Examples:` table this
- * path would produce (or why it's empty) — i.e. exactly what the root transition's generated
- * scenario would assert for this path (REQ-029 up to REQ-031). Rendered nested one indentation
+ * terminates the path, the result of every transition along the path — innermost first, ending
+ * with the root transition's own (REQ-146/REQ-439) — and the actual `Examples:` table this path
+ * would produce (or why it's empty) — i.e. exactly what the root transition's generated scenario
+ * would assert for this path (REQ-029 up to REQ-031). Rendered nested one indentation
  * step under the terminal candidate that reaches it (its "last transition"), without a bullet
  * dash, since it isn't itself a candidate.
  *
  * @param root Top-level transition whose expansion path is being resolved.
  * @param rootStateMachine State machine owning `root`.
- * @param sourceChain This path's own chain of expansion sources.
+ * @param sourceChain This path's own chain of expansion sources, innermost first.
  * @param mergedGivens Full merged precondition context at the terminal candidate.
  * @param leafTrigger The terminal candidate's own trigger, used as the resolved `When` event.
  * @param candidateBulletIndent Leading spaces of the terminal candidate's own bullet line.
@@ -502,14 +511,51 @@ function renderResolvedLeaf(
 ): string[] {
     const indent = candidateBulletIndent + INDENT_STEP
     const idPart = `[${root.id ?? ""}.${pathIndex}]`
-    const detailIndent = indent + DETAIL_INDENT
+    const pad = " ".repeat(indent + DETAIL_INDENT)
     const lines: string[] = [`${" ".repeat(indent)}${FINAL_PREFIX}${idPart}`]
 
-    lines.push(...mergedGivens.map((stateRef) => `${" ".repeat(detailIndent)}${CHECK_PREFIX}${debugStateRefText(stateRef, false, true)}`))
-    lines.push(`${" ".repeat(detailIndent)}➡️ ${debugTriggerText(leafTrigger, true)}`)
-    lines.push(`${" ".repeat(detailIndent)}⏩ ${debugStateRefText(root.result, true)}`)
-    lines.push(...renderExamplesLines(root, rootStateMachine, sourceChain, mergedGivens, context, indent))
+    // Each link's result reads its references through the binding its own trigger received (REQ-438).
+    const links = [...sourceChain.map((step) => step.transition), root]
+    const bindings = chainArgumentBindings(root, sourceChain)
+    const results = links.map((link, index) => bindResult(link.result, bindings[index]))
+
+    lines.push(...mergedGivens.map((stateRef) => `${pad}${CHECK_PREFIX}${debugStateRefText(stateRef, false, true)}`))
+    lines.push(`${pad}➡️ ${debugTriggerText(leafTrigger, true)}`)
+    lines.push(...results.map((result, index) => `${pad}⏩ [${links[index].id ?? "?"}] ${debugStateRefText(result, true)}`))
+
+    const renderedNames = renderedPlaceholderNames(
+        [rootStateMachine.defaultPreconditions ?? [], ...sourceChain.map((step) => step.defaultPreconditions)].flat(),
+        mergedGivens, leafTrigger, results,
+    )
+    lines.push(...renderExamplesLines(root, rootStateMachine, sourceChain, mergedGivens, context, indent, renderedNames))
     return lines
+}
+
+/**
+ * Placeholder names a scenario's steps render (REQ-436): those of its `Given` states — the default
+ * preconditions of the machines along its chain included, as the generated feature renders them —
+ * its `When` trigger and its `Then` results.
+ *
+ * @param defaultPreconditions Default preconditions of the machines along the scenario's chain.
+ * @param givens The scenario's precondition states.
+ * @param trigger The scenario's `When` trigger.
+ * @param results The scenario's results, in step order.
+ * @returns The rendered placeholder names.
+ */
+function renderedPlaceholderNames(
+    defaultPreconditions: DefaultPrecondition[],
+    givens: StateRef[],
+    trigger: Trigger,
+    results: StateRef[],
+): Set<string> {
+    const names = (args: Argument[] | undefined, isResult: boolean): string[] =>
+        (args ?? []).map((argument) => attributePlaceholderName(argument, isResult))
+    return new Set([
+        ...defaultPreconditions.flatMap((precondition) => names(precondition.arguments, false)),
+        ...givens.flatMap((stateRef) => names(stateRef.arguments, false)),
+        ...names(trigger.arguments, false),
+        ...results.flatMap((result) => names(result.arguments, true)),
+    ])
 }
 
 /**
@@ -524,8 +570,8 @@ function renderResolvedLeaf(
  *   at the top level — all of one state machine's own transitions, each being its own root).
  * @param accumulated Precondition states already established by the ancestor chain.
  * @param sourceChain This path's own chain of expansion sources established so far (REQ-170/171),
- *   for computing the real `Examples:` table at a resolved leaf — mirrors `ExpansionPath.sourceChain`
- *   from the real generator's own `expandStateTrigger`.
+ *   outermost first and excluding the root, for computing the real `Examples:` table at a resolved
+ *   leaf — reversed there into the generator's own `ExpansionPath.sourceChain` order.
  * @param ancestorStack Transitions already on the current expansion path, for cycle detection.
  * @param indent Leading spaces of the machine bullet.
  * @param taggedTransitions All transitions tagged with owner machine name.
@@ -590,9 +636,12 @@ function renderMachineGroup(
         const skipResult = !isRootLevel && !isFinal
         lines.push(...renderCandidateLines(candidate, displayTagged, bulletIndent, isFinal, skipResult))
         if (isFinal) {
+            const givens = candidate.states ?? []
             lines.push(...renderExamplesLines(
-                candidateRoot, candidateRootStateMachine, sourceChain, candidate.states ?? [],
-                exampleContext, bulletIndent,
+                candidateRoot, candidateRootStateMachine, [], givens, exampleContext, bulletIndent,
+                renderedPlaceholderNames(
+                    candidateRootStateMachine.defaultPreconditions ?? [], givens, candidate.trigger, [candidate.result],
+                ),
             ))
         }
 
@@ -600,7 +649,7 @@ function renderMachineGroup(
 
         const mergedGivens = mergeGivens(accumulated, candidate.states ?? [], ownership)
         const candidateStateMachine = taggedTransitions.find((tagged) => tagged.transition === candidate)!.stateMachine
-        const nextSourceChain: ExpansionSourceStep[] = [...sourceChain, {
+        const nextSourceChain: ExpansionSourceStep[] = depth === 0 ? [] : [...sourceChain, {
             stateMachineName, transition: candidate, defaultPreconditions: candidateStateMachine.defaultPreconditions ?? [],
         }]
 
@@ -610,7 +659,7 @@ function renderMachineGroup(
             if (depth > 0) {
                 candidateLeafCounter.count += 1
                 lines.push(...renderResolvedLeaf(
-                    candidateRoot, candidateRootStateMachine, nextSourceChain, mergedGivens,
+                    candidateRoot, candidateRootStateMachine, [...nextSourceChain].reverse(), mergedGivens,
                     candidate.trigger, bulletIndent, candidateLeafCounter.count, exampleContext,
                 ))
             }
@@ -668,7 +717,7 @@ export function renderTransitionsReport(stateMachines: StateMachine[]): string {
         "- ❌: conflicting precondition state - already accumulated, different state value",
         "- ✅: precondition state of a final (fully expanded) transition",
         "- ➡️: trigger (`When`)",
-        "- ⏩: result (`Then`)",
+        "- ⏩: result (`Then`); in a final expanded transition one per transition along the chain, innermost first, prefixed with that transition's ID",
         "- 🢂️: final (fully-expanded) transition",
         "",
     ]

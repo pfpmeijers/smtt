@@ -64,7 +64,7 @@ export function formatExamplesTable(
     const rowCells = deduplicateRenderedRows(uniqueRows.map((row, rowIndex) => {
         const originalRowIndex = allRows.indexOf(row)
         const sourceRowIndex = originalRowIndex >= 0 ? originalRowIndex : rowIndex
-        return columns.map((column) => resolveCellValue(stateMachines, stateMachineName, columns, column, row, sourceRowIndex, allRows))
+        return columns.map((column) => resolveCellValue(stateMachines, stateMachineName, column, row, sourceRowIndex, allRows))
     }))
 
     const headerCells = columns.map((column) => column.name)

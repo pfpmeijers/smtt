@@ -10,10 +10,11 @@
  * modifier it prints — stays with that consumer.
  */
 
+import { resultingColumnName } from "./arguments"
 import { evaluateCondition } from "./conditions"
 import { buildStateOwnership, ownerOfStateName, ownerOfStateRef, type StateOwnershipIndex } from "./ownership"
 import type {
-    Argument, DefaultPrecondition, ExpansionSourceRef, StateMachine, Transition, Trigger,
+    Argument, DefaultPrecondition, ExpansionSourceRef, StateMachine, StateRef, Transition, Trigger,
 } from "./sm.ast.d"
 
 /** Guard against runaway recursion through (near-)cyclic expansion chains. */
@@ -206,6 +207,78 @@ export interface ExpansionSourceStep {
     stateMachineName: string
     transition: Transition
     defaultPreconditions: DefaultPrecondition[]
+}
+
+// --- Trigger argument bindings ---
+
+/** Attribute name → name of the `Examples:` column it denotes, for one link of an expansion chain. */
+export type ArgumentBindings = ReadonlyMap<string, string>
+
+/**
+ * What a state trigger's arguments denote once `source` resolves the trigger (REQ-438): a bare
+ * argument whose attribute the source's result sets means the value that result leaves it holding
+ * — the source's `resulting` column — not the value the attribute held before the event. An
+ * argument the source's result does not set carries its value over (REQ-430), so it stays bound
+ * to its own column and is left out of the map. A modified argument is matched by modifier
+ * (REQ-430) and resolves against its own derived column, so it is never bound either.
+ *
+ * @param trigger State trigger being resolved.
+ * @param source Transition resolving `trigger`.
+ * @returns The bindings the trigger's arguments take.
+ */
+export function triggerArgumentBindings(trigger: Trigger, source: Transition): ArgumentBindings {
+    const setByResult = new Set(
+        (source.result.arguments ?? [])
+            .filter((argument) => argument.result && !argument.modifier)
+            .map((argument) => argument.name),
+    )
+    const bindings = new Map<string, string>()
+    for (const argument of trigger.arguments ?? []) {
+        if (!argument.modifier && setByResult.has(argument.name)) {
+            bindings.set(argument.name, resultingColumnName(argument.name))
+        }
+    }
+    return bindings
+}
+
+/**
+ * The bindings each transition of one expansion path holds for its own trigger (REQ-438), in
+ * chain order: one entry per `sourceChain` step, innermost first, then one for `transition`
+ * itself. A step's trigger is resolved by the step before it; the innermost step is driven by an
+ * event, so it binds nothing.
+ *
+ * @param transition Top-level transition of the path.
+ * @param sourceChain The path's own chain of sources, innermost first.
+ * @returns Bindings per chain step, followed by the bindings of `transition`.
+ */
+export function chainArgumentBindings(transition: Transition, sourceChain: ExpansionSourceStep[]): ArgumentBindings[] {
+    const links = [...sourceChain.map((step) => step.transition), transition]
+    return links.map((link, index) =>
+        index === 0 || link.trigger.type !== "state"
+            ? new Map<string, string>()
+            : triggerArgumentBindings(link.trigger, links[index - 1]),
+    )
+}
+
+/**
+ * A result with every attribute reference replaced by the column its binding names (REQ-438), so
+ * it reads as what the transition actually assigns along this chain.
+ *
+ * @param result Result state reference to bind.
+ * @param bindings Bindings of the transition owning `result`.
+ * @returns `result` itself when nothing is bound, otherwise a bound copy.
+ */
+export function bindResult(result: StateRef, bindings: ArgumentBindings): StateRef {
+    if (bindings.size === 0) return result
+    const isBound = (argument: Argument): boolean =>
+        argument.result?.valueIsReference === true && bindings.has(argument.result.value ?? "")
+    if (!(result.arguments ?? []).some(isBound)) return result
+    return {
+        ...result,
+        arguments: (result.arguments ?? []).map((argument) => isBound(argument)
+            ? { ...argument, result: { ...argument.result!, value: bindings.get(argument.result!.value!)! } }
+            : argument),
+    }
 }
 
 // --- Chain analysis ---

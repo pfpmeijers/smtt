@@ -28,6 +28,7 @@
 #   shall not survive the filter: an absent value pins nothing to compare against.
 
 # Throws: State machine `m`: Empty examples table for anonymous transition.
-1 candidate row(s) available: { a1=1 }.
+1 candidate row(s) available:
+{ a1=1 }.
 No row satisfied every condition:
   - `a1` as `a9` (declared on `m`#?)

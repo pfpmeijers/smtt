@@ -133,6 +133,36 @@ test("[TST-211] → [REQ-437]: A chain-produced result value takes precedence ov
     assertMatchesReference(stateMachines, feature)
 })
 
+test("[TST-215] → [REQ-437]: An unbound reference keeps the value the attribute held before the event", () => {
+    const stateMachines: StateMachines = [
+        {
+            name: "m1",
+            states: [{name: "s1"}, {name: "s2"}],
+            dataValueCombinations: [{b: "5"}],
+            transitions: [{
+                states: [{name: "s1"}],
+                trigger: {type: "event", name: "e", arguments: [{name: "b"}]},
+                result: {name: "s2", arguments: [{name: "a", result: {value: "b", valueIsReference: true}}]},
+            }],
+        },
+        {
+            name: "m2",
+            states: [{name: "s3"}, {name: "s4"}],
+            dataValueCombinations: [{a: "7"}],
+            transitions: [{
+                states: [{name: "s3", arguments: [{name: "a"}]}],
+                // The trigger carries no `a`, so `c` refers to `a` as it was, not to m1's `resulting a`.
+                trigger: {type: "state", name: "s2"},
+                result: {name: "s4", arguments: [{name: "c", result: {value: "a", valueIsReference: true}}]},
+            }],
+        },
+    ]
+    validateStateMachines(stateMachines)
+    const feature = createFeatures(stateMachines)["m2"]
+    assertContains(feature, "| 7 | 5 | 7           | 5           |")
+    assertMatchesReference(stateMachines, feature)
+})
+
 test("[TST-177] → [REQ-428]: A reference-valued trigger condition disqualifies no expansion source", () => {
     const stateMachines: StateMachines = [{
         name: "m1",
