@@ -75,7 +75,64 @@ test("[TST-104] → [REQ-235]: shared step definition lists deduplicated transit
     }]
 
     const shared = createSteps(stateMachines)["shared.steps.js"]
-    assertContains(shared, "// 001, 002")
+    assertContains(shared, "// - m1: 001\n// - m2: 002")
+})
+
+test("[TST-226] → [REQ-229/231]: every rendered variant of an event used by two state machines goes to shared.steps.js", () => {
+    const stateMachines: StateMachines = [{
+        name: "m1",
+        states: [{ name: "s1" }],
+        transitions: [{ id: "001", trigger: { type: "event", name: "e1" }, result: { name: "s1" } }],
+    }, {
+        name: "m2",
+        states: [{ name: "s2" }],
+        transitions: [{
+            id: "002",
+            trigger: { type: "event", name: "e1", arguments: [{ qualifier: "using", name: "a1" }] },
+            result: { name: "s2" },
+        }],
+        dataValueCombinations: [{ a1: "v1" }],
+    }]
+
+    const steps = createSteps(stateMachines)
+    const shared = steps["shared.steps.js"]
+    assertContains(shared, "// - m1: 001\nWhen('e1', async ({ page }) => {")
+    assertContains(shared, "// - m2: 002\nWhen('e1 using {string}', async ({ page }, a1) => {")
+    assertNotContains(steps["m1.steps.js"], "When('e1'")
+    assertNotContains(steps["m2.steps.js"], "When('e1 using")
+
+    const fixtures = createFixtures(stateMachines)
+    assertContains(fixtures["shared.fixtures.js"], "export async function makeE1({ page })")
+    assertContains(fixtures["shared.fixtures.js"], "export async function makeE1Using({ page }, a1)")
+    assertNotContains(fixtures["m1.fixtures.js"], "makeE1")
+    assertNotContains(fixtures["m2.fixtures.js"], "makeE1Using")
+})
+
+test("[TST-227] → [REQ-230]: variants of an event used by only one state machine stay in its own file", () => {
+    const stateMachines: StateMachines = [{
+        name: "m1",
+        states: [{ name: "s1" }, { name: "s2" }],
+        transitions: [{
+            id: "001",
+            trigger: { type: "event", name: "e1" },
+            result: { name: "s1" },
+        }, {
+            id: "002",
+            states: [{ name: "s1" }],
+            trigger: { type: "event", name: "e1", arguments: [{ qualifier: "using", name: "a1" }] },
+            result: { name: "s2" },
+        }],
+        dataValueCombinations: [{ a1: "v1" }],
+    }, {
+        name: "m3",
+        states: [{ name: "s3" }],
+        transitions: [{ id: "003", trigger: { type: "event", name: "e3" }, result: { name: "s3" } }],
+    }]
+
+    const steps = createSteps(stateMachines)
+    assert.ok(!("shared.steps.js" in steps), "shared.steps.js must not be generated when nothing is shared")
+    assertContains(steps["m1.steps.js"], "When('e1'")
+    assertContains(steps["m1.steps.js"], "When('e1 using {string}'")
 })
 
 test("[TST-105] → [REQ-318/319/320]: When fixture shared by two state machines is written once to shared.fixtures.js", () => {

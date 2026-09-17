@@ -35,9 +35,19 @@
   (transitions) shall be deduplicated; the generator shall keep one 
   registration and record the originating transition IDs as comments.
 
-- [REQ-211] The generator shall print transition IDs as a comma-separated 
-  comment immediately above the generated step definition, 
-  e.g. `// 021, 022, 023`.
+- [REQ-211] The generator shall print transition IDs as a comment immediately
+  above the generated step definition, grouped by the state machine whose
+  transition list contributed them: one bullet line per contributing state
+  machine, sorted by state machine name, each holding that machine's own
+  deduplicated, sorted, comma-separated transition ids, e.g.
+  ```
+  // - m1: 021, 022
+  // - m2: 023
+  ```
+  A step's transition ids can span more than one state machine because a
+  `Given`/`Then` step is filed under the state machine that owns its
+  referenced state (REQ-224), which is not always the state machine that
+  owns the transition requiring it.
 
 - [REQ-212] The generator shall render the step pattern text with the correct
   keyword prefix for the step kind:
@@ -59,7 +69,10 @@
   names.
 
 - [REQ-215] Parameter names shall be derived from the example column names, 
-  normalized to camelCase.
+  normalized to camelCase. A leading `resulting` word (from the `resulting 
+  $attribute-name` column naming, see [REQ-101](smtt.generate.features.md)) 
+  is dropped before camelCasing, so `resulting painting count` yields 
+  `paintingCount`, not `resultingPaintingCount`.
 
 - [REQ-216] The callback signature for parameterized steps shall be 
   `async ({ page }, $param1, $param2, ...)`.
@@ -121,19 +134,33 @@ state machine's transitions. Writing that step definition into every
 contributing state machine's file would register the same step pattern more
 than once across files, which the target step runner rejects.
 
+A state has exactly one owning state machine, but an event has none: it is
+external to every machine that reacts to it. Two machines may therefore also
+describe the same event differently — one naming its arguments, the other not
+caring about them — which renders as two different `When` step patterns for a
+single event. Sharing is decided per event, not per rendered pattern, so that
+one event's step definitions and fixtures live in one place.
+
 - [REQ-229] The generator shall determine, across all state machines, which
-  rendered `When` step pattern and keyword combinations occur in more than
-  one state machine. This applies regardless of whether the pattern comes
-  from a direct event trigger or from a resolved state-trigger expansion
-  (see [State Trigger Expansion](#state-trigger-expansion)).
+  event triggers occur in more than one state machine. Triggers shall be
+  grouped by trigger name, case-insensitively, so that every rendered `When`
+  pattern of one event — with arguments and without — belongs to the same
+  group. This applies regardless of whether the trigger comes from a direct
+  event trigger or from a resolved state-trigger expansion (see
+  [State Trigger Expansion](#state-trigger-expansion)); an expanded state
+  trigger contributes the resolved event's name, not the trigger state's.
 
-- [REQ-230] A `When` step pattern used by exactly one state machine shall
-  remain in that state machine's own `.steps.js` file, unaffected by this
-  section (REQ-226).
+- [REQ-230] The `When` step patterns of an event used by exactly one state
+  machine shall remain in that state machine's own `.steps.js` file,
+  unaffected by this section (REQ-226). A single state machine using one event
+  with several argument lists is not sharing: all its patterns stay in its own
+  file, as REQ-209 already provides for.
 
-- [REQ-231] A `When` step pattern used by two or more state machines shall be
-  written once, into a shared step file, instead of being duplicated into
-  each contributing state machine's file.
+- [REQ-231] Every `When` step pattern of an event used by two or more state
+  machines shall be written once, into a shared step file, instead of being
+  duplicated into each contributing state machine's file. A pattern
+  registered by only one of the contributing machines shall be written there
+  too, since it belongs to the shared event.
 
 - [REQ-232] The shared step file shall be named `shared.steps.js`.
 
@@ -143,18 +170,20 @@ than once across files, which the target step runner rejects.
   one state machine, because state names are unique across all state
   machines, so they are never subject to sharing.
 
-- [REQ-234] When the contributing state machines register the same pattern
-  with different parameter lists, the shared step definition shall use the
-  widest parameter list encountered, following the same rule as for
-  duplicate patterns within one file (REQ-210).
+- [REQ-234] Each pattern of a shared event shall keep its own registration in
+  the shared file: patterns are not merged across argument lists. When the
+  contributing state machines register the same pattern with different
+  parameter lists, that registration shall use the widest parameter list
+  encountered, following the same rule as for duplicate patterns within one
+  file (REQ-210).
 
 - [REQ-235] The transition-id comment above a shared step definition
-  (REQ-211) shall list the deduplicated, sorted transition ids contributed
-  by every state machine that uses the pattern.
+  (REQ-211) shall list a bullet per contributing state machine, each with
+  its own deduplicated, sorted transition ids.
 
-- [REQ-236] The assignment of a `When` step pattern to the shared file,
-  versus to a single state machine's own file, shall be deterministic and
-  independent of state machine or transition ordering (REQ-228).
+- [REQ-236] The assignment of an event's `When` step patterns to the shared
+  file, versus to a single state machine's own file, shall be deterministic
+  and independent of state machine or transition ordering (REQ-228).
 
 ## Example shape
 
@@ -164,21 +193,22 @@ import * as fixtures from '../fixtures/index.js'
 
 // --- Given ---
 
-// 021, 022, 023
+// - main: 021, 022, 023
 Given('initially landing page selected', async ({ page }) => {
   await fixtures.setLandingPageSelected({ page })
 })
 
 // --- When ---
 
-// 021
+// - main: 021
 When('subsite selected', async ({ page }) => {
   await fixtures.makeSubsiteSelected({ page })
 })
 
 // --- Then ---
 
-// 021, 039
+// - main: 021
+// - subsite: 039
 Then('expect subsite page with {string}', async ({ page }, subject) => {
   await fixtures.expectSubsitePage({ page }, subject)
 })

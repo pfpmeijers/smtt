@@ -443,6 +443,10 @@ Two kinds of triggers exist:
 - **State-trigger** — fires when another state machine enters a specific state.
   Write the state's name between backticks.
 
+Several state machines may react to the same event, and each of them writes
+only the arguments it needs — one machine can name the event's data while
+another names the event alone. 
+
 #### Data linking
 
 To specify data-aware transitions, use references to data attributes defined in 

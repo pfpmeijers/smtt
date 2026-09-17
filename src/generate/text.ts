@@ -1,6 +1,6 @@
-import type { Argument, StateRef, Trigger } from "../parse"
+import type { Argument, ImpliedConditionsIndex, StateRef, Trigger } from "../parse"
 import type { ExampleColumn } from "../parse"
-import { attributePlaceholderName, validateArgument } from "../parse"
+import { attributePlaceholderName, impliedResultValue, validateArgument } from "../parse"
 
 // --- File names ---
 
@@ -42,15 +42,60 @@ function renderArgument(stateMachineName: string, argument: Argument, isFirst: b
 }
 
 /**
+ * Whether a result argument says only what its result state's name already says (REQ-442): the
+ * state's implied conditions pin the attribute to one concrete value — absent via `undefined`, or
+ * a literal via `=` — and the argument assigns exactly that value, so its `resulting
+ * $attribute-name` column holds the same cell in every row by construction.
+ *
+ * The pin is read through `impliedResultValue`, the same helper completion uses to synthesise
+ * these arguments (REQ-434), so rendering hides exactly what completion adds and the two cannot
+ * drift apart. An argument assigning anything else — a different literal, or a reference whose
+ * value is not statically known — is left rendered, a contradiction included, which REQ-433
+ * reports rather than hides.
+ *
+ * A modifier argument is never suppressed: it renders a derived column of its own rather than the
+ * `resulting` one, so the implied condition says nothing about the value it shows.
+ *
+ * @param stateRef Result state references the argument belongs to.
+ * @param argument Argument to test.
+ * @param impliedIndex Implied conditions per state name.
+ * @returns Whether the argument is left out of the rendered step.
+ */
+function isRedundantPinnedResult(
+    stateRef: StateRef,
+    argument: Argument,
+    impliedIndex: ImpliedConditionsIndex,
+): boolean {
+    const result = argument.result
+    if (argument.modifier || !result || result.valueIsReference) return false
+    return (impliedIndex[stateRef.name.toLowerCase()] ?? []).some((implied) => {
+        if (implied.attribute.toLowerCase() !== argument.name.toLowerCase()) return false
+        const pinned = impliedResultValue(implied.condition)
+        return pinned !== undefined && pinned.value === result.value
+    })
+}
+
+/**
  * Render all arguments of a state or trigger as one inline text, or `""` when there are none.
  *
  * @param stateMachineName Name of the state machine owning the arguments, for error context.
+ * @param stateRef State references owning the arguments, or `null` for a trigger.
  * @param args Arguments to render.
  * @param isResult Whether the arguments belong to the transition result.
+ * @param impliedIndex Implied conditions per state name, for REQ-442 suppression.
  * @returns The rendered argument text.
  */
-function renderArguments(stateMachineName: string, args: Argument[] | undefined, isResult: boolean): string {
-    return (args ?? [])
+function renderArguments(
+    stateMachineName: string,
+    stateRef: StateRef | null,
+    args: Argument[] | undefined,
+    isResult: boolean,
+    impliedIndex: ImpliedConditionsIndex,
+): string {
+    const rendered = (args ?? []).filter(
+        (argument) => !(isResult && stateRef && isRedundantPinnedResult(stateRef, argument, impliedIndex)),
+    )
+    return rendered
         .map((argument, index) => renderArgument(stateMachineName, argument, index === 0, isResult))
         .join("")
 }
@@ -61,10 +106,17 @@ function renderArguments(stateMachineName: string, args: Argument[] | undefined,
  * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param stateRef State references to render.
  * @param isResult Whether the state references belongs to the transition result.
+ * @param impliedIndex Implied conditions per state name, used to suppress result arguments whose
+ *   value the result state itself already pins (REQ-442).
  * @returns The rendered state references text.
  */
-export function stateRefText(stateMachineName: string, stateRef: StateRef, isResult = false): string {
-    return `${stateRef.name}${renderArguments(stateMachineName, stateRef.arguments, isResult)}`
+export function stateRefText(
+    stateMachineName: string,
+    stateRef: StateRef,
+    isResult = false,
+    impliedIndex: ImpliedConditionsIndex = {},
+): string {
+    return `${stateRef.name}${renderArguments(stateMachineName, stateRef, stateRef.arguments, isResult, impliedIndex)}`
 }
 
 /**
@@ -75,7 +127,7 @@ export function stateRefText(stateMachineName: string, stateRef: StateRef, isRes
  * @returns The rendered trigger text.
  */
 export function triggerText(stateMachineName: string, trigger: Trigger): string {
-    return `${trigger.name}${renderArguments(stateMachineName, trigger.arguments, false)}`
+    return `${trigger.name}${renderArguments(stateMachineName, null, trigger.arguments, false, {})}`
 }
 
 // --- Step generation ---
@@ -84,14 +136,17 @@ const STEP_PLACEHOLDER_RE = /"<([^>]+)>"/g
 const STEP_PREFIX_RE = /^(?:initially|expect)\s+/i
 const TRAILING_CONNECTORS_RE = /\s+(?:about|as|into|so|to|from|for|under|in|on|with|of|at|by|not)\s*$/i
 
+const RESULTING_PREFIX_RE = /^resulting\s+/i
+
 /**
- * Convert a phrase into camelCase.
+ * Convert a phrase into camelCase, dropping a leading `resulting` prefix (REQ-101's `resulting
+ * $attribute-name` column naming) so generated arg names read as the plain attribute name.
  *
  * @param text Text to convert.
  * @returns The camelCase representation.
  */
 export function toCamelCase(text: string): string {
-    return text.split(/\s+/).filter((word) => word.length > 0).map((word, index) => {
+    return text.replace(RESULTING_PREFIX_RE, "").split(/\s+/).filter((word) => word.length > 0).map((word, index) => {
         if (index === 0) return word.toLowerCase()
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
     }).join("")

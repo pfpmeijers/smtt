@@ -27,6 +27,24 @@ function uniqueSortedTransitionIds(transitionIds: string[]): string[] {
 }
 
 /**
+ * Render the transition-id comment above a step definition: one bullet per state machine that
+ * contributed transitions to it, sorted by state machine name, each listing its own deduplicated,
+ * sorted transition ids (REQ-211).
+ *
+ * @param transitionsByStateMachine Transition ids grouped by contributing state machine.
+ * @returns The rendered, possibly multi-line, comment.
+ */
+function buildTransitionComment(transitionsByStateMachine: Map<string, string[]>): string {
+    const stateMachineNames = [...transitionsByStateMachine.keys()].sort((left, right) => left.localeCompare(right))
+    return stateMachineNames
+        .map((stateMachineName) => {
+            const ids = uniqueSortedTransitionIds(transitionsByStateMachine.get(stateMachineName) ?? [])
+            return `// - ${stateMachineName}: ${ids.join(", ")}`
+        })
+        .join("\n")
+}
+
+/**
  * Render one step.
  *
  * @param step Step to render.
@@ -38,8 +56,7 @@ function buildStep(step: Step): string {
     const fixtureCall = step.params.length > 0
         ? `await fixtures.${step.fixtureName}({ page }, ${step.params.join(", ")})`
         : `await fixtures.${step.fixtureName}({ page })`
-    const transitionIds = uniqueSortedTransitionIds(step.transitionIds)
-    const comment = `// ${transitionIds.join(", ")}`
+    const comment = buildTransitionComment(step.transitionsByStateMachine)
     const stepText = `${step.keyword}('${quotedPattern}', async ({ page }${paramsSignature}) => {\n` +
         `  ${fixtureCall}\n` +
         `})\n`

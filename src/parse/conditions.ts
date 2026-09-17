@@ -6,7 +6,7 @@
  * machine set, independent of what a consumer does with the answer.
  */
 
-import type { Condition, ImpliedCondition, StateRef, Transition } from "./sm.ast.d"
+import type { Condition, ImpliedCondition, Result, StateRef, Transition } from "./sm.ast.d"
 import type { ExpansionSourceStep } from "./expand"
 import type { ImpliedConditionsIndex } from "./ownership"
 
@@ -291,4 +291,27 @@ export function collectImpliedFilterConditionsForGivens(
         }
     }
     return filters
+}
+
+// --- Implied pins ---
+
+/**
+ * The result payload a literal implied condition pins, when it pins one.
+ *
+ * Shared by completion (REQ-434), which synthesises such a result, and by feature rendering
+ * (REQ-442), which hides an argument already carrying it — so the two cannot drift apart.
+ *
+ * @param condition Implied condition to read.
+ * @returns `{ value: <literal> }` for a plain literal `=`, `{}` (no `value`, matching how the
+ *   grammar represents `set to undefined`) for `undefined`, or `undefined` when the condition
+ *   pins no concrete value at all — a `defined` declaration (any value satisfies it, so none can
+ *   be chosen), a reference-valued `=` (the value lives in another attribute, not a literal), or
+ *   any other operator.
+ */
+export function impliedResultValue(condition: Condition): Result | undefined {
+    if (condition.operator === "undefined") return {}
+    if (condition.operator === "=" && !condition.valueIsReference && typeof condition.value === "string") {
+        return { value: condition.value }
+    }
+    return undefined
 }

@@ -32,12 +32,12 @@ export async function makeE4({ page }) {
 
 // --- Expect (Then) ---
 
-export async function expectM2Empty({ page }, resultingA2) {
+export async function expectM2Empty({ page }) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: expectM2Empty")
 }
 
-export async function expectM2Full({ page }, resultingA2) {
+export async function expectM2Full({ page }) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: expectM2Full")
 }

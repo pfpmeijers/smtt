@@ -270,6 +270,50 @@ Examples:
   - [REQ-062] The `$attribute-name` shall be taken from AST path
     `[i].transitions[j].states[*].arguments[*].name`.
 
+- [REQ-442] A transition result's argument shall not be rendered when the
+  result state's implied conditions pin its attribute to one concrete value —
+  absence via `undefined`, or a literal via `=` (REQ-433 in
+  `smtt.parse.validate.md`) — and the argument assigns exactly that value. The
+  `resulting $attribute-name` column then goes unreferenced and is dropped by
+  REQ-436; a transition whose only argument is suppressed this way renders as a
+  plain `Scenario` (REQ-047).
+
+  The pin is the same one REQ-434 in `smtt.parse.complete.md` reads to
+  synthesise these arguments, so rendering hides exactly what completion adds.
+  Tying the two to one definition keeps them from drifting apart: an operator
+  that starts pinning a value gains both behaviours at once, and one that stops
+  loses both.
+
+  Rationale: an implied condition describes every occurrence of its state
+  (REQ-433), so such an argument's column holds the same cell in every row by
+  construction. It can never tell two rows apart, and what it would assert is
+  already carried by the result state's own name — `Then expect cart empty`
+  states exactly what a `"<resulting painting count>"` of `0` would, and
+  `Then expect painting available` exactly what an empty `"<resulting painting
+  assignee name>"` would. Rendering it yields a step parameter whose value no
+  fixture has to be told.
+
+  Remarks:
+  - This is a rendering rule only. The argument remains in the completed AST,
+    so a state trigger resolving against this result still binds to it
+    (REQ-438 in `smtt.parse.complete.md`) and reads the pinned value, rather
+    than carrying over the value the attribute held before the transition.
+  - No row is lost. Row filters are collected from the transition and its
+    expansion chain, never from the rendered columns, so suppression removes
+    no row; and a suppressed column is constant, so it collapses none either
+    under REQ-160/REQ-440.
+  - Suppression does not depend on who wrote the argument: an author spelling
+    out the redundant assignment, qualifier included, gets the same step as one
+    leaving it to REQ-434. Otherwise the two spellings of one outcome would
+    render as two different steps.
+  - An argument assigning anything else is always rendered: a different
+    literal, which contradicts the target and REQ-433 reports; or an attribute
+    reference, whose value is not statically the pinned one.
+  - `defined` pins no single value and so suppresses nothing, and neither does
+    a modifier argument, which renders a derived column of its own instead of
+    the `resulting` one. A sameness (`as`) pin binds rather than assigns, so it
+    is not one of REQ-434's pins and suppresses nothing here either.
+
 
 ## Scenario Examples
 

@@ -54,7 +54,9 @@
   shall include matching camelCase parameter names after `{ page }`.
 
 - [REQ-314] Parameter names shall be derived from the rendered step placeholders
-  and normalized to camelCase.
+  and normalized to camelCase. A leading `resulting` word is dropped before
+  camelCasing, so `resulting painting count` yields `paintingCount`, not
+  `resultingPaintingCount`.
 
 - [REQ-315] The generator shall emit only fixture stubs that belong to the state
   machine whose fixture file is being generated.
@@ -73,10 +75,13 @@ than one state machine's transitions. Writing that fixture stub into every
 contributing state machine's file would export the same function name from
 more than one file, which the fixture index cannot re-export unambiguously.
 
-- [REQ-318] The generator shall write the fixture stub for a `When` step
-  pattern shared by more than one state machine (steps generation REQ-231)
-  into a single shared fixture file, instead of into each contributing state
-  machine's fixture file.
+- [REQ-318] The generator shall write the fixture stub for every `When` step
+  pattern of an event shared by more than one state machine (steps generation
+  REQ-229/REQ-231) into a single shared fixture file, instead of into each
+  contributing state machine's fixture file. An event rendered with and
+  without arguments yields one stub per pattern, e.g.
+  `makePaintingReservationConfirmed` beside
+  `makePaintingReservationConfirmedUsing`, both in the shared file.
 
 - [REQ-319] The shared fixture file shall be named `shared.fixtures.js`.
 

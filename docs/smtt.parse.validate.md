@@ -114,6 +114,30 @@ unaffected by completion.
   schema, since `Result` (unlike `Condition`) carries no `operator` field to
   choose a non-equality comparison with.
 
+- [REQ-443] A transition result argument's suffix shall not read as a
+  condition. A comparison written in a result position — `` `policies` as
+  "approved" `` — matches no result rule (REQ-415 leaves a result only
+  `set to`), so the grammar absorbs it into the argument's free-text `suffix`
+  and it silently becomes decoration: it constrains no example row, binds no
+  value, and the generated step asserts nothing about the attribute.
+
+  Rationale: the author writes the same phrase in both columns of a rules
+  table and gets semantics in the precondition column and prose in the result
+  column, with nothing to signal the difference. Accepting it quietly is worse
+  than refusing it, because the model then reads as if the attribute were
+  constrained when the rendered rows still range over every value it can take.
+
+  Remarks:
+  - A suffix counts as condition-shaped when it is, in full, a comparison
+    operator followed by a value literal, or a bare `undefined`/`defined`
+    presence check. Descriptive prose that merely opens with an operator word
+    — `as shown`, `in cart` — is not one, so REQ-059's suffixes keep working.
+  - The author's two ways out: `` `attribute` set to <value> `` when the
+    transition assigns the value, or an implied condition on the target state
+    when it holds for every occurrence of that state (REQ-433).
+  - Every violation is reported together, since a model that adopted the
+    spelling tends to repeat it across many transitions.
+
 - [REQ-416] State-triggers shall not resolve via a cyclic definition.
 
 - [REQ-145] A range condition's `value` shall be a single string holding both

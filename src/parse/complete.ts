@@ -22,6 +22,7 @@
  */
 
 import type { Argument, Condition, Result, StateMachine } from "./sm.ast.d"
+import { impliedResultValue } from "./conditions"
 
 // --- Shared helpers ---
 
@@ -219,24 +220,6 @@ function buildImpliedIndex(stateMachines: StateMachine[]): Record<string, { attr
         }
     }
     return impliedIndex
-}
-
-/**
- * The result payload a literal implied condition pins, when it pins one.
- *
- * @param condition Implied condition to read.
- * @returns `{ value: <literal> }` for a plain literal `=`, `{}` (no `value`, matching how the
- *   grammar represents `set to undefined`) for `undefined`, or `undefined` when the condition
- *   pins no concrete value at all — a `defined` declaration (any value satisfies it, so none can
- *   be chosen), a reference-valued `=` (the value lives in another attribute, not a literal), or
- *   any other operator.
- */
-function impliedResultValue(condition: Condition): Result | undefined {
-    if (condition.operator === "undefined") return {}
-    if (condition.operator === "=" && !condition.valueIsReference && typeof condition.value === "string") {
-        return { value: condition.value }
-    }
-    return undefined
 }
 
 /**

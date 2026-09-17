@@ -54,7 +54,15 @@ export interface Step {
     pattern: string
     params: string[]
     fixtureName: string
-    transitionIds: string[]
+    /**
+     * Transition ids requiring this step, grouped by the state machine whose transition list
+     * contributed them (REQ-211): a `Given`/`Then` step can be filed under a different state
+     * machine's file than the transition that required it, when the referenced state belongs to
+     * another machine (REQ-224).
+     */
+    transitionsByStateMachine: Map<string, string[]>
+    /** For a `When` step: the resolved event trigger's name, without its arguments (REQ-229). */
+    triggerName?: string
 }
 
 /** Generated steps belonging to one state machine. */
@@ -164,10 +172,13 @@ function buildExamplesTable(
  */
 function resolveExpansionPaths(context: RenderContext, transition: Transition): ExpansionPath[] {
     if (transition.trigger.type === "state") {
-        return expandStateTrigger(transition.trigger, context.ownership, context.taggedTransitions, transition)
+        return expandStateTrigger(
+            transition.trigger, context.ownership, context.taggedTransitions, transition, context.impliedIndex,
+        )
     }
     return [{
         whenText: triggerText(context.stateMachine.name, transition.trigger),
+        whenTriggerName: transition.trigger.name,
         whenOwner: context.stateMachine.name,
         intermediateThenTexts: [],
         intermediateThenOwners: [],
@@ -187,6 +198,7 @@ function resolveExpansionPaths(context: RenderContext, transition: Transition): 
  * @param ownGiven The `Given` state belonging to the rendering state machine, if any.
  * @param contextGivens All other `Given` states, in effective step order.
  * @param idSuffix Expansion path suffix, e.g. `.2`, or `""` for a single path.
+ * @param impliedIndex Implied conditions per state name, for REQ-442 suppression.
  * @returns The rendered scenario label.
  */
 function buildScenarioLabel(
@@ -196,13 +208,14 @@ function buildScenarioLabel(
     ownGiven: StateRef | undefined,
     contextGivens: StateRef[],
     idSuffix: string,
+    impliedIndex: ImpliedConditionsIndex,
 ): string {
     const ownText = ownGiven ? stateRefText(stateMachineName, ownGiven) : "?"
     const contextPart = contextGivens.length === 0
         ? ""
         : `; given ${contextGivens.map((stateRef) => stateRefText(stateMachineName, stateRef)).join(", ")}`
     const labelTail = lowerCaseLabelPreservingValueLiterals(
-        `${ownText} → ${stateRefText(stateMachineName, transition.result, true)}` +
+        `${ownText} → ${stateRefText(stateMachineName, transition.result, true, impliedIndex)}` +
             `; when ${triggerText(stateMachineName, transition.trigger)}${contextPart}`,
     )
 
@@ -217,6 +230,7 @@ function buildScenarioLabel(
  * @param transition Transition being rendered.
  * @param path Expansion path to render.
  * @param effectiveGivens Effective `Given` states of the scenario.
+ * @param impliedIndex Implied conditions per state name, for REQ-442 suppression.
  * @returns The rendered step lines.
  */
 function buildScenarioSteps(
@@ -224,6 +238,7 @@ function buildScenarioSteps(
     transition: Transition,
     path: ExpansionPath,
     effectiveGivens: StateRef[],
+    impliedIndex: ImpliedConditionsIndex,
 ): string[] {
     const steps = effectiveGivens.map((stateRef, index) =>
         `    ${index === 0 ? "Given" : "And"} initially ${stateRefText(stateMachineName, stateRef)}`,
@@ -231,7 +246,10 @@ function buildScenarioSteps(
     steps.push(`    When ${path.whenText}`)
 
     // Intermediate results of an expansion chain precede the transition's own result (REQ-146).
-    const thenTexts = [...path.intermediateThenTexts, stateRefText(stateMachineName, transition.result, true)]
+    const thenTexts = [
+        ...path.intermediateThenTexts,
+        stateRefText(stateMachineName, transition.result, true, impliedIndex),
+    ]
     steps.push(...thenTexts.map((text, index) => `    ${index === 0 ? "Then" : "And"} expect ${text}`))
     return steps
 }
@@ -253,7 +271,9 @@ function renderScenarios(context: RenderContext, transition: Transition): string
         const effectiveGivens = buildEffectiveGivens(
             transition, defaultPreconditions, ownership, stateMachine, path.injectedGivenStates,
         )
-        const steps = buildScenarioSteps(stateMachine.name, transition, path, effectiveGivens)
+        const steps = buildScenarioSteps(
+            stateMachine.name, transition, path, effectiveGivens, context.impliedIndex,
+        )
 
         // Only columns whose placeholder is rendered in one of the steps are kept (REQ-436).
         const referencedNames = new Set(
@@ -273,7 +293,9 @@ function renderScenarios(context: RenderContext, transition: Transition): string
         const idSuffix = expansionPaths.length > 1 ? `.${pathIndex + 1}` : ""
 
         const lines = [
-            buildScenarioLabel(stateMachine.name, transition, keyword, ownGiven, contextGivens, idSuffix),
+            buildScenarioLabel(
+                stateMachine.name, transition, keyword, ownGiven, contextGivens, idSuffix, context.impliedIndex,
+            ),
             ...steps,
         ]
         if (transition.notes) lines.push(`    # Notes: ${transition.notes}`)
@@ -288,30 +310,38 @@ function renderScenarios(context: RenderContext, transition: Transition): string
  * Register a generated step for a state machine.
  *
  * @param stateMachineData Per-state-machine step store.
- * @param stateMachineName Target state machine name.
+ * @param ownerStateMachineName State machine whose file this step is written into.
+ * @param sourceStateMachineName State machine whose transition list required this step,
+ *   for grouping the transition-id comment (REQ-211); may differ from `ownerStateMachineName`
+ *   when the step's own state is owned by another machine (REQ-224).
  * @param keyword Step keyword.
  * @param pattern Rendered step pattern.
  * @param params Step callback parameter names.
  * @param fixtureName Fixture function name derived from the step.
  * @param transitionId Source transition id.
+ * @param triggerName Resolved event trigger name for a `When` step, without its arguments.
  */
 function registerStep(
     stateMachineData: Map<string, Step[]>,
-    stateMachineName: string,
+    ownerStateMachineName: string,
+    sourceStateMachineName: string,
     keyword: "Given" | "When" | "Then",
     pattern: string,
     params: string[],
     fixtureName: string,
     transitionId: string | undefined,
+    triggerName?: string,
 ): void {
-    const steps = stateMachineData.get(stateMachineName)
+    const id = transitionId ?? "?"
+    const steps = stateMachineData.get(ownerStateMachineName)
     if (steps === undefined) {
-        stateMachineData.set(stateMachineName, [{
+        stateMachineData.set(ownerStateMachineName, [{
             keyword,
             pattern,
             params,
             fixtureName,
-            transitionIds: [transitionId ?? "?"],
+            transitionsByStateMachine: new Map([[sourceStateMachineName, [id]]]),
+            triggerName,
         }])
         return
     }
@@ -324,10 +354,16 @@ function registerStep(
             pattern,
             params,
             fixtureName,
-            transitionIds: [transitionId ?? "?"],
+            transitionsByStateMachine: new Map([[sourceStateMachineName, [id]]]),
+            triggerName,
         })
     } else {
-        existing.transitionIds.push(transitionId ?? "?")
+        const ids = existing.transitionsByStateMachine.get(sourceStateMachineName)
+        if (ids === undefined) {
+            existing.transitionsByStateMachine.set(sourceStateMachineName, [id])
+        } else {
+            ids.push(id)
+        }
         if (params.length > existing.params.length) {
             existing.params = params
         }
@@ -343,6 +379,7 @@ function registerStep(
  * @param ownership State ownership index.
  * @param taggedTransitions All transitions of all state machines.
  * @param stateMachineData Per-state-machine step store.
+ * @param impliedIndex Implied conditions per state name, for REQ-442 suppression.
  */
 function collectTransitionSteps(
     transition: Transition,
@@ -351,11 +388,13 @@ function collectTransitionSteps(
     ownership: ReturnType<typeof buildStateOwnership>,
     taggedTransitions: ReturnType<typeof buildTaggedTransitions>,
     stateMachineData: Map<string, Step[]>,
+    impliedIndex: ImpliedConditionsIndex,
 ): void {
     const expansionPaths = transition.trigger.type === "state"
-        ? expandStateTrigger(transition.trigger, ownership, taggedTransitions, transition)
+        ? expandStateTrigger(transition.trigger, ownership, taggedTransitions, transition, impliedIndex)
         : [{
             whenText: triggerText(stateMachine.name, transition.trigger),
+            whenTriggerName: transition.trigger.name,
             whenOwner: stateMachine.name,
             intermediateThenTexts: [],
             intermediateThenOwners: [],
@@ -382,6 +421,7 @@ function collectTransitionSteps(
             registerStep(
                 stateMachineData,
                 owner,
+                stateMachine.name,
                 "Given",
                 `initially ${toOutlinePattern(stateRefText(stateMachine.name, stateRef))}`,
                 resolveBaseParams(getStepParams(stateRefText(stateMachine.name, stateRef)), exampleColumns),
@@ -393,11 +433,13 @@ function collectTransitionSteps(
         registerStep(
             stateMachineData,
             expansionPath.whenOwner || stateMachine.name,
+            stateMachine.name,
             "When",
             toOutlinePattern(expansionPath.whenText),
             resolveBaseParams(getStepParams(expansionPath.whenText), exampleColumns),
             fixtureNameFromStep("When", toOutlinePattern(expansionPath.whenText)),
             transition.id,
+            expansionPath.whenTriggerName,
         )
 
         for (let index = 0; index < expansionPath.intermediateThenTexts.length; index++) {
@@ -405,6 +447,7 @@ function collectTransitionSteps(
             registerStep(
                 stateMachineData,
                 expansionPath.intermediateThenOwners[index] || stateMachine.name,
+                stateMachine.name,
                 "Then",
                 `expect ${toOutlinePattern(thenRawText)}`,
                 resolveBaseParams(getStepParams(thenRawText), exampleColumns),
@@ -413,10 +456,11 @@ function collectTransitionSteps(
             )
         }
 
-        const resultText = stateRefText(stateMachine.name, transition.result, true)
+        const resultText = stateRefText(stateMachine.name, transition.result, true, impliedIndex)
         registerStep(
             stateMachineData,
             ownerOfStateRef(transition.result, ownership) ?? stateMachine.name,
+            stateMachine.name,
             "Then",
             `expect ${toOutlinePattern(resultText)}`,
             resolveBaseParams(getStepParams(resultText), exampleColumns),
@@ -467,6 +511,7 @@ function renderFeatureFile(context: RenderContext): string {
 export function buildFeatures(stateMachines: StateMachine[]): Feature[] {
     const ownership = buildStateOwnership(stateMachines)
     const taggedTransitions = buildTaggedTransitions(stateMachines)
+    const impliedIndex = buildImpliedConditionsIndex(stateMachines)
     const stateMachineData = new Map<string, Step[]>()
 
     for (const stateMachine of stateMachines) {
@@ -482,6 +527,7 @@ export function buildFeatures(stateMachines: StateMachine[]): Feature[] {
                 ownership,
                 taggedTransitions,
                 stateMachineData,
+                impliedIndex,
             )
         }
     }

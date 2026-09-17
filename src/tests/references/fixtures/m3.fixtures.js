@@ -47,12 +47,12 @@ export async function makeE9({ page }) {
 
 // --- Expect (Then) ---
 
-export async function expectM3Closed({ page }, resultingA4) {
+export async function expectM3Closed({ page }, a4) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: expectM3Closed")
 }
 
-export async function expectM3Open({ page }, a3, resultingA4) {
+export async function expectM3Open({ page }, a3, a4) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: expectM3Open")
 }

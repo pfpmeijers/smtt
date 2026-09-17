@@ -32,7 +32,7 @@ test("[TST-087] → [REQ-206/207/208/210/211]: step file groups, sorts and dedup
 
     assert.ok(stepsFile.indexOf("// --- Given ---") < stepsFile.indexOf("// --- When ---"))
     assert.ok(stepsFile.indexOf("// --- When ---") < stepsFile.indexOf("// --- Then ---"))
-    assertContains(stepsFile, "// 021, 023")
+    assertContains(stepsFile, "// - m: 021, 023")
     assert.ok(stepsFile.indexOf("Given('initially s1'") < stepsFile.indexOf("Given('initially s2'"))
     assert.ok(stepsFile.indexOf("When('e1'") < stepsFile.indexOf("When('e2'"))
     assert.ok(stepsFile.indexOf("Then('expect s1'") < stepsFile.indexOf("Then('expect s2'"))
@@ -62,6 +62,25 @@ test("[TST-088] → [REQ-214/215/216/217/218/219/227]: parameterized steps carry
     assertContains(fixtures["m.fixtures.js"], "export async function setSaBc({ page })")
     assertContains(fixtures["m.fixtures.js"], "export async function makeE({ page }, aaBc)")
     assertContains(fixtures["m.fixtures.js"], "export async function expectSaBc({ page })")
+})
+
+test("[TST-232] → [REQ-215/314]: parameter names drop the leading `resulting` word before camelCasing", () => {
+    const stateMachines: StateMachines = [{
+        name: "m",
+        states: [{ name: "s" }],
+        dataValueCombinations: [{ "a": "A" }],
+        transitions: [{
+            trigger: { type: "event", name: "e" },
+            result: { name: "s", arguments: [{ name: "a", result: { value: "1" } }] },
+        }],
+    }]
+
+    const steps = createSteps(stateMachines)["m.steps.js"]
+    assertContains(steps, "Then('expect s {string}', async ({ page }, a) => {")
+    assertContains(steps, "await fixtures.expectS({ page }, a)")
+
+    const fixtures = createFixtures(stateMachines)
+    assertContains(fixtures["m.fixtures.js"], "export async function expectS({ page }, a)")
 })
 
 test("[TST-089] → [REQ-201/202/203]: fixture files use kebab-case names and index exports", () => {

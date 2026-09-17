@@ -462,7 +462,39 @@ describe("validateStateMachines business rules", () => {
 
         assert.doesNotThrow(() => validateStateMachines(stateMachines))
     })
+
+    it("[TST-233] → [REQ-443]: rejects a condition-shaped suffix on a result argument", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        // `a1` as "v1" in a result position matches no result rule, so the grammar hands it to
+        // the argument's free-text suffix, where it constrains nothing.
+        stateMachines[0].transitions![0].result.arguments = [{ name: "a1", suffix: 'as "v1"' }]
+
+        assert.throws(
+            () => validateStateMachines(stateMachines),
+            /result argument `a1` carries `as "v1"`[\s\S]*REQ-443/,
+        )
+    })
+
+    it("[TST-234] → [REQ-443]: accepts a descriptive suffix that merely opens with an operator word", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].transitions![0].result.arguments = [{ name: "a1", suffix: "as shown" }]
+
+        assert.doesNotThrow(() => validateStateMachines(stateMachines))
+    })
+
+    it("[TST-235] → [REQ-443]: reports every condition-shaped result suffix at once", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].transitions!.push({
+            id: "002",
+            trigger: { type: "event", name: "e2" },
+            result: { name: "s2", arguments: [{ name: "a2", suffix: ">= 2" }] },
+        })
+        stateMachines[0].transitions![0].result.arguments = [{ name: "a1", suffix: 'is "v1"' }]
+
+        assert.throws(() => validateStateMachines(stateMachines), (error: Error) => {
+            assert.match(error.message, /`001`[\s\S]*`a1`/)
+            assert.match(error.message, /`002`[\s\S]*`a2`/)
+            return true
+        })
+    })
 })
-
-
-

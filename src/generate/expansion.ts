@@ -1,5 +1,6 @@
 import type {
-    Argument, DefaultPrecondition, StateMachine, StateOwnershipIndex, StateRef, Transition, Trigger,
+    Argument, DefaultPrecondition, ImpliedConditionsIndex, StateMachine, StateOwnershipIndex, StateRef,
+    Transition, Trigger,
 } from "../parse"
 import {
     buildTaggedTransitions,
@@ -49,6 +50,8 @@ function invalidTransitionPrefix(
 /** One resolved causal path from an event trigger to the transition being rendered. */
 export interface ExpansionPath {
     whenText: string
+    /** Name of the resolved event trigger, without its arguments (REQ-229). */
+    whenTriggerName: string
     whenOwner: string
     intermediateThenTexts: string[]
     intermediateThenOwners: string[]
@@ -196,6 +199,8 @@ function immediateExpansionSources(
  * @param ownership State ownership index.
  * @param taggedTransitions All transitions of all state machines.
  * @param currentTransition Transition carrying the trigger, excluded as its own source.
+ * @param impliedIndex Implied conditions per state name, for REQ-442 suppression in the
+ *   intermediate result texts.
  * @param expansionStack Transitions already being expanded, used for cycle detection.
  * @param depth Current recursion depth.
  * @returns One path per matching source; a single verbatim path when the trigger has no source.
@@ -207,6 +212,7 @@ export function expandStateTrigger(
     ownership: StateOwnershipIndex,
     taggedTransitions: TaggedTransition[],
     currentTransition: Transition | null,
+    impliedIndex: ImpliedConditionsIndex = {},
     expansionStack: ReadonlySet<Transition> = new Set(),
     depth = 0,
 ): ExpansionPath[] {
@@ -229,6 +235,7 @@ export function expandStateTrigger(
         const ownerName = currentTransition ? transitionOwnerName(currentTransition, taggedTransitions) : "<unknown>"
         return [{
             whenText: triggerText(ownerName, trigger),
+            whenTriggerName: trigger.name,
             whenOwner: ownerName,
             intermediateThenTexts: [],
             intermediateThenOwners: [],
@@ -245,11 +252,12 @@ export function expandStateTrigger(
             transition: source.transition,
             defaultPreconditions: source.stateMachine.defaultPreconditions ?? [],
         }
-        const resultText = stateRefText(source.stateMachineName, source.transition.result, true)
+        const resultText = stateRefText(source.stateMachineName, source.transition.result, true, impliedIndex)
 
         if (source.transition.trigger.type !== "state") {
             return [{
                 whenText: triggerText(source.stateMachineName, source.transition.trigger),
+                whenTriggerName: source.transition.trigger.name,
                 whenOwner: source.stateMachineName,
                 intermediateThenTexts: [resultText],
                 intermediateThenOwners: [source.stateMachineName],
@@ -259,10 +267,12 @@ export function expandStateTrigger(
         }
 
         const deeperPaths = expandStateTrigger(
-            source.transition.trigger, ownership, taggedTransitions, source.transition, nextStack, depth + 1,
+            source.transition.trigger, ownership, taggedTransitions, source.transition, impliedIndex,
+            nextStack, depth + 1,
         )
         return deeperPaths.map((path) => ({
             whenText: path.whenText,
+            whenTriggerName: path.whenTriggerName,
             whenOwner: path.whenOwner,
             intermediateThenTexts: [...path.intermediateThenTexts, resultText],
             intermediateThenOwners: [...path.intermediateThenOwners, source.stateMachineName],

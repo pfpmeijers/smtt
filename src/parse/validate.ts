@@ -170,6 +170,7 @@ export function validateStateMachines(data: unknown): void {
     validateModifierValuePoolSize(stateMachines)
     validateReferenceOperators(stateMachines)
     validateReferenceTargets(stateMachines)
+    validateResultArgumentSuffixes(stateMachines)
 
     // [REQ-406/REQ-411] Business-rule checks performed after schema validation
     // succeeds, since they rely on `data` actually conforming to the
@@ -679,6 +680,63 @@ export function validateReferenceTargets(stateMachines: StateMachine[]): void {
             `machine declares a data attribute by the name \`${expression.value}\` (REQ-425).`,
         )
     })
+}
+
+/** A literal value: a quoted string, a backticked attribute reference, or a number. */
+const VALUE_LITERAL = String.raw`(?:"[^"]*"|\`[^\`]*\`|-?\d+(?:\.\d+)?)`
+
+/**
+ * A result argument suffix that is really a condition in disguise (REQ-443): a comparison operator
+ * followed by a value, or a bare presence check. Anchored at both ends, so descriptive prose that
+ * merely starts with an operator word — `as shown`, `in cart` — is not mistaken for one.
+ */
+const CONDITION_SHAPED_SUFFIX = new RegExp(
+    "^(?:" +
+    String.raw`(?:as|is not|are not|is|are)\s+${VALUE_LITERAL}` +
+    String.raw`|(?:>=|<=|<>|=|>|<)\s*${VALUE_LITERAL}` +
+    String.raw`|(?:is\s+)?undefined|defined` +
+    ")$",
+    "i",
+)
+
+/**
+ * [REQ-443] Raises an error when a transition result's argument carries a condition-shaped suffix.
+ *
+ * A result expresses an assignment and nothing else (`set to <value>`), so a comparison written in
+ * a result position — `` `policies` as "approved" `` — matches no result rule and is absorbed by
+ * the argument's free-text `suffix` instead. The author writes the same phrase that carries real
+ * semantics in a precondition, and it silently degrades to decoration: it constrains no row,
+ * binds no value, and the generated step asserts nothing about the attribute.
+ *
+ * Every violation is reported at once rather than one per run, since a model that adopted the
+ * spelling tends to repeat it across many transitions.
+ *
+ * @param stateMachines Parsed state-machine AST nodes.
+ * @returns Nothing. Validation succeeds by not throwing.
+ * @throws Error When any result argument's suffix reads as a condition.
+ */
+export function validateResultArgumentSuffixes(stateMachines: StateMachine[]): void {
+    const violations: string[] = []
+    for (const stateMachine of stateMachines) {
+        for (const transition of stateMachine.transitions ?? []) {
+            for (const argument of transition.result.arguments ?? []) {
+                const suffix = argument.suffix?.trim()
+                if (!suffix || !CONDITION_SHAPED_SUFFIX.test(suffix)) continue
+                violations.push(
+                    `  - ${formatTransitionContext(stateMachine.name, transition)}: result argument ` +
+                    `\`${argument.name}\` carries \`${suffix}\`, in state \`${transition.result.name}\``,
+                )
+            }
+        }
+    }
+    if (violations.length === 0) return
+    throw new Error(
+        `A transition result states an assignment, not a comparison, so the following ` +
+        `condition(s) parse as descriptive suffix text and constrain nothing:\n` +
+        `${violations.join("\n")}\n` +
+        `Write \`set to <value>\` to assign the value, or move the comparison to an implied ` +
+        `condition on the target state (REQ-443).`,
+    )
 }
 
 /**
