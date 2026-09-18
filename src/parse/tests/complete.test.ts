@@ -206,6 +206,48 @@ describe("completeStateMachines — Step 1: inferred result assignments (REQ-434
         ])
     })
 
+    it("[TST-241] → [REQ-434]: infers a result assignment for an `as` literal implied condition", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [
+                    { name: "s1" },
+                    { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "as", value: "x" } }] },
+                ],
+                transitions: [
+                    { id: "001", trigger: { type: "event", name: "e1" }, result: { name: "s2" } },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        // A sameness to a fixed value pins it exactly as `=` does.
+        assert.deepEqual(stateMachines[0].transitions![0].result.arguments, [
+            { name: "a1", result: { value: "x" } },
+        ])
+    })
+
+    it("[TST-242] → [REQ-434]: does not infer anything for an `as` naming another attribute", () => {
+        const stateMachines: StateMachine[] = [
+            {
+                name: "m1",
+                states: [
+                    { name: "s1" },
+                    {
+                        name: "s2",
+                        impliedConditions: [
+                            { attribute: "a1", condition: { operator: "as", value: "a2", valueIsReference: true } },
+                        ],
+                    },
+                ],
+                transitions: [
+                    { id: "001", trigger: { type: "event", name: "e1" }, result: { name: "s2" } },
+                ],
+            },
+        ]
+        completeStateMachines(stateMachines)
+        assert.strictEqual(stateMachines[0].transitions![0].result.arguments, undefined)
+    })
+
     it("[TST-194] → [REQ-434]: does not override an explicit result that leaves an `undefined`-declaring target set", () => {
         const stateMachines: StateMachine[] = [
             {

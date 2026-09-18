@@ -272,7 +272,7 @@ Examples:
 
 - [REQ-442] A transition result's argument shall not be rendered when the
   result state's implied conditions pin its attribute to one concrete value —
-  absence via `undefined`, or a literal via `=` (REQ-433 in
+  absence via `undefined`, or a literal via `=` or `as` (REQ-433 in
   `smtt.parse.validate.md`) — and the argument assigns exactly that value. The
   `resulting $attribute-name` column then goes unreferenced and is dropped by
   REQ-436; a transition whose only argument is suppressed this way renders as a
@@ -311,8 +311,9 @@ Examples:
     reference, whose value is not statically the pinned one.
   - `defined` pins no single value and so suppresses nothing, and neither does
     a modifier argument, which renders a derived column of its own instead of
-    the `resulting` one. A sameness (`as`) pin binds rather than assigns, so it
-    is not one of REQ-434's pins and suppresses nothing here either.
+    the `resulting` one. A sameness (`as`) to another attribute pins no
+    literal either — its value follows that attribute per row — so it
+    suppresses nothing; a sameness to a literal pins it like `=` does.
 
 
 ## Scenario Examples

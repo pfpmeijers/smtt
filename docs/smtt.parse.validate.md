@@ -244,7 +244,7 @@ ready-made.
 
   - the target declares `defined` and the transition leaves the attribute
     undefined, or declares `undefined` and the transition leaves it set;
-  - the target declares `` = `` a literal and the transition leaves a
+  - the target declares `` = `` or `as` a literal and the transition leaves a
     different literal, or leaves the attribute undefined.
 
   An attribute whose post-transition value nothing determines — no result
@@ -253,8 +253,10 @@ ready-made.
   so nothing follows. Ordering, set and range declarations are likewise not
   reported, since whether they hold depends on the row.
 
-  A sameness (`as`) declaration on the target state is never owed: it binds
-  rather than demands (REQ-432 in `smtt.generate.features.md`), so the
+  A sameness (`as`) to a literal is a pin like `=`: for a fixed value,
+  "is the same as" and "equals" say the same thing, so it is owed and checked
+  exactly as `=` is. A sameness to another attribute is not owed: it binds
+  per row rather than demands (REQ-432 in `smtt.generate.features.md`), so the
   generator satisfies it by construction.
 
   Without this check a contradiction surfaces only much later — as an empty

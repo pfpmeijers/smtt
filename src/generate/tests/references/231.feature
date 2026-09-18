@@ -51,8 +51,8 @@
 # Covers requirements:
 # - [REQ-442] A transition result's argument shall not be rendered when the result state's implied
 #   conditions pin its attribute to one concrete value — absence via `undefined`, or a literal via
-#   `=` (REQ-433 in `smtt.parse.validate.md`) — and the argument assigns exactly that value. The
-#   `resulting $attribute-name` column then goes unreferenced and is dropped by REQ-436; a
+#   `=` or `as` (REQ-433 in `smtt.parse.validate.md`) — and the argument assigns exactly that value.
+#   The `resulting $attribute-name` column then goes unreferenced and is dropped by REQ-436; a
 #   transition whose only argument is suppressed this way renders as a plain `Scenario` (REQ-047).
 
 Feature: m2

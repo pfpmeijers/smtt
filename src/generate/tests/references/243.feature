@@ -1,41 +1,29 @@
-# Results from: undefined-result-arguments.test.ts, TST-229: An authored `set to undefined` renders like the synthesized one
+# Results from: undefined-result-arguments.test.ts, TST-243: Result argument assigning its result state's `as` literal is not rendered
 # State machines:
 #  - name: m
 #    states:
 #      - name: s1
 #      - name: s2
 #        impliedConditions:
-#          - attribute: a
+#          - attribute: a1
 #            condition:
-#              operator: undefined
+#              operator: as
+#              value: v1
 #    dataValueCombinations:
-#      - a: ""
-#      - a: "1"
+#      - a1: v1
+#      - a1: v2
 #    transitions:
-#      - id: authored
-#        states:
+#      - states:
 #          - name: s1
 #        trigger:
 #          type: event
-#          name: e1
+#          name: e
 #        result:
 #          name: s2
 #          arguments:
-#            - name: a
-#              qualifier: with
-#              result: {}
-#        notes: ""
-#      - id: synthesized
-#        states:
-#          - name: s1
-#        trigger:
-#          type: event
-#          name: e2
-#        result:
-#          name: s2
-#          arguments:
-#            - name: a
-#              result: {}
+#            - name: a1
+#              result:
+#                value: v1
 #        notes: ""
 # Covers requirements:
 # - [REQ-442] A transition result's argument shall not be rendered when the result state's implied
@@ -46,12 +34,7 @@
 
 Feature: m
 
-  Scenario: [authored] s1 → s2; when e1
+  Scenario: [] s1 → s2; when e
     Given initially s1
-    When e1
-    Then expect s2
-
-  Scenario: [synthesized] s1 → s2; when e2
-    Given initially s1
-    When e2
+    When e
     Then expect s2

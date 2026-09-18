@@ -1,27 +1,37 @@
-# Results from: undefined-result-arguments.test.ts, TST-228: Result argument pinned undefined by its result state is not rendered
+# Results from: undefined-result-arguments.test.ts, TST-236: Result argument assigning its result state's `=` literal is not rendered
 # State machines:
 #  - name: m
 #    states:
 #      - name: s1
+#        impliedConditions:
+#          - attribute: n
+#            condition:
+#              operator: ">"
+#              value: "0"
 #      - name: s2
 #        impliedConditions:
-#          - attribute: a
+#          - attribute: n
 #            condition:
-#              operator: undefined
+#              operator: =
+#              value: "0"
 #    dataValueCombinations:
-#      - a: ""
-#      - a: "1"
+#      - n: "0"
+#      - n: "1"
+#      - n: "2"
 #    transitions:
 #      - states:
 #          - name: s1
+#            arguments:
+#              - name: n
 #        trigger:
 #          type: event
 #          name: e
 #        result:
 #          name: s2
 #          arguments:
-#            - name: a
-#              result: {}
+#            - name: n
+#              result:
+#                value: "0"
 #        notes: ""
 # Covers requirements:
 # - [REQ-442] A transition result's argument shall not be rendered when the result state's implied
@@ -39,7 +49,11 @@
 
 Feature: m
 
-  Scenario: [] s1 → s2; when e
-    Given initially s1
+  Scenario Outline: [] s1 "<n>" → s2; when e
+    Given initially s1 "<n>"
     When e
     Then expect s2
+    Examples:
+      | n |
+      | 1 |
+      | 2 |

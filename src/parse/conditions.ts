@@ -296,22 +296,35 @@ export function collectImpliedFilterConditionsForGivens(
 // --- Implied pins ---
 
 /**
+ * The single literal a condition pins its attribute to, when it pins one: a plain `=` literal, or
+ * an `as` literal. For a fixed value, sameness and equality say the same thing — the attribute
+ * holds exactly that literal — so both are one pin. An `as` naming another attribute is not: it
+ * links two values per row rather than fixing one.
+ *
+ * @param condition Condition to read.
+ * @returns The pinned literal, or `undefined` when the condition pins none.
+ */
+export function pinnedLiteral(condition: Condition): string | undefined {
+    if (condition.operator !== "=" && condition.operator !== "as") return undefined
+    if (condition.valueIsReference || typeof condition.value !== "string") return undefined
+    return condition.value
+}
+
+/**
  * The result payload a literal implied condition pins, when it pins one.
  *
  * Shared by completion (REQ-434), which synthesises such a result, and by feature rendering
  * (REQ-442), which hides an argument already carrying it — so the two cannot drift apart.
  *
  * @param condition Implied condition to read.
- * @returns `{ value: <literal> }` for a plain literal `=`, `{}` (no `value`, matching how the
- *   grammar represents `set to undefined`) for `undefined`, or `undefined` when the condition
- *   pins no concrete value at all — a `defined` declaration (any value satisfies it, so none can
- *   be chosen), a reference-valued `=` (the value lives in another attribute, not a literal), or
- *   any other operator.
+ * @returns `{ value: <literal> }` for a literal pin (`=` or `as`, see `pinnedLiteral`), `{}` (no
+ *   `value`, matching how the grammar represents `set to undefined`) for `undefined`, or
+ *   `undefined` when the condition pins no concrete value at all — a `defined` declaration (any
+ *   value satisfies it, so none can be chosen), a reference-valued `=` or `as` (the value lives in
+ *   another attribute, not a literal), or any other operator.
  */
 export function impliedResultValue(condition: Condition): Result | undefined {
     if (condition.operator === "undefined") return {}
-    if (condition.operator === "=" && !condition.valueIsReference && typeof condition.value === "string") {
-        return { value: condition.value }
-    }
-    return undefined
+    const literal = pinnedLiteral(condition)
+    return literal === undefined ? undefined : { value: literal }
 }

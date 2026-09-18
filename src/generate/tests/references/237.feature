@@ -1,41 +1,30 @@
-# Results from: undefined-result-arguments.test.ts, TST-229: An authored `set to undefined` renders like the synthesized one
+# Results from: undefined-result-arguments.test.ts, TST-237: A result literal contradicting its result state's `=` pin stays rendered (validation would reject this input; not exercised here)
 # State machines:
 #  - name: m
 #    states:
 #      - name: s1
 #      - name: s2
 #        impliedConditions:
-#          - attribute: a
+#          - attribute: n
 #            condition:
-#              operator: undefined
+#              operator: =
+#              value: "0"
 #    dataValueCombinations:
-#      - a: ""
-#      - a: "1"
+#      - n: "0"
+#      - n: "1"
 #    transitions:
-#      - id: authored
-#        states:
+#      - states:
 #          - name: s1
 #        trigger:
 #          type: event
-#          name: e1
+#          name: e
 #        result:
 #          name: s2
 #          arguments:
-#            - name: a
+#            - name: n
 #              qualifier: with
-#              result: {}
-#        notes: ""
-#      - id: synthesized
-#        states:
-#          - name: s1
-#        trigger:
-#          type: event
-#          name: e2
-#        result:
-#          name: s2
-#          arguments:
-#            - name: a
-#              result: {}
+#              result:
+#                value: "1"
 #        notes: ""
 # Covers requirements:
 # - [REQ-442] A transition result's argument shall not be rendered when the result state's implied
@@ -46,12 +35,10 @@
 
 Feature: m
 
-  Scenario: [authored] s1 → s2; when e1
+  Scenario Outline: [] s1 → s2 with "<resulting n>"; when e
     Given initially s1
-    When e1
-    Then expect s2
-
-  Scenario: [synthesized] s1 → s2; when e2
-    Given initially s1
-    When e2
-    Then expect s2
+    When e
+    Then expect s2 with "<resulting n>"
+    Examples:
+      | resulting n |
+      | 1           |

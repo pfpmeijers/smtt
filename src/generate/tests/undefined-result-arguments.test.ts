@@ -155,3 +155,70 @@ test("[TST-231] → [REQ-442]: A suppressed result still binds a state trigger t
     assertContains(feature, "      | a | resulting c |\n      |   |             |\n      | 1 |             |")
     assertMatchesReference(stateMachines, feature)
 })
+
+test("[TST-236] → [REQ-442/436/047]: Result argument assigning its result state's `=` literal is not rendered", () => {
+    const stateMachines: StateMachines = validated([{
+        name: "m",
+        states: [
+            {name: "s1", impliedConditions: [{attribute: "n", condition: {operator: ">", value: "0"}}]},
+            // `s2` pins `n` to the single literal `0`, so `resulting n` holds `0` in every row.
+            {name: "s2", impliedConditions: [{attribute: "n", condition: {operator: "=", value: "0"}}]},
+        ],
+        dataValueCombinations: [{n: "0"}, {n: "1"}, {n: "2"}],
+        transitions: [{
+            states: [{name: "s1", arguments: [{name: "n"}]}],
+            trigger: {type: "event", name: "e"},
+            result: {name: "s2", arguments: [{name: "n", result: {value: "0"}}]},
+            notes: "",
+        }],
+    }])
+    const feature = createFeatures(stateMachines)["m"]
+    assertContains(feature, "    Then expect s2\n")
+    assertNotContains(feature, "resulting n")
+    // The precondition's own `n` column still varies, so it keeps its rows.
+    assertContains(feature, "      | n |\n      | 1 |")
+    assertMatchesReference(stateMachines, feature)
+})
+
+test("[TST-237] → [REQ-442]: A result literal contradicting its result state's `=` pin stays rendered (validation would reject this input; not exercised here)", () => {
+    const stateMachines: StateMachines = [{
+        name: "m",
+        states: [
+            {name: "s1"},
+            {name: "s2", impliedConditions: [{attribute: "n", condition: {operator: "=", value: "0"}}]},
+        ],
+        dataValueCombinations: [{n: "0"}, {n: "1"}],
+        transitions: [{
+            states: [{name: "s1"}],
+            trigger: {type: "event", name: "e"},
+            result: {name: "s2", arguments: [{name: "n", qualifier: "with", result: {value: "1"}}]},
+            notes: "",
+        }],
+    }]
+    // Rendering only: whether the contradiction is an error is REQ-433's call, not this rule's.
+    const feature = createFeatures(stateMachines)["m"]
+    assertContains(feature, 'Then expect s2 with "<resulting n>"')
+    assertMatchesReference(stateMachines, feature)
+})
+
+test("[TST-243] → [REQ-442]: Result argument assigning its result state's `as` literal is not rendered", () => {
+    const stateMachines: StateMachines = validated([{
+        name: "m",
+        states: [
+            {name: "s1"},
+            // A sameness to a fixed value pins it like `=` does.
+            {name: "s2", impliedConditions: [{attribute: "a1", condition: {operator: "as", value: "v1"}}]},
+        ],
+        dataValueCombinations: [{a1: "v1"}, {a1: "v2"}],
+        transitions: [{
+            states: [{name: "s1"}],
+            trigger: {type: "event", name: "e"},
+            result: {name: "s2", arguments: [{name: "a1", result: {value: "v1"}}]},
+            notes: "",
+        }],
+    }])
+    const feature = createFeatures(stateMachines)["m"]
+    assertContains(feature, "    Then expect s2\n")
+    assertNotContains(feature, "resulting a1")
+    assertMatchesReference(stateMachines, feature)
+})
