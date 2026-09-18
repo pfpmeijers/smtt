@@ -74,11 +74,24 @@
   is dropped before camelCasing, so `resulting painting count` yields 
   `paintingCount`, not `resultingPaintingCount`.
 
+- [REQ-444] A modifier prefix on an example column name (`$modifier
+  $attribute-name`, see [REQ-078](smtt.generate.features.md)) carries no
+  meaning for the step callback: it exists only to distinguish the column
+  header from its base attribute for a human reader. The parameter name
+  shall therefore be derived from the base attribute name, not the
+  modifier-prefixed column name, so a modifier column `next therapy subject`
+  yields the parameter `therapySubject`, not `nextTherapySubject`.
+
 - [REQ-216] The callback signature for parameterized steps shall be 
   `async ({ page }, $param1, $param2, ...)`.
 
-- [REQ-217] The generated fixture call shall pass the same parameter names to 
-  the fixture function in the same order.
+- [REQ-217] The generated fixture call shall pass `page` and the same
+  parameter names as properties of a single struct argument, using object
+  shorthand, e.g. `fixtures.makeSubsiteSelected({ page, subject })`. Parameter
+  order within the struct is not significant, since each parameter is
+  identified by name rather than position; this lets a fixture called from
+  several steps with different, non-overlapping subsets of parameters
+  recognize which ones were actually supplied.
 
 - [REQ-218] The generator shall derive the fixture function name from the
   rendered step phrase, excluding the keyword prefix and converting the remaining
@@ -210,6 +223,6 @@ When('subsite selected', async ({ page }) => {
 // - main: 021
 // - subsite: 039
 Then('expect subsite page with {string}', async ({ page }, subject) => {
-  await fixtures.expectSubsitePage({ page }, subject)
+  await fixtures.expectSubsitePage({ page, subject })
 })
 ```

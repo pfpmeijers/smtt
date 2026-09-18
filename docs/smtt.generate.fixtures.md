@@ -51,12 +51,24 @@
   ```
 
 - [REQ-313] When the fixture phrase contains arguments, the function signature
-  shall include matching camelCase parameter names after `{ page }`.
+  shall destructure a single struct argument holding `page` and the matching
+  camelCase parameter names as sibling properties, e.g.
+  `({ page, subject })`, not `({ page }, subject)`. Each parameter is
+  identified by name rather than position, so a fixture stub can be called
+  with any subset of its optional (state-based) parameters present, in any
+  order, without relying on a fixed positional prefix.
 
 - [REQ-314] Parameter names shall be derived from the rendered step placeholders
   and normalized to camelCase. A leading `resulting` word is dropped before
   camelCasing, so `resulting painting count` yields `paintingCount`, not
   `resultingPaintingCount`.
+
+- [REQ-445] As with step parameters (REQ-444 in `smtt.generate.steps.md`), a
+  modifier prefix on an example column name carries no meaning for the
+  fixture stub. The parameter name shall be derived from the base attribute
+  name, not the modifier-prefixed column name, so a modifier column `next
+  therapy subject` yields the parameter `therapySubject`, not
+  `nextTherapySubject`.
 
 - [REQ-315] The generator shall emit only fixture stubs that belong to the state
   machine whose fixture file is being generated.
@@ -122,7 +134,7 @@ export async function makeSubsiteSelected({ page }) {
 
 // --- Expect (Then) ---
 
-export async function expectSubsitePage({ page }, subject) {
+export async function expectSubsitePage({ page, subject }) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: expectSubsitePage")
 }

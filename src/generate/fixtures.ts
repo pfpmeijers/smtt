@@ -72,8 +72,8 @@ function buildFixtureIndex(stateMachineNames: string[], includeShared: boolean):
  * @returns The rendered fixture stub.
  */
 function buildFunctionStub(step: Step): string {
-    const paramsSignature = step.params.length > 0 ? `, ${step.params.join(", ")}` : ""
-    return `export async function ${step.fixtureName}({ page }${paramsSignature}) {\n` +
+    const structArgs = step.params.length > 0 ? `page, ${step.params.join(", ")}` : "page"
+    return `export async function ${step.fixtureName}({ ${structArgs} }) {\n` +
         `    // TODO: Implement.\n` +
         `    console.log("NOT IMPLEMENTED: ${step.fixtureName}")\n` +
         `}\n`

@@ -103,7 +103,7 @@ test("[TST-226] → [REQ-229/231]: every rendered variant of an event used by tw
 
     const fixtures = createFixtures(stateMachines)
     assertContains(fixtures["shared.fixtures.js"], "export async function makeE1({ page })")
-    assertContains(fixtures["shared.fixtures.js"], "export async function makeE1Using({ page }, a1)")
+    assertContains(fixtures["shared.fixtures.js"], "export async function makeE1Using({ page, a1 })")
     assertNotContains(fixtures["m1.fixtures.js"], "makeE1")
     assertNotContains(fixtures["m2.fixtures.js"], "makeE1Using")
 })

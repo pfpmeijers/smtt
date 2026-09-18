@@ -15,14 +15,14 @@ Given('initially m3 paused', async ({ page }) => {
 
 // - m3: 012
 Given('initially m3 pending with {string}', async ({ page }, a4) => {
-  await fixtures.setM3Pending({ page }, a4)
+  await fixtures.setM3Pending({ page, a4 })
 })
 
 // --- When ---
 
 // - m3: 012
 When('e5 with {string}', async ({ page }, a3) => {
-  await fixtures.makeE5({ page }, a3)
+  await fixtures.makeE5({ page, a3 })
 })
 
 // - m3: 013
@@ -49,7 +49,7 @@ When('e9', async ({ page }) => {
 
 // - m3: 015, 016, 017
 Then('expect m3 closed with {string}', async ({ page }, a4) => {
-  await fixtures.expectM3Closed({ page }, a4)
+  await fixtures.expectM3Closed({ page, a4 })
 })
 
 // - m3: 014, 019
@@ -59,7 +59,7 @@ Then('expect m3 open', async ({ page }) => {
 
 // - m3: 012
 Then('expect m3 open with {string}, {string}', async ({ page }, a3, a4) => {
-  await fixtures.expectM3Open({ page }, a3, a4)
+  await fixtures.expectM3Open({ page, a3, a4 })
 })
 
 // - m3: 013, 018
