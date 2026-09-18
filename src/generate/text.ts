@@ -134,7 +134,8 @@ export function triggerText(stateMachineName: string, trigger: Trigger): string 
 
 const STEP_PLACEHOLDER_RE = /"<([^>]+)>"/g
 const STEP_PREFIX_RE = /^(?:initially|expect)\s+/i
-const TRAILING_CONNECTORS_RE = /\s+(?:about|as|into|so|to|from|for|under|in|on|with|of|at|by|not)\s*$/i
+const TRAILING_CONNECTORS_RE =
+    /\s+(?:about|on|as|for|from|into|of|so|to|under|with|using|at|by|over|within|outside|between|against|per|via|around|during|through)\s*$/i
 
 const RESULTING_PREFIX_RE = /^resulting\s+/i
 
@@ -173,15 +174,23 @@ export function getStepParams(stepText: string): string[] {
 }
 
 /**
- * Keep only placeholder parameters that correspond to generated example columns.
+ * Keep only placeholder parameters that correspond to generated example columns, naming each by
+ * its underlying attribute rather than its rendered column header: a modifier prefix (e.g.
+ * `next`) distinguishes the `Examples:` column from its base attribute for a human reader, but
+ * carries no semantic meaning for the step callback, so the param drops it (e.g. `next therapy
+ * subject` becomes `therapySubject`, not `nextTherapySubject`).
  *
  * @param rawParams Parameters extracted from the step text.
  * @param exampleColumns Example columns available for the transition.
- * @returns Parameters that have matching example columns, in source order.
+ * @returns Base-attribute param names for placeholders with a matching example column, in
+ *   source order.
  */
 export function resolveBaseParams(rawParams: string[], exampleColumns: ExampleColumn[]): string[] {
-    const allowed = new Set(exampleColumns.map((column) => toCamelCase(column.name)))
-    return rawParams.filter((param) => allowed.has(param))
+    const columnsByParamName = new Map(exampleColumns.map((column) => [toCamelCase(column.name), column]))
+    return rawParams.flatMap((param) => {
+        const column = columnsByParamName.get(param)
+        return column ? [toCamelCase(column.sourceName)] : []
+    })
 }
 
 const FIXTURE_PREFIXES: Record<"Given" | "When" | "Then", string> = {

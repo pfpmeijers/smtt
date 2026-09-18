@@ -3,7 +3,7 @@
 
 // --- Set (Given) ---
 
-export async function setM1Active({ page }, a1) {
+export async function setM1Active({ page, a1 }) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: setM1Active")
 }
@@ -15,7 +15,7 @@ export async function setM1Inactive({ page }) {
 
 // --- Make (When) ---
 
-export async function makeE1({ page }, a1) {
+export async function makeE1({ page, a1 }) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: makeE1")
 }
@@ -27,7 +27,7 @@ export async function makeE2({ page }) {
 
 // --- Expect (Then) ---
 
-export async function expectM1Active({ page }, a1) {
+export async function expectM1Active({ page, a1 }) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: expectM1Active")
 }

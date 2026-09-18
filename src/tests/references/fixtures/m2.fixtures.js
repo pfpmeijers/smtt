@@ -3,17 +3,17 @@
 
 // --- Set (Given) ---
 
-export async function setM2Empty({ page }, a2) {
+export async function setM2Empty({ page, a2 }) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: setM2Empty")
 }
 
-export async function setM2Full({ page }, a2) {
+export async function setM2Full({ page, a2 }) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: setM2Full")
 }
 
-export async function setM2Partial({ page }, a2) {
+export async function setM2Partial({ page, a2 }) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: setM2Partial")
 }
@@ -42,7 +42,7 @@ export async function expectM2Full({ page }) {
     console.log("NOT IMPLEMENTED: expectM2Full")
 }
 
-export async function expectM2Partial({ page }, incrementedA2) {
+export async function expectM2Partial({ page, a2 }) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: expectM2Partial")
 }

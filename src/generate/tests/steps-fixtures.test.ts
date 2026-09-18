@@ -53,14 +53,14 @@ test("[TST-088] → [REQ-214/215/216/217/218/219/227]: parameterized steps carry
     assertContains(steps, "Given('initially sa bc', async ({ page }) => {")
     assertContains(steps, "await fixtures.setSaBc({ page })")
     assertContains(steps, "When('e {string}', async ({ page }, aaBc) => {")
-    assertContains(steps, "await fixtures.makeE({ page }, aaBc)")
+    assertContains(steps, "await fixtures.makeE({ page, aaBc })")
     assertContains(steps, "Then('expect sa bc', async ({ page }) => {")
     assertContains(steps, "await fixtures.expectSaBc({ page })")
 
     const fixtures = createFixtures(stateMachines)
     assertContains(fixtures["index.js"], "export * from './m.fixtures.js'")
     assertContains(fixtures["m.fixtures.js"], "export async function setSaBc({ page })")
-    assertContains(fixtures["m.fixtures.js"], "export async function makeE({ page }, aaBc)")
+    assertContains(fixtures["m.fixtures.js"], "export async function makeE({ page, aaBc })")
     assertContains(fixtures["m.fixtures.js"], "export async function expectSaBc({ page })")
 })
 
@@ -77,10 +77,30 @@ test("[TST-232] → [REQ-215/314]: parameter names drop the leading `resulting` 
 
     const steps = createSteps(stateMachines)["m.steps.js"]
     assertContains(steps, "Then('expect s {string}', async ({ page }, a) => {")
-    assertContains(steps, "await fixtures.expectS({ page }, a)")
+    assertContains(steps, "await fixtures.expectS({ page, a })")
 
     const fixtures = createFixtures(stateMachines)
-    assertContains(fixtures["m.fixtures.js"], "export async function expectS({ page }, a)")
+    assertContains(fixtures["m.fixtures.js"], "export async function expectS({ page, a })")
+})
+
+test("[TST-245] → [REQ-444/445]: parameter names drop the modifier prefix of a derived example column", () => {
+    const stateMachines: StateMachines = [{
+        name: "m",
+        states: [{ name: "s" }],
+        dataValueCombinations: [{ a: "a0" }, { a: "a1" }],
+        transitions: [{
+            states: [{ name: "s", arguments: [{ name: "a" }] }],
+            trigger: { type: "event", name: "e", arguments: [{ modifier: "next", name: "a" }] },
+            result: { name: "s" },
+        }],
+    }]
+
+    const steps = createSteps(stateMachines)["m.steps.js"]
+    assertContains(steps, "When('e {string}', async ({ page }, a) => {")
+    assertContains(steps, "await fixtures.makeE({ page, a })")
+
+    const fixtures = createFixtures(stateMachines)
+    assertContains(fixtures["m.fixtures.js"], "export async function makeE({ page, a })")
 })
 
 test("[TST-089] → [REQ-201/202/203]: fixture files use kebab-case names and index exports", () => {
@@ -122,10 +142,10 @@ test("[TST-090] → [REQ-214/215/216/217/313]: parameterized steps and fixtures 
 
     const steps = createSteps(stateMachines)["m.steps.js"]
     assertContains(steps, "When('e {string}, {string}', async ({ page }, aaBc, adEf) => {")
-    assertContains(steps, "await fixtures.makeE({ page }, aaBc, adEf)")
+    assertContains(steps, "await fixtures.makeE({ page, aaBc, adEf })")
 
     const fixtures = createFixtures(stateMachines)
-    assertContains(fixtures["m.fixtures.js"], "export async function makeE({ page }, aaBc, adEf)")
+    assertContains(fixtures["m.fixtures.js"], "export async function makeE({ page, aaBc, adEf })")
 })
 
 test("[TST-091] → [REQ-204/205]: step file contains required imports", () => {
@@ -234,7 +254,7 @@ test("[TST-097] → [REQ-309/310]: fixture deduplicates stubs and keeps the wide
     }]
 
     const fixture = createFixtures(stateMachines)["m.fixtures.js"]
-    assertContains(fixture, "export async function makeE({ page }, a1, a2)")
+    assertContains(fixture, "export async function makeE({ page, a1, a2 })")
     const occurrences = (fixture.match(/function makeE\b/g) ?? []).length
     assert.strictEqual(occurrences, 1, "makeE must appear exactly once")
 })

@@ -53,9 +53,8 @@ function buildTransitionComment(transitionsByStateMachine: Map<string, string[]>
 function buildStep(step: Step): string {
     const quotedPattern = step.pattern.replace(/'/g, "\\'")
     const paramsSignature = step.params.length > 0 ? `, ${step.params.join(", ")}` : ""
-    const fixtureCall = step.params.length > 0
-        ? `await fixtures.${step.fixtureName}({ page }, ${step.params.join(", ")})`
-        : `await fixtures.${step.fixtureName}({ page })`
+    const structArgs = step.params.length > 0 ? `page, ${step.params.join(", ")}` : "page"
+    const fixtureCall = `await fixtures.${step.fixtureName}({ ${structArgs} })`
     const comment = buildTransitionComment(step.transitionsByStateMachine)
     const stepText = `${step.keyword}('${quotedPattern}', async ({ page }${paramsSignature}) => {\n` +
         `  ${fixtureCall}\n` +

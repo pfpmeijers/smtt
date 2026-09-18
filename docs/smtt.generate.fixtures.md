@@ -1,8 +1,13 @@
 # SMTT Fixture Generation
 
 > This document specifies the requirements for generating `.fixtures.js` files
-> and the shared `fixtures/index.js` re-export file from the normalized
-> transition/state data.
+> and the shared `fixtures/index.js`.
+
+Fixture files are the manually implemented adapter layer of the generated
+output: once a stub is generated, the user maps it to real interactions
+with the application under test. Unlike feature and step files, which are
+strictly generated and always overwritten, `generate` must never discard that
+manual work.
 
 - [REQ-301] The generator shall write one `.fixtures.js` file per state machine.
 
@@ -51,12 +56,24 @@
   ```
 
 - [REQ-313] When the fixture phrase contains arguments, the function signature
-  shall include matching camelCase parameter names after `{ page }`.
+  shall destructure a single struct argument holding `page` and the matching
+  camelCase parameter names as sibling properties, e.g.
+  `({ page, subject })`, not `({ page }, subject)`. Each parameter is
+  identified by name rather than position, so a fixture stub can be called
+  with any subset of its optional (state-based) parameters present, in any
+  order, without relying on a fixed positional prefix.
 
 - [REQ-314] Parameter names shall be derived from the rendered step placeholders
   and normalized to camelCase. A leading `resulting` word is dropped before
   camelCasing, so `resulting painting count` yields `paintingCount`, not
   `resultingPaintingCount`.
+
+- [REQ-445] As with step parameters (REQ-444 in `smtt.generate.steps.md`), a
+  modifier prefix on an example column name carries no meaning for the
+  fixture stub. The parameter name shall be derived from the base attribute
+  name, not the modifier-prefixed column name, so a modifier column `next
+  therapy subject` yields the parameter `therapySubject`, not
+  `nextTherapySubject`.
 
 - [REQ-315] The generator shall emit only fixture stubs that belong to the state
   machine whose fixture file is being generated.
@@ -100,6 +117,39 @@ more than one file, which the fixture index cannot re-export unambiguously.
   state machine's fixture file, since the corresponding steps are never
   shared (steps generation REQ-233).
 
+## Writing fixture files to disk
+
+- [REQ-446] When a `.fixtures.js` file (per-state-machine or
+  `shared.fixtures.js`) does not yet exist at the target path, the generator
+  shall create it with the full content described above (REQ-301 up to
+  REQ-323).
+
+- [REQ-447] When a `.fixtures.js` file already exists at the target path, the
+  generator shall not overwrite or otherwise modify any of its existing
+  content, including previously generated stubs the user has since
+  implemented, added imports, or other manual edits.
+
+  Rationale: fixture files are the only generated artifact the user is meant
+  to hand-edit (REQ-301 up to REQ-323 produce a starting point, not the final
+  code). `generate` is expected to run repeatedly as the state machine model
+  evolves, so an unconditional overwrite would silently destroy that manual
+  work on every run.
+
+- [REQ-448] When a `.fixtures.js` file already exists, the generator shall
+  append only the stubs for fixture functions not already defined in the
+  file, determined by whether the file contains `export async function
+  $name(` for that stub's function name. A stub whose function is already
+  defined, in any form, shall not be regenerated or duplicated.
+
+- [REQ-449] Appended stubs shall be written after the file's existing
+  content, preceded by a `// --- TODO ---` section header, in the same
+  alphabetically-sorted, deduplicated form as a freshly generated file (REQ-308
+  up to REQ-310).
+
+- [REQ-450] The same create-or-append-missing-only rule (REQ-446 up to
+  REQ-449) applies to `fixtures/index.js`: re-export lines for fixture files
+  not yet re-exported are appended, and existing lines are left untouched.
+
 ## Example shape
 
 ```js
@@ -122,7 +172,7 @@ export async function makeSubsiteSelected({ page }) {
 
 // --- Expect (Then) ---
 
-export async function expectSubsitePage({ page }, subject) {
+export async function expectSubsitePage({ page, subject }) {
     // TODO: Implement.
     console.log("NOT IMPLEMENTED: expectSubsitePage")
 }

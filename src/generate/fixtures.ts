@@ -72,8 +72,8 @@ function buildFixtureIndex(stateMachineNames: string[], includeShared: boolean):
  * @returns The rendered fixture stub.
  */
 function buildFunctionStub(step: Step): string {
-    const paramsSignature = step.params.length > 0 ? `, ${step.params.join(", ")}` : ""
-    return `export async function ${step.fixtureName}({ page }${paramsSignature}) {\n` +
+    const structArgs = step.params.length > 0 ? `page, ${step.params.join(", ")}` : "page"
+    return `export async function ${step.fixtureName}({ ${structArgs} }) {\n` +
         `    // TODO: Implement.\n` +
         `    console.log("NOT IMPLEMENTED: ${step.fixtureName}")\n` +
         `}\n`
@@ -134,6 +134,33 @@ function buildSharedFixtureFileContent(sharedWhenSteps: Step[]): string {
  */
 export function renderFixtureFiles(features: Feature[]): Map<string, string> {
     const files = new Map<string, string>()
+    const entries = collectFixtureFileEntries(features)
+    for (const [fileName, entry] of entries) {
+        files.set(fileName, entry.content)
+    }
+    const stateMachineNames = features
+        .map((stateMachineData) => stateMachineData.stateMachine.name)
+        .sort((left, right) => left.localeCompare(right))
+    files.set("index.js", buildFixtureIndex(stateMachineNames, entries.has(SHARED_FIXTURES_FILE_NAME)))
+    return files
+}
+
+/** One fixture file's rendered content plus the individual stubs it is made of. */
+interface FixtureFileEntry {
+    content: string
+    steps: Step[]
+}
+
+/**
+ * Compute, per fixture file, both its freshly rendered content (used when the file does not yet
+ * exist on disk) and the deduplicated steps it is built from (used to detect which stubs are
+ * already present in an existing file, so `writeFixtureFiles` only appends what is missing).
+ *
+ * @param features Normalized feature data with generated steps.
+ * @returns Fixture file entries keyed by file name.
+ */
+function collectFixtureFileEntries(features: Feature[]): Map<string, FixtureFileEntry> {
+    const files = new Map<string, FixtureFileEntry>()
     const { steps: sharedWhenSteps, patterns: sharedPatterns } = collectSharedTriggerSteps(features)
     const stateMachineNames = features
         .map((stateMachineData) => stateMachineData.stateMachine.name)
@@ -141,30 +168,98 @@ export function renderFixtureFiles(features: Feature[]): Map<string, string> {
     for (const stateMachineName of stateMachineNames) {
         const stateMachineData = features.find((entry) => entry.stateMachine.name === stateMachineName)
         if (stateMachineData !== undefined) {
-            files.set(
-                `${slugify(stateMachineName)}.fixtures.js`,
-                buildFixtureFileContent(stateMachineName, ownSteps(stateMachineData, sharedPatterns)),
-            )
+            const steps = sortedByName(deduplicateByName(ownSteps(stateMachineData, sharedPatterns)))
+            files.set(`${slugify(stateMachineName)}.fixtures.js`, {
+                content: buildFixtureFileContent(stateMachineName, steps),
+                steps,
+            })
         }
     }
     if (sharedWhenSteps.length > 0) {
-        files.set(SHARED_FIXTURES_FILE_NAME, buildSharedFixtureFileContent(sharedWhenSteps))
+        const steps = sortedByName(deduplicateByName(sharedWhenSteps))
+        files.set(SHARED_FIXTURES_FILE_NAME, {
+            content: buildSharedFixtureFileContent(steps),
+            steps,
+        })
     }
-    files.set("index.js", buildFixtureIndex(stateMachineNames, sharedWhenSteps.length > 0))
     return files
 }
 
 /**
- * Write one `<slug>.fixtures.js` file per state machine into `fixturesDir`.
+ * Write one `<slug>.fixtures.js` file per state machine into `fixturesDir`, plus the shared
+ * fixture file and `fixtures/index.js`.
+ *
+ * Fixture files are the manually implemented adapter layer (see `README.md`, "Execution
+ * Architecture: The 3-Tier 'Generation Gap' Pattern"), so `generate` must never discard work
+ * already done in them. A file that does not exist yet is created with every stub; a file that
+ * already exists is left untouched except for appending stubs for functions it does not yet
+ * define (REQ-446 up to REQ-450, matching `smtt generate --help`: "stubs appended only").
  *
  * @param features Normalized feature data with generated steps.
  * @param fixturesDir Output directory for fixture files.
  */
 export function writeFixtureFiles(features: Feature[], fixturesDir: string): void {
     fs.mkdirSync(fixturesDir, { recursive: true })
-    for (const [fileName, content] of renderFixtureFiles(features)) {
-        const filePath = path.join(fixturesDir, fileName)
-        fs.writeFileSync(filePath, content, "utf8")
-        console.info(`Generated: \`${filePath}\``)
+    const entries = collectFixtureFileEntries(features)
+    const fileNames: string[] = []
+    for (const [fileName, entry] of entries) {
+        fileNames.push(fileName)
+        writeOrUpdateFixtureFile(path.join(fixturesDir, fileName), entry)
     }
+    writeOrUpdateFixtureIndex(path.join(fixturesDir, "index.js"), fileNames)
+}
+
+/**
+ * Create a fixture file if it does not exist yet, or append stubs for any of its steps whose
+ * function is not already defined in the file. Never touches or removes existing content
+ * (REQ-446 up to REQ-449).
+ *
+ * @param filePath Path of the `.fixtures.js` file to write or update.
+ * @param entry Freshly rendered content and steps for that file.
+ */
+function writeOrUpdateFixtureFile(filePath: string, entry: FixtureFileEntry): void {
+    if (!fs.existsSync(filePath)) {
+        fs.writeFileSync(filePath, entry.content, "utf8")
+        console.info(`Generated: \`${filePath}\``)
+        return
+    }
+
+    const existing = fs.readFileSync(filePath, "utf8")
+    const missingSteps = entry.steps.filter((step) => !existing.includes(`export async function ${step.fixtureName}(`))
+    if (missingSteps.length === 0) {
+        console.info(`Up to date: \`${filePath}\``)
+        return
+    }
+
+    const stubs = missingSteps.map(buildFunctionStub).join("\n")
+    const updated = `${existing.trimEnd()}\n\n// --- TODO ---\n\n${stubs}\n`
+    fs.writeFileSync(filePath, updated, "utf8")
+    console.info(`Updated: \`${filePath}\` (added ${missingSteps.length} stub${missingSteps.length === 1 ? "" : "s"})`)
+}
+
+/**
+ * Create `fixtures/index.js` if it does not exist yet, or append re-export lines for any fixture
+ * file that is not already re-exported. Never touches or removes existing lines (REQ-450).
+ *
+ * @param indexPath Path of the `fixtures/index.js` file to write or update.
+ * @param fileNames Fixture file names that must be re-exported.
+ */
+function writeOrUpdateFixtureIndex(indexPath: string, fileNames: string[]): void {
+    const exportLines = fileNames.map((fileName) => `export * from './${fileName}'`)
+    if (!fs.existsSync(indexPath)) {
+        fs.writeFileSync(indexPath, `${exportLines.join("\n")}\n`, "utf8")
+        console.info(`Generated: \`${indexPath}\``)
+        return
+    }
+
+    const existing = fs.readFileSync(indexPath, "utf8")
+    const missingLines = exportLines.filter((line) => !existing.includes(line))
+    if (missingLines.length === 0) {
+        console.info(`Up to date: \`${indexPath}\``)
+        return
+    }
+
+    const updated = `${existing.trimEnd()}\n${missingLines.join("\n")}\n`
+    fs.writeFileSync(indexPath, updated, "utf8")
+    console.info(`Updated: \`${indexPath}\``)
 }

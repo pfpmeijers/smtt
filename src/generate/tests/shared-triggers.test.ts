@@ -102,10 +102,9 @@ test("[TST-226] → [REQ-229/231]: every rendered variant of an event used by tw
     assertNotContains(steps["m2.steps.js"], "When('e1 using")
 
     const fixtures = createFixtures(stateMachines)
-    assertContains(fixtures["shared.fixtures.js"], "export async function makeE1({ page })")
-    assertContains(fixtures["shared.fixtures.js"], "export async function makeE1Using({ page }, a1)")
+    assertContains(fixtures["shared.fixtures.js"], "export async function makeE1({ page, a1 })")
     assertNotContains(fixtures["m1.fixtures.js"], "makeE1")
-    assertNotContains(fixtures["m2.fixtures.js"], "makeE1Using")
+    assertNotContains(fixtures["m2.fixtures.js"], "makeE1")
 })
 
 test("[TST-227] → [REQ-230]: variants of an event used by only one state machine stay in its own file", () => {
