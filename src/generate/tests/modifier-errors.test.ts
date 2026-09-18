@@ -14,7 +14,7 @@ test("[TST-043] → [REQ-080]: incremented modifier on a non-numeric value raise
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        'State machine `m`: Anonymous transition: Invalid modifier `incremented` for attribute `a` on result `s`: expected a numeric value but got "foo"')
+        'State machine `m`: transition \`000\`: Invalid modifier `incremented` for attribute `a` on result `s`: expected a numeric value but got "foo"')
 })
 
 test("[TST-044] → [REQ-136]: Modifier without a prior base reference raises an error", () => {
@@ -30,5 +30,5 @@ test("[TST-044] → [REQ-136]: Modifier without a prior base reference raises an
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        `State machine \`m\`: Anonymous transition: Invalid modifier \`incremented\` for attribute \`count\` on result \`s\`: no base reference found in the transition`)
+        `State machine \`m\`: transition \`000\`: Invalid modifier \`incremented\` for attribute \`count\` on result \`s\`: no base reference found in the transition`)
 })

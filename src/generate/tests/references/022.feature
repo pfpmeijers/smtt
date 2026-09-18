@@ -13,10 +13,11 @@
 #          name: e
 #        result:
 #          name: s
+#        id: "000"
 # Covers requirements:
 # - [REQ-157] The generator shall raise an error when arguments are referenced in a transition
 #   (directly or indirectly) but the effective `$example-data-values` table across all contributing
 #   machines is empty after row merging — i.e. no attribute columns exist to drive the `Examples:`
 #   block.
 
-# Throws: State machine `m`: Anonymous transition references argument(s), but the state machine's dataValueCombinations table is empty or absent (REQ-157/REQ-163).
+# Throws: State machine `m`: transition `000` references argument(s), but the state machine's dataValueCombinations table is empty or absent (REQ-157/REQ-163).

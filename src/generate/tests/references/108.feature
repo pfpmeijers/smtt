@@ -19,6 +19,7 @@
 #            - name: a2
 #              result:
 #                value: "2"
+#        id: "000"
 # Covers requirements:
 # - [REQ-169] A base attribute name shall not receive a column when its only occurrence in the
 #   transition is a result argument carrying a result value — such an argument's step placeholder
@@ -30,7 +31,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s → s "<a1>", "<resulting a2>"; when e
+  Scenario Outline: [000]
     Given initially s
     When e
     Then expect s "<a1>", "<resulting a2>"

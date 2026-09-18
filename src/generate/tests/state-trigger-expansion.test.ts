@@ -80,7 +80,7 @@ test("[TST-073] → [REQ-109/110]: State trigger expansion adds intermediate The
     assertMatchesReference(stateMachines, feature)
 })
 
-test("[TST-074] → [REQ-029/030/031/113]: State trigger with multiple expansion paths", () => {
+test("[TST-074] → [REQ-029/113]: State trigger with multiple expansion paths", () => {
     const stateMachines: StateMachines = [{
         name: "m1",
         states: [{name: "s0"}, {name: "s1"}],
@@ -99,6 +99,7 @@ test("[TST-074] → [REQ-029/030/031/113]: State trigger with multiple expansion
             id: "001",
                         trigger: {type: "state", name: "s1"},
             result: {name: "s2"},
+            notes: "Chained",
         }],
     }
     ]
@@ -233,7 +234,7 @@ test("[TST-078] → [REQ-118/164]: Source transition not matched when result arg
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        "State machine `m2`: Anonymous transition has an unresolvable state trigger `s1` — no source transition satisfies the trigger's argument `a` (REQ-118/REQ-164).",
+        "State machine `m2`: transition `001` has an unresolvable state trigger `s1` — no source transition satisfies the trigger's argument `a` (REQ-118/REQ-164).",
     )
 })
 

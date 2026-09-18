@@ -25,6 +25,7 @@
 #        result:
 #          name: s2
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-156] When a default precondition argument carries a modifier, the modifier shall reference
 #   the base value of the same attribute as encountered in the specific transition it is injected
@@ -32,7 +33,7 @@
 
 Feature: m2
 
-  Scenario Outline: [] s2 "<count>" → s2; when e; given s1 "<incremented count>"
+  Scenario Outline: [000]
     Given initially s1 "<incremented count>"
     And initially s2 "<count>"
     When e

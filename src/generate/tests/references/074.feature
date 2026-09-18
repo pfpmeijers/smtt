@@ -10,11 +10,13 @@
 #          name: e1
 #        result:
 #          name: s1
+#        id: "000"
 #      - trigger:
 #          type: event
 #          name: e2
 #        result:
 #          name: s1
+#        id: "002"
 #  - name: m2
 #    states:
 #      - name: s2
@@ -25,31 +27,28 @@
 #          name: s1
 #        result:
 #          name: s2
+#        notes: Chained
 # Covers requirements:
 # - [REQ-029] For state trigger based transitions with multiple expansion paths, a path suffix shall
-#   be appended to the id.
-# - [REQ-030] The `→ $result-state-name` part shall stay the same across paths.
-# - [REQ-031] For expanded paths, `$context-states` in the label shall be the merged set of all
-#   `Given` precondition states, excluding the own state, listed in effective step order (the
-#   top-level transition's own default preconditions first, in their declared array order, then the
-#   top-level transition's own explicit states, then the states injected by the expansion
-#   source(s)).
+#   be appended to the id, while the description stays the same across paths.
 # - [REQ-113] When expansion produces multiple paths (multiple source transitions), each path shall
 #   generate its own scenario, differentiated by a `.1`, `.2`, … suffix on the scenario (transition)
 #   ID.
 
 Feature: m2
 
-  Scenario: [001.1] s2 → s2; when s1; given s0
+  Scenario: [001.1] Chained
     Given initially s2
     And initially s0
     When e1
     Then expect s1
     And expect s2
+    # Notes: Chained
 
-  Scenario: [001.2] s2 → s2; when s1; given s0
+  Scenario: [001.2] Chained
     Given initially s2
     And initially s0
     When e2
     Then expect s1
     And expect s2
+    # Notes: Chained

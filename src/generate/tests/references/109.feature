@@ -22,6 +22,7 @@
 #                value: a
 #                valueIsReference: true
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-423] When a result's value is an attribute reference (`result.valueIsReference`, REQ-424 in
 #   `smtt.parse.validate.md`), the `resulting $attribute-name` column's cell value shall be taken
@@ -30,7 +31,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s "<resulting b>"; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s "<resulting b>"

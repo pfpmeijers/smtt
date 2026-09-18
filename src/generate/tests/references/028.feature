@@ -17,12 +17,13 @@
 #        result:
 #          name: s3
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-133] The initial state shall be taken from AST path `[i].initialState`.
 
 Feature: m2
 
-  Scenario: [] s3 → s3; when e2; given s1
+  Scenario: [000]
     Given initially s3
     And initially s1
     When e2

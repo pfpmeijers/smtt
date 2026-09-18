@@ -21,6 +21,7 @@
 #              result:
 #                value: b
 #                valueIsReference: true
+#        id: "000"
 #  - name: m2
 #    states:
 #      - name: s3
@@ -42,6 +43,7 @@
 #              result:
 #                value: a
 #                valueIsReference: true
+#        id: "001"
 # Covers requirements:
 # - [REQ-437] A bound result reference (REQ-438 in `smtt.parse.complete.md`) shall take its cell
 #   value from the `resulting $attribute-name` column it is bound to, instead of from REQ-423's row
@@ -49,7 +51,7 @@
 
 Feature: m2
 
-  Scenario Outline: [] s3 "<a>" → s4 "<resulting c>"; when s2; given s1
+  Scenario Outline: [001]
     Given initially s3 "<a>"
     And initially s1
     When e "<b>"

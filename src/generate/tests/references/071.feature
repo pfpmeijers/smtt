@@ -11,6 +11,7 @@
 #          name: e
 #        result:
 #          name: s
+#        id: "000"
 # Covers requirements:
 # - [REQ-102] Triggers shall be of either `event` type or `state` type. A state trigger represents
 #   another state machine entering that state, which then cascades into a transition of the current
@@ -20,7 +21,7 @@
 
 Feature: m
 
-  Scenario: [] s → s; when e
+  Scenario: [000]
     Given initially s
     When e
     Then expect s

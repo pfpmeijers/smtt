@@ -9,6 +9,7 @@
 #          name: e
 #        result:
 #          name: s1
+#        id: "000"
 #  - name: m2
 #    states:
 #      - name: s2
@@ -18,6 +19,7 @@
 #          name: s1
 #        result:
 #          name: s2
+#        id: "001"
 #  - name: m3
 #    states:
 #      - name: s3
@@ -27,6 +29,7 @@
 #          name: s2
 #        result:
 #          name: s3
+#        id: "002"
 # Covers requirements:
 # - [REQ-108] When the source has a state trigger, the expansion shall recurse further into that
 #   source until an event trigger is reached.
@@ -37,7 +40,7 @@
 
 Feature: m3
 
-  Scenario: [] s3 → s3; when s2; given s1, s2
+  Scenario: [002]
     Given initially s3
     And initially s1
     And initially s2

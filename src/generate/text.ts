@@ -223,37 +223,3 @@ export function fixtureNameFromStep(keyword: "Given" | "When" | "Then", stepText
 
     return `${FIXTURE_PREFIXES[keyword]}${base}`
 }
-
-// --- Scenario labels ---
-
-const QUOTED_SEGMENT = /"[^"]*"/g
-const VALUE_LITERAL_CONTEXT = /(?:^|\s)(?:=|<>|>|<|>=|<=|as|is|is not|in|not in|in range|not in range)\s*$/
-
-/**
- * Lower case a scenario label while preserving the casing of quoted condition value literals
- * (REQ-028). Name tokens and `"<placeholder>"` references are lower cased; a quoted literal
- * directly following a comparison operator keeps its original casing, as it denotes data
- * rather than a name.
- *
- * Examples: `Item Available` → `item available`; `status as "Active"` → `status as "Active"`;
- * `Item "<Count>"` → `item "<count>"`.
- *
- * @param text Scenario label text to transform.
- * @returns The lower-cased label with quoted value literals preserved.
- */
-export function lowerCaseLabelPreservingValueLiterals(text: string): string {
-    let result = ""
-    let lastIndex = 0
-    for (const match of text.matchAll(QUOTED_SEGMENT)) {
-        const start = match.index ?? 0
-        const quoted = match[0]
-        const prefix = text.slice(lastIndex, start)
-        const inner = quoted.slice(1, -1)
-        const isPlaceholder = inner.startsWith("<") && inner.endsWith(">")
-
-        result += prefix.toLowerCase()
-        result += !isPlaceholder && VALUE_LITERAL_CONTEXT.test(prefix) ? quoted : `"${inner.toLowerCase()}"`
-        lastIndex = start + quoted.length
-    }
-    return result + text.slice(lastIndex).toLowerCase()
-}

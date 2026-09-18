@@ -11,13 +11,14 @@
 #          name: e
 #        result:
 #          name: s
+#        id: "000"
 # Covers requirements:
 # - [REQ-119] All generated feature files shall follow standard Gherkin indentation conventions:
 # - [REQ-122] The `Scenario:` / `Scenario Outline:` shall be indented 2 spaces.
 
 Feature: m
 
-  Scenario: [] s → s; when e
+  Scenario: [000]
     Given initially s
     When e
     Then expect s

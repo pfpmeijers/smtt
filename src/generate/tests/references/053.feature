@@ -21,6 +21,7 @@
 #        result:
 #          name: s
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-065] The table shall add _derived_ columns required by modifiers.
 # - [REQ-081] The `previous` / `next` modifiers shall take the previous / next value from the
@@ -30,7 +31,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s; when e "<previous a>"
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e "<previous a>"
     Then expect s

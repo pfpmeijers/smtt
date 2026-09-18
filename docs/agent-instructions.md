@@ -1,6 +1,9 @@
-# Requirements documents for the smtt functions
-- These are described in `smtt.<function>.<aspect>.md` files, e.g. 
-  `smtt.generate.features.md`
+# How to write/edit requirements documents for the smtt functions
+
+> Agent instructions to write/edit the smtt requirements documents. 
+> These are `smtt.<function>.<aspect>.md` files, e.g. 
+> `smtt.generate.features.md`
+
 - Do not refer to carrier application (i.e. Malerien) specific examples for 
   the state machine aspects (like state names, attribute names, etc.) 
 - Use REQ-### for the requirement numbers and keep them unique across all smtt
@@ -17,3 +20,5 @@
       - Example1: <example> 
       ...
   ```
+- Do not nest requirements. To group requirements use (sub)sections about its
+  topic.

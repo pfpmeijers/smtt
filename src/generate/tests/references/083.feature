@@ -11,6 +11,7 @@
 #          name: e
 #        result:
 #          name: s
+#        id: "000"
 # Covers requirements:
 # - [REQ-042] The `Then` step shall be emitted as `Then expect $result-name [$arguments]`.
 # - [REQ-043] The result name shall be taken from AST path `[i].transitions[j].result.name`.
@@ -21,7 +22,7 @@
 
 Feature: m
 
-  Scenario: [] s → s; when e
+  Scenario: [000]
     Given initially s
     When e
     Then expect s

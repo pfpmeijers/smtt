@@ -38,74 +38,31 @@ Feature: $state-machine-name
   the following label:
 
 ```gherkin
-Scenario: [$id] $original-state-name → $result-state-name; when $trigger; given $context-states
+Scenario: [$id] $description
 ```
 
 - [REQ-010] The transition shall be taken from AST path `[i].transitions[j]`.
-
-The transition's precondition ("from") state — referred to as the "own state" —
-is the state belonging to the current state machine. It is resolved from these
-sources, in order of precedence:
-
-1. **Explicit transition state**: the entry in `[i].transitions[j].states` whose
-   name matches one of the machine's defined state names (`[i].states[*].name`).
-2. **Default precondition**: when the transition's `states` array contains no
-   match for the current machine, a default precondition from
-   `[i].defaultPreconditions` whose state belongs to the current machine.
-3. **Implied initial state**: when neither the transition nor default
-   preconditions supply a state from the current machine, the machine's initial
-   state is implied — taken from `[i].initialState`, or when that is not
-   explicitly defined, the first entry in `[i].states`.
 
 The scenario label shall be composed of the following parts:
 
 - [REQ-011] The label shall include `[$id]`, the transition id.
   - [REQ-012] The `$id` shall be taken from AST path `[i].transitions[j].id`.
 
-- [REQ-013] The label shall include `$original-state-name`, i.e. the state
-  machine's own "from" state for this transition.
-  - [REQ-014] The `$original-state-name` shall be taken from AST path
-    `[i].transitions[j].states[k].name`, where `k` is the index of the own state
-    in the transition's state array.
-  - [REQ-015] The `$original-state-name` state shall be identified by matching
-    each entry's name against the state machine's defined state names taken from
-    AST path `[i].states[*].name`, where `i` is the index of the state machine
-    the scenario belongs to.
-
-- [REQ-017] The label shall include ` → $result-state-name`, the state
-  machine's "to" state for this transition.
-  - [REQ-018] The `$result-state-name` shall be taken from AST path
-    `[i].transitions[j].result.name`.
-
-- [REQ-019] The label shall include `; when $trigger`, the trigger name, being
-  an event or a state entered of another state machine.
-  - [REQ-020] The `$trigger` shall be taken from AST path
-    `[i].transitions[j].trigger.name`.
-
-- [REQ-021] The label shall include `; given $context-states`, all precondition
-  states other than the own state.
-  - [REQ-022] The `$context-states` shall be rendered as a comma-separated
-    list.
-  - [REQ-023] The `$context-states` shall be listed in the same order as the
-    `Given` steps: default preconditions first (in their array order), then
-    explicit transition states (excluding the own state, in their array order).
-  - [REQ-024] The `; given $context-states` part shall be omitted when there
-    are no context states.
-  - [REQ-025] The context states shall be taken from AST paths
-    `[i].transitions[j].states[*].name` (except for the own state entry), and
-    `[i].defaultPreconditions[*].state`.
-
-- [REQ-026] Where any state or the trigger carries arguments, those arguments
-  shall be appended to the name inline — see [State Arguments](#state-arguments)
-  for the format.
-
-- [REQ-027] The inline argument appending shall apply to all name slots in the
-  label: `$original-state-name`, `$trigger`, `$result-state-name`, and the
-  other names within `$context-states`.
-
-- [REQ-028] The scenario label part following the ID shall be rendered in
-  lower case. Lower-casing applies to textual name tokens (state names, trigger
-  names, qualifier words, attribute names).
+- [REQ-451] The label shall include ` $description`, the transition
+  description, following the id.
+  - Rationale: the transition id and description identify a scenario by what
+    the author wrote, rather than by a mechanical composition of its
+    precondition, trigger and result states, which the steps already spell out.
+  - Remarks: a description written after the id of a list-form transition
+    (`- <id>: <description>`) is folded into the transition's notes by the
+    parse step, ahead of any explicit notes; a table row has notes only. The
+    notes therefore are the transition description, and no separate
+    description field exists in the AST.
+  - [REQ-452] The `$description` shall be taken from AST path
+    `[i].transitions[j].notes`, verbatim: it is not lower cased and its
+    placeholders are not rewritten.
+  - [REQ-453] The ` $description` part shall be omitted when the transition has
+    no notes, leaving the label as `[$id]`.
 
 - [REQ-159] The scenario label shall be truncated to a maximum of 200
   characters. The transition ID (`[$id]`) ensures uniqueness regardless of
@@ -113,12 +70,12 @@ The scenario label shall be composed of the following parts:
 
 Example:
 ```gherkin
-Scenario: [REQ-003] Item available → item in cart; when item added to cart; given user session present
+Scenario: [REQ-003] Cart hold is time-limited and will expire automatically
 ```
 
-For state trigger based transitions with multiple expansion paths, additional
-label formatting rules apply — see [State Trigger Expansion](#state-trigger-expansion)
-(REQ-029, REQ-030, REQ-031).
+For state trigger based transitions with multiple expansion paths, the id
+carries a path suffix — see [State Trigger Expansion](#state-trigger-expansion)
+(REQ-029).
 
 ## Steps block
 
@@ -187,7 +144,7 @@ The scenario steps shall be generated from the transition information:
   tool).
 
 ```gherkin
-Scenario: [REQ-003] Item available → item in cart; when item added to cart; given user session present
+Scenario: [REQ-003] Cart hold is time-limited and will expire automatically
   Given initially user session present
   And initially item available
   When item added to cart
@@ -502,7 +459,7 @@ Complete example — transition: `State A` with `count`, trigger `event X`,
 result `State B` with incremented `count`:
 
 ```gherkin
-Scenario Outline: [REQ-001] state a → state b; when event x
+Scenario Outline: [REQ-001] ...
   Given initially state a "<count>"
   When event x
   Then expect state b "<incremented count>"
@@ -847,7 +804,7 @@ Supported operators:
   results in ``state x with `a` set to 2 ``)<br/> then scenario steps and
   examples table:
   ```gherkin
-    Scenario Outline: [REQ-001] x "<a>" â†’ x "<resulting a>"; when e
+    Scenario Outline: [REQ-001] ...
       Given initially x "<a>"
       When e
       Then expect x "<resulting a>"
@@ -871,7 +828,7 @@ Supported operators:
   `a`), <br/> (state `x`, trigger `e`, results in `` x with `a` set to 2 ``)
   <br/> then scenario steps and examples table:
   ```gherkin
-    Scenario Outline: [REQ-001] x â†’ x "<resulting a>"; when e
+    Scenario Outline: [REQ-001] ...
       Given initially x
       When e
       Then expect x "<resulting a>"
@@ -907,7 +864,7 @@ Supported operators:
   `resulting a`, and `c` takes `b`'s value through it. Were `m2`'s trigger
   `s2` without `a`, `c` would take `a`'s own value from before the event.
   ```gherkin
-    Scenario Outline: [REQ-002] s3 → s4 "<resulting c>"; when e
+    Scenario Outline: [REQ-002] ...
       Given initially s3
       When e with "<b>"
       Then expect s2 with "<resulting a>"
@@ -930,7 +887,7 @@ Supported operators:
   each row's `resulting q` tracks that same row's own `p`, not one shared
   literal:
   ```gherkin
-    Scenario Outline: [REQ-001] x "<p>" â†’ x "<resulting q>"; when e
+    Scenario Outline: [REQ-001] ...
       Given initially x "<p>"
       When e
       Then expect x "<resulting q>"
@@ -1031,21 +988,13 @@ result (Identity machine's result).
   `.1`, `.2`, … suffix on the scenario (transition) ID.
 
 - [REQ-029] For state trigger based transitions with multiple expansion paths, a
-  path suffix shall be appended to the id.
-
-- [REQ-030] The `→ $result-state-name` part shall stay the same across paths.
+  path suffix shall be appended to the id, while the description stays the
+  same across paths.
 
   ```
-  [$id.1] $original-state-name → $result-state-name; when $expansion-1; given $context-states
-  [$id.2] $original-state-name → $result-state-name; when $expansion-2; given $context-states
+  [$id.1] $description
+  [$id.2] $description
   ```
-
-- [REQ-031] For expanded paths, `$context-states` in the label shall be the
-  merged set of all `Given` precondition states, excluding the own state, listed
-  in effective step order (the top-level transition's own default
-  preconditions first, in their declared array order, then the top-level
-  transition's own explicit states, then the states injected by the
-  expansion source(s)).
 
 - [REQ-114] The `Given` precondition steps for an expanded scenario shall
   include states from both the source (expanded) transition and the top-level

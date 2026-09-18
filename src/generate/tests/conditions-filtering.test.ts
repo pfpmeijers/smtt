@@ -245,10 +245,10 @@ test("[TST-014] → [REQ-099/100]: All rows filtered out raises error", () => {
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        'State machine `m`: Empty examples table for anonymous transition.\n' +
+        'State machine `m`: Empty examples table for transition `000`.\n' +
         '1 candidate row(s) available:\n{ a=0 }.\n' +
         'No row satisfied every condition:\n' +
-        '  - `a` > 5 (declared on `m`#?)')
+        '  - `a` > 5 (declared on `m`#000)')
 })
 
 test("[TST-015] → [REQ-075] Empty value on a non-undefined operator is rejected", () => {
@@ -303,8 +303,8 @@ test("[TST-176] → [REQ-427]: Reference condition on an attribute absent from t
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        'State machine `m`: Empty examples table for anonymous transition.\n' +
+        'State machine `m`: Empty examples table for transition `000`.\n' +
         '1 candidate row(s) available:\n{ a1=1 }.\n' +
         'No row satisfied every condition:\n' +
-        '  - `a1` as `a9` (declared on `m`#?)')
+        '  - `a1` as `a9` (declared on `m`#000)')
 })

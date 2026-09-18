@@ -25,6 +25,7 @@
 #            - name: a
 #              result: {}
 #        notes: ""
+#        id: "000"
 #  - name: m2
 #    states:
 #      - name: s3
@@ -48,6 +49,7 @@
 #                value: a
 #                valueIsReference: true
 #        notes: ""
+#        id: "001"
 # Covers requirements:
 # - [REQ-442] A transition result's argument shall not be rendered when the result state's implied
 #   conditions pin its attribute to one concrete value — absence via `undefined`, or a literal via
@@ -57,7 +59,7 @@
 
 Feature: m2
 
-  Scenario Outline: [] s3 → s4 "<resulting c>"; when s2 "<a>"; given s1 "<a>"
+  Scenario Outline: [001]
     Given initially s3
     And initially s1 "<a>"
     When e

@@ -19,6 +19,7 @@
 #          name: e
 #        result:
 #          name: s
+#        id: "000"
 # Covers requirements:
 # - [REQ-427] A condition value marked as an attribute reference (`...condition.valueIsReference`,
 #   REQ-424 in `smtt.parse.validate.md`) shall not be compared as a literal: for each candidate row,
@@ -27,8 +28,8 @@
 #   holds no value for the referenced attribute — it has no column for it, or the cell is empty —
 #   shall not survive the filter: an absent value pins nothing to compare against.
 
-# Throws: State machine `m`: Empty examples table for anonymous transition.
+# Throws: State machine `m`: Empty examples table for transition `000`.
 1 candidate row(s) available:
 { a1=1 }.
 No row satisfied every condition:
-  - `a1` as `a9` (declared on `m`#?)
+  - `a1` as `a9` (declared on `m`#000)

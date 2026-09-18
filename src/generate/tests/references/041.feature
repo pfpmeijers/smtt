@@ -12,13 +12,14 @@
 #        result:
 #          name: s
 #        notes: ...
+#        id: "000"
 # Covers requirements:
 # - [REQ-129] No blank line shall be emitted between the last `Then` step and the `# Notes:`
 #   comment.
 
 Feature: m
 
-  Scenario: [] s → s; when e
+  Scenario: [000] ...
     Given initially s
     When e
     Then expect s

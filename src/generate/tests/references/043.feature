@@ -19,8 +19,9 @@
 #            - modifier: incremented
 #              name: a
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-080] The parser component shall verify that these modifiers are applied to numerical
 #   values.
 
-# Throws: State machine `m`: Anonymous transition: Invalid modifier `incremented` for attribute `a` on result `s`: expected a numeric value but got "foo"
+# Throws: State machine `m`: transition `000`: Invalid modifier `incremented` for attribute `a` on result `s`: expected a numeric value but got "foo"

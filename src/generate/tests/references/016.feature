@@ -24,6 +24,7 @@
 #              result:
 #                value: "2"
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-066] The table shall add _derived_ columns required by result values.
 # - [REQ-088] Result values shall extend the columns.
@@ -33,7 +34,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s "<resulting a>"; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s "<resulting a>"

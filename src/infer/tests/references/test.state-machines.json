@@ -32,7 +32,8 @@
           },
           "result": {
             "name": "device busy"
-          }
+          },
+          "id": "000"
         },
         {
           "states": [
@@ -46,7 +47,8 @@
           },
           "result": {
             "name": "device ready"
-          }
+          },
+          "id": "001"
         }
       ],
       "impossible": {
@@ -132,7 +134,8 @@
           },
           "result": {
             "name": "mode active"
-          }
+          },
+          "id": "002"
         },
         {
           "states": [
@@ -146,7 +149,8 @@
           },
           "result": {
             "name": "mode inactive"
-          }
+          },
+          "id": "003"
         }
       ],
       "impossible": {

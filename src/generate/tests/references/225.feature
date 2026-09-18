@@ -25,13 +25,14 @@
 #            - name: a2
 #        result:
 #          name: s1
+#        id: "000"
 # Covers requirements:
 # - [REQ-440] A rendered examples table row shall be pruned when renaming its interchangeable values
 #   turns it into an earlier row, keeping the first row.
 
 Feature: m1
 
-  Scenario Outline: [] s1 "<a1>" → s1; when e "<a2>"
+  Scenario Outline: [000]
     Given initially s1 "<a1>"
     When e "<a2>"
     Then expect s1

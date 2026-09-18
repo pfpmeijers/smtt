@@ -15,13 +15,14 @@
 #          name: e
 #        result:
 #          name: s
+#        id: "000"
 # Covers requirements:
 # - [REQ-119] All generated feature files shall follow standard Gherkin indentation conventions:
 # - [REQ-126] The examples table rows shall be indented 6 spaces.
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s

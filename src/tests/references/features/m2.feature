@@ -1,7 +1,7 @@
 Feature: m2
   Counter machine. Counts items from 0 to 3. Requires `M1 active` to operate.
 
-  Scenario Outline: [004] m2 empty with "<a2>" → m2 partial with "<incremented a2>"; when e3; given m1 active
+  Scenario Outline: [004]
     Given initially m1 active
     And initially m2 empty with "<a2>"
     When e3
@@ -10,7 +10,7 @@ Feature: m2
       | a2 | incremented a2 |
       | 0  | 1              |
 
-  Scenario Outline: [005] m2 partial with "<a2>" → m2 partial with "<incremented a2>"; when e3; given m1 active
+  Scenario Outline: [005]
     Given initially m1 active
     And initially m2 partial with "<a2>"
     When e3
@@ -19,7 +19,7 @@ Feature: m2
       | a2 | incremented a2 |
       | 1  | 2              |
 
-  Scenario Outline: [006] m2 partial with "<a2>" → m2 full; when e3; given m1 active
+  Scenario Outline: [006] Ceiling reached
     Given initially m1 active
     And initially m2 partial with "<a2>"
     When e3
@@ -29,7 +29,7 @@ Feature: m2
       | a2 |
       | 2  |
 
-  Scenario Outline: [007] m2 partial with "<a2>" → m2 partial with "<decremented a2>"; when e4; given m1 active
+  Scenario Outline: [007]
     Given initially m1 active
     And initially m2 partial with "<a2>"
     When e4
@@ -39,7 +39,7 @@ Feature: m2
       | 2  | 1              |
       | 3  | 2              |
 
-  Scenario Outline: [008] m2 partial with "<a2>" → m2 empty; when e4; given m1 active
+  Scenario Outline: [008]
     Given initially m1 active
     And initially m2 partial with "<a2>"
     When e4
@@ -48,7 +48,7 @@ Feature: m2
       | a2 |
       | 1  |
 
-  Scenario Outline: [009] m2 full with "<a2>" → m2 partial with "<decremented a2>"; when e4; given m1 active
+  Scenario Outline: [009]
     Given initially m1 active
     And initially m2 full with "<a2>"
     When e4
@@ -57,7 +57,7 @@ Feature: m2
       | a2 | decremented a2 |
       | 3  | 2              |
 
-  Scenario: [010] m2 partial → m2 empty; when m1 inactive; given m1 active
+  Scenario: [010] Counter cleared when M1 deactivates
     Given initially m1 active
     And initially m2 partial
     When e2
@@ -65,7 +65,7 @@ Feature: m2
     And expect m2 empty
     # Notes: Counter cleared when M1 deactivates
 
-  Scenario: [011] m2 full → m2 empty; when m1 inactive; given m1 active
+  Scenario: [011] Counter cleared when M1 deactivates
     Given initially m1 active
     And initially m2 full
     When e2

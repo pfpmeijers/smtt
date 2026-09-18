@@ -27,6 +27,7 @@
 #          arguments:
 #            - name: b3
 #        notes: ""
+#        id: "000"
 #  - name: m0
 #    states:
 #      - name: s2
@@ -39,7 +40,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s1 "<b1>" → s1 "<b3>"; when e "<b2>"; given s2 "<a1>"
+  Scenario Outline: [000]
     Given initially s2 "<a1>"
     And initially s1 "<b1>"
     When e "<b2>"

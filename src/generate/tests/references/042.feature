@@ -15,12 +15,13 @@
 #          name: e
 #        result:
 #          name: s
+#        id: "000"
 # Covers requirements:
 # - [REQ-130] No blank line shall be emitted between `Examples:` and its table.
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s

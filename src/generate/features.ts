@@ -37,7 +37,6 @@ import { buildEffectiveGivens } from "./givens"
 import {
     fixtureNameFromStep,
     getStepParams,
-    lowerCaseLabelPreservingValueLiterals,
     resolveBaseParams,
     slugify,
     stateRefText,
@@ -188,38 +187,18 @@ function resolveExpansionPaths(context: RenderContext, transition: Transition): 
 }
 
 /**
- * Compose the scenario label (REQ-009 up to REQ-031). The label includes the transition id,
- * own state, result state, trigger and remaining context states. The part following the id is
- * lower cased (REQ-028) and the whole label is truncated to `MAX_LABEL_LENGTH` (REQ-159).
+ * Compose the scenario label (REQ-009 up to REQ-012, REQ-451 up to REQ-453). The label consists of
+ * the transition id and the transition description (its notes), and is truncated to
+ * `MAX_LABEL_LENGTH` (REQ-159).
  *
- * @param stateMachineName Name of the state machine owning the transition, for error context.
  * @param transition Transition being rendered.
  * @param keyword Scenario keyword, either `Scenario` or `Scenario Outline`.
- * @param ownGiven The `Given` state belonging to the rendering state machine, if any.
- * @param contextGivens All other `Given` states, in effective step order.
  * @param idSuffix Expansion path suffix, e.g. `.2`, or `""` for a single path.
- * @param impliedIndex Implied conditions per state name, for REQ-442 suppression.
  * @returns The rendered scenario label.
  */
-function buildScenarioLabel(
-    stateMachineName: string,
-    transition: Transition,
-    keyword: string,
-    ownGiven: StateRef | undefined,
-    contextGivens: StateRef[],
-    idSuffix: string,
-    impliedIndex: ImpliedConditionsIndex,
-): string {
-    const ownText = ownGiven ? stateRefText(stateMachineName, ownGiven) : "?"
-    const contextPart = contextGivens.length === 0
-        ? ""
-        : `; given ${contextGivens.map((stateRef) => stateRefText(stateMachineName, stateRef)).join(", ")}`
-    const labelTail = lowerCaseLabelPreservingValueLiterals(
-        `${ownText} → ${stateRefText(stateMachineName, transition.result, true, impliedIndex)}` +
-            `; when ${triggerText(stateMachineName, transition.trigger)}${contextPart}`,
-    )
-
-    const label = `  ${keyword}: [${transition.id ?? ""}${idSuffix}] ${labelTail}`
+function buildScenarioLabel(transition: Transition, keyword: string, idSuffix: string): string {
+    const description = transition.notes ? ` ${transition.notes}` : ""
+    const label = `  ${keyword}: [${transition.id ?? ""}${idSuffix}]${description}`
     return label.length > MAX_LABEL_LENGTH ? `${label.slice(0, MAX_LABEL_LENGTH - 3)}...` : label
 }
 
@@ -286,16 +265,10 @@ function renderScenarios(context: RenderContext, transition: Transition): string
         const examplesTable = isOutline ? buildExamplesTable(context, transition, columns, path) : null
         const keyword = isOutline ? "Scenario Outline" : "Scenario"
 
-        const ownGiven = effectiveGivens.find(
-            (stateRef) => ownerOfStateRef(stateRef, ownership) === stateMachine.name,
-        )
-        const contextGivens = effectiveGivens.filter((stateRef) => stateRef !== ownGiven)
         const idSuffix = expansionPaths.length > 1 ? `.${pathIndex + 1}` : ""
 
         const lines = [
-            buildScenarioLabel(
-                stateMachine.name, transition, keyword, ownGiven, contextGivens, idSuffix, context.impliedIndex,
-            ),
+            buildScenarioLabel(transition, keyword, idSuffix),
             ...steps,
         ]
         if (transition.notes) lines.push(`    # Notes: ${transition.notes}`)

@@ -21,6 +21,7 @@
 #              result:
 #                value: b
 #                valueIsReference: true
+#        id: "000"
 #  - name: m2
 #    states:
 #      - name: s3
@@ -38,10 +39,11 @@
 #                value: "5"
 #        result:
 #          name: s4
+#        id: "001"
 # Covers requirements:
 # - [REQ-423] When a result's value is an attribute reference (`result.valueIsReference`, REQ-424 in
 #   `smtt.parse.validate.md`), the `resulting $attribute-name` column's cell value shall be taken
 #   from that *row's own value* for the referenced attribute, instead of the fixed literal REQ-089
 #   otherwise takes it from.
 
-# Throws: State machine `m2`: Anonymous transition has an unresolvable state trigger `s2` — no source transition satisfies the trigger's argument `a` (REQ-118/REQ-164).
+# Throws: State machine `m2`: transition `001` has an unresolvable state trigger `s2` — no source transition satisfies the trigger's argument `a` (REQ-118/REQ-164).

@@ -17,6 +17,7 @@
 #        result:
 #          name: s
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-063] When the scenario carries arguments, an examples table shall be appended.
 # - [REQ-067] Row construction shall use `$example-data-values` as starting point.
@@ -26,7 +27,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s as "<a>" → s; when e
+  Scenario Outline: [000]
     Given initially s as "<a>"
     When e
     Then expect s

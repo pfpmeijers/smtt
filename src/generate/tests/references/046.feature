@@ -24,6 +24,7 @@
 #        result:
 #          name: s
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-158] The `previous` / `next` modifiers shall derive position from the *original* full
 #   example values table, not from any condition-filtered subset. The `incremented` / `decremented`
@@ -31,7 +32,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s; when e "<next a>"
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e "<next a>"
     Then expect s

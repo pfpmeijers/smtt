@@ -21,6 +21,7 @@
 #        result:
 #          name: s
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-054] The `$modifier` shall be taken from AST path
 #   `[i].transitions[j].states[*].arguments[*].modifier`.
@@ -32,7 +33,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s; when e "<next a>"
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e "<next a>"
     Then expect s

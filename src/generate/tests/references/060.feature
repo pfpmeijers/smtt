@@ -1,4 +1,4 @@
-# Results from: scenario-label.test.ts, TST-060: Scenario label lower case
+# Results from: scenario-label.test.ts, TST-060: Scenario label description keeps its casing and placeholders
 # State machines:
 #  - name: m
 #    states:
@@ -21,28 +21,18 @@
 #                value: A
 #        result:
 #          name: s2
+#        notes: Item Added With <a>
 # Covers requirements:
-# - [REQ-028] The scenario label part following the ID shall be rendered in lower case. Lower-casing
-#   applies to textual name tokens (state names, trigger names, qualifier words, attribute names).
-# - [REQ-047] When any state, the trigger, or an applicable default precondition carries
-#   argument(s), the scenario shall be emitted as a `Scenario Outline` with an examples table
-#   (described further down), instead of a `Scenario`.
-# - [REQ-048] The generator shall add the arguments information after the state name.
-# - [REQ-057] `$qualifier` shall be a single qualifier before the attribute name, in case no
-#   modifier is given.
-# - [REQ-058] The `$qualifier` shall be taken from AST path
-#   `[i].transitions[j].states[*].arguments[*].qualifier`.
-# - [REQ-061] `$attribute-name` shall be the name of a state's data attribute, present as a column
-#   in the `Examples:` table below the step definitions.
-# - [REQ-062] The `$attribute-name` shall be taken from AST path
-#   `[i].transitions[j].states[*].arguments[*].name`.
+# - [REQ-452] The `$description` shall be taken from AST path `[i].transitions[j].notes`, verbatim:
+#   it is not lower cased and its placeholders are not rewritten.
 
 Feature: m
 
-  Scenario Outline: [001] s1 → s2; when e with "<a>"
+  Scenario Outline: [001] Item Added With <a>
     Given initially s1
     When e with "<a>"
     Then expect s2
+    # Notes: Item Added With <a>
     Examples:
       | a |
       | A |

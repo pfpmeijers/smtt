@@ -21,6 +21,7 @@
 #              modifier: next
 #              name: a
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-051] `$pre-qualifier` shall be a qualifying word/phrase before the modifier.
 # - [REQ-052] The `$pre-qualifier` shall be taken from AST path
@@ -28,7 +29,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s under "<next a>"; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s under "<next a>"

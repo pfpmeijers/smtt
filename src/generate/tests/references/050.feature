@@ -21,6 +21,7 @@
 #            - modifier: incremented
 #              name: a
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-053] `$modifier` shall be the qualifying word/phrase before the attribute name.
 # - [REQ-065] The table shall add _derived_ columns required by modifiers.
@@ -40,7 +41,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s "<incremented a>"; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s "<incremented a>"

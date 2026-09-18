@@ -1,7 +1,7 @@
 Feature: m3
   Workflow machine. Tracks a labelled process through its lifecycle. Requires `M1 active` and coordinates with `M2`.
 
-  Scenario Outline: [012] m3 pending with "<a4>" → m3 open with "<a3>", "<resulting a4>"; when e5 with "<a3>"; given m1 active, m2 partial
+  Scenario Outline: [012] Starting the workflow assigns label and score
     Given initially m1 active
     And initially m2 partial
     And initially m3 pending with "<a4>"
@@ -12,19 +12,19 @@ Feature: m3
       | a4 | a3 | resulting a4 |
       | 0  | P1 | 10           |
 
-  Scenario: [013] m3 open → m3 paused; when e6; given m1 active
+  Scenario: [013]
     Given initially m1 active
     And initially m3 open
     When e6
     Then expect m3 paused
 
-  Scenario: [014] m3 paused → m3 open; when e7; given m1 active
+  Scenario: [014]
     Given initially m1 active
     And initially m3 paused
     When e7
     Then expect m3 open
 
-  Scenario Outline: [015] m3 open → m3 closed with "<resulting a4>"; when e8; given m1 active, m2 full
+  Scenario Outline: [015] Completion requires full M2; score set to max
     Given initially m1 active
     And initially m3 open
     And initially m2 full
@@ -35,7 +35,7 @@ Feature: m3
       | resulting a4 |
       | 20           |
 
-  Scenario Outline: [016] m3 open → m3 closed with "<resulting a4>"; when e9; given m1 active, m2 empty
+  Scenario Outline: [016] Abort from open with empty counter
     Given initially m1 active
     And initially m3 open
     And initially m2 empty
@@ -46,7 +46,7 @@ Feature: m3
       | resulting a4 |
       | 0            |
 
-  Scenario Outline: [017] m3 paused → m3 closed with "<resulting a4>"; when e9; given m1 active
+  Scenario Outline: [017] Abort while paused
     Given initially m1 active
     And initially m3 paused
     When e9
@@ -56,7 +56,7 @@ Feature: m3
       | resulting a4 |
       | 0            |
 
-  Scenario: [018] m3 open → m3 paused; when m1 inactive; given m1 active
+  Scenario: [018] Auto-paused when M1 deactivates
     Given initially m1 active
     And initially m3 open
     When e2
@@ -64,7 +64,7 @@ Feature: m3
     And expect m3 paused
     # Notes: Auto-paused when M1 deactivates
 
-  Scenario Outline: [019] m3 paused → m3 open; when m1 active with "<a1>"; given m1 inactive
+  Scenario Outline: [019] Auto-resumed when M1 reactivates
     Given initially m1 inactive
     And initially m3 paused
     When e1 with "<a1>"

@@ -24,6 +24,7 @@
 #        result:
 #          name: s1
 #        notes: ""
+#        id: "000"
 #  - name: m0
 #    states:
 #      - name: s2
@@ -36,7 +37,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s1 "<b1>" → s1; when e; given s3
+  Scenario Outline: [000]
     Given initially s1 "<b1>"
     And initially s3
     When e

@@ -15,13 +15,14 @@
 #          name: s
 #        notes: ""
 #        sourceLine: 7
+#        id: "000"
 # Covers requirements:
 # - [REQ-149] Metadata fields (source file path, source line number) in the AST shall not be used in
 #   feature generation.
 
 Feature: m
 
-  Scenario: [] s → s; when e
+  Scenario: [000]
     Given initially s
     When e
     Then expect s

@@ -20,6 +20,7 @@
 #        result:
 #          name: s
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-073] An empty string (`""`) in `$example-data-values` shall represent an undefined/absent
 #   value for that attribute.
@@ -29,7 +30,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s

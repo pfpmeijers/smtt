@@ -26,6 +26,7 @@
 #        result:
 #          name: s
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-166] Each implied condition's `$attribute-name` shall be taken from AST path
 #   `[i].states[k].impliedConditions[*].attribute` and matched against the examples table column of
@@ -34,7 +35,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s

@@ -26,6 +26,7 @@
 #              result:
 #                value: "1"
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-442] A transition result's argument shall not be rendered when the result state's implied
 #   conditions pin its attribute to one concrete value — absence via `undefined`, or a literal via
@@ -35,7 +36,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s1 → s2 with "<resulting n>"; when e
+  Scenario Outline: [000]
     Given initially s1
     When e
     Then expect s2 with "<resulting n>"

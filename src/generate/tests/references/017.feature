@@ -17,6 +17,7 @@
 #            - name: a
 #              result:
 #                value: "2"
+#        id: "000"
 # Covers requirements:
 # - [REQ-089] The `resulting $attribute-name` column cell value shall be taken directly from
 #   `result.value` in the AST. A result argument's value is always a plain equality assignment
@@ -24,7 +25,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s → s "<resulting a>"; when e
+  Scenario Outline: [000]
     Given initially s
     When e
     Then expect s "<resulting a>"

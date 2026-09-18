@@ -25,6 +25,7 @@
 #            - qualifier: as
 #              name: a
 #        notes: ""
+#        id: "000"
 #  - name: m2
 #    states:
 #      - name: s3
@@ -47,6 +48,7 @@
 #            - qualifier: as
 #              name: a
 #        notes: ""
+#        id: "001"
 # Covers requirements:
 # - [REQ-162] Conditions from all transitions in an expansion chain shall be merged as a
 #   conjunction: a row survives only if it satisfies ALL conditions from the top-level transition
@@ -54,7 +56,7 @@
 
 Feature: m2
 
-  Scenario Outline: [] s3 → s4 as "<a>"; when s2 as "<a>"; given s1
+  Scenario Outline: [001]
     Given initially s3
     And initially s1
     When e with "<a>"

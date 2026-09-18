@@ -15,6 +15,7 @@
 #          name: e
 #        result:
 #          name: s1
+#        id: "000"
 #  - name: m2
 #    states:
 #      - name: s2
@@ -28,6 +29,7 @@
 #          name: s1
 #        result:
 #          name: s2
+#        id: "001"
 # Covers requirements:
 # - [REQ-116] Duplicate state references (same name and same arguments) shall be de-duplicated,
 #   keeping the first occurrence — so a later-listed state (e.g. one injected by expansion) that
@@ -37,7 +39,7 @@
 
 Feature: m2
 
-  Scenario Outline: [] s2 → s2; when s1; given s1 "<a>"
+  Scenario Outline: [001]
     Given initially s1 "<a>"
     And initially s2
     When e

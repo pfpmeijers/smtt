@@ -32,6 +32,7 @@
 #        result:
 #          name: s
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-160] Rendered examples table rows shall be unique: any row whose displayed values repeat an
 #   earlier row in the final `Examples:` block shall be removed, keeping the first occurrence.
@@ -39,7 +40,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s as "<a1>" → s; when e
+  Scenario Outline: [000]
     Given initially s as "<a1>"
     When e
     Then expect s

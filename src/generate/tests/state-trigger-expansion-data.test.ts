@@ -94,7 +94,7 @@ test("[TST-110] → [REQ-423]: A reference-valued result does not satisfy a stat
         }],
     }]
     assertThrowMatchesReference(stateMachines, () => createFeatures(stateMachines),
-        "State machine `m2`: Anonymous transition has an unresolvable state trigger `s2` — no source transition " +
+        "State machine `m2`: transition `001` has an unresolvable state trigger `s2` — no source transition " +
         "satisfies the trigger's argument `a` (REQ-118/REQ-164).",
     )
 })

@@ -23,6 +23,7 @@
 #          name: e
 #        result:
 #          name: s
+#        id: "000"
 # Covers requirements:
 # - [REQ-427] A condition value marked as an attribute reference (`...condition.valueIsReference`,
 #   REQ-424 in `smtt.parse.validate.md`) shall not be compared as a literal: for each candidate row,
@@ -33,7 +34,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a1>", "<a2>" → s; when e
+  Scenario Outline: [000]
     Given initially s "<a1>", "<a2>"
     When e
     Then expect s

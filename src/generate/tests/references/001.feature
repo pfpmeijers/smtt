@@ -1,4 +1,4 @@
-# Results from: arguments-in-label.test.ts, TST-001: Arguments appear in scenario label state names
+# Results from: arguments-in-label.test.ts, TST-001: Arguments appear in the step state names
 # State machines:
 #  - name: m
 #    states:
@@ -30,20 +30,16 @@
 #          arguments:
 #            - qualifier: from
 #              name: a2
+#        id: "000"
 #  - name: m0
 #    states:
 #      - name: s3
 # Covers requirements:
-# - [REQ-026] Where any state or the trigger carries arguments, those arguments shall be appended to
-#   the name inline — see [State Arguments](#state-arguments) for the format.
-# - [REQ-027] The inline argument appending shall apply to all name slots in the label:
-#   `$original-state-name`, `$trigger`, `$result-state-name`, and the other names within
-#   `$context-states`.
 # - [REQ-049] The arguments shall be taken from AST paths:
 
 Feature: m
 
-  Scenario Outline: [] s1 as "<a1>" → s2 from "<a2>"; when e with "<ae>"; given s3 on "<a3>"
+  Scenario Outline: [000]
     Given initially s3 on "<a3>"
     And initially s1 as "<a1>"
     When e with "<ae>"

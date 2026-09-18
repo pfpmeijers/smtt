@@ -33,6 +33,8 @@ narrow case, a transition's own result arguments (REQ-434) — in this order:
 5. Augment the example table with the value combinations that conditions and
    results reference (REQ-421), including the combinations implied by an
    attribute reference (REQ-426).
+6. Generate an id for every transition that has none (REQ-454), once all
+   machines are completed.
 
 Step 1 runs first because every later step reads the example table: the derived
 rows must be in place before anything back-fills or augments them.
@@ -105,6 +107,18 @@ earlier author-written value assigns — is never replaced.
   is left exactly as authored, and REQ-433 continues to flag that
   contradiction: it reflects a decision the author actually wrote down, not a
   gap this step should paper over.
+
+- [REQ-454] The complete AST shall give every transition without an id a
+  generated one, unique among all transition ids of the AST.
+  - Rationale: the id is optional in the source, but labels a scenario and a
+    transition in every report; an anonymous transition would be
+    indistinguishable from the others.
+  - Remarks: generated ids are zero-padded numbers starting at `000`
+    (`000`, `001`, …), assigned in AST order (machine order, then transition
+    order). A number whose id an author wrote anywhere
+    in the sources, in any machine, is skipped, so a generated id never
+    collides with a defined one. Ids compare case-insensitively. A defined id
+    is never changed.
 
 - [REQ-419] The complete AST shall declare a data attribute for every
   attribute referenced anywhere in the machine: `dataValueCombinations` column

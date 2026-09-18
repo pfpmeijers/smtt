@@ -9,10 +9,10 @@ test("[TST-031] → [REQ-159]: Scenario label truncated to 200 chars with an ell
         transitions: [{
             id: "001",
             states: [{name: "s"}],
-            // A very long trigger name forces the label past 200 chars.
-            trigger: {type: "event", name: "e" + "-".repeat(300)},
+            trigger: {type: "event", name: "e"},
             result: {name: "s"},
-            notes: "",
+            // A very long description forces the label past 200 chars.
+            notes: "d".repeat(300),
         }],
     }]
     validateStateMachines(stateMachines)

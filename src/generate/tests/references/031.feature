@@ -9,10 +9,10 @@
 #          - name: s
 #        trigger:
 #          type: event
-#          name: e------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#          name: e
 #        result:
 #          name: s
-#        notes: ""
+#        notes: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 # Covers requirements:
 # - [REQ-159] The scenario label shall be truncated to a maximum of 200 characters. The transition
 #   ID (`[$id]`) ensures uniqueness regardless of truncation. Truncation shall occur at the end, and
@@ -20,7 +20,8 @@
 
 Feature: m
 
-  Scenario: [001] s → s; when e----------------------------------------------------------------------------------------------------------------------------------------------------------------------...
+  Scenario: [001] ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd...
     Given initially s
-    When e------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    When e
     Then expect s
+    # Notes: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd

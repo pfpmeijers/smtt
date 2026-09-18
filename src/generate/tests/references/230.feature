@@ -45,7 +45,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s1 "<a>" → s2; when e
+  Scenario Outline: [000]
     Given initially s1 "<a>"
     When e
     Then expect s2

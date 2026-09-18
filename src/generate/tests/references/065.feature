@@ -21,6 +21,7 @@
 #              postQualifier: from
 #              name: a
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-055] `$post-qualifier` shall be the qualifying word/phrase after the modifier.
 # - [REQ-056] The `$post-qualifier` shall be taken from AST path
@@ -28,7 +29,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s from "<next a>"; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s from "<next a>"

@@ -21,6 +21,7 @@
 #            - modifier: decremented
 #              name: a
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-065] The table shall add _derived_ columns required by modifiers.
 # - [REQ-077] The `incremented` / `decremented` modifiers shall take the incremented / decremented
@@ -30,7 +31,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s "<decremented a>"; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s "<decremented a>"

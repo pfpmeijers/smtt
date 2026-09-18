@@ -21,6 +21,7 @@
 #            - modifier: last
 #              name: a
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-139] The `last` modifier shall always take the last value from the example values table,
 #   regardless of the current row position.
@@ -28,7 +29,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s "<last a>"; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s "<last a>"

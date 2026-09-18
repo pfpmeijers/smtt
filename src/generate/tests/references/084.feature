@@ -12,6 +12,7 @@
 #        result:
 #          name: s
 #        notes: ...
+#        id: "000"
 # Covers requirements:
 # - [REQ-045] `# Notes:` shall be appended after the final `Then` step (including any intermediate
 #   expansion steps) when notes are defined.
@@ -19,7 +20,7 @@
 
 Feature: m
 
-  Scenario: [] s → s; when e
+  Scenario: [000] ...
     Given initially s
     When e
     Then expect s

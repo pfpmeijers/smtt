@@ -19,6 +19,7 @@
 #          name: e
 #        result:
 #          name: s
+#        id: "000"
 # Covers requirements:
 # - [REQ-086] Argument conditions shall filter/extend the data combination tables (`Examples`) by
 #   removing rows/adding columns.
@@ -31,7 +32,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s

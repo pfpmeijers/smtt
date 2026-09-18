@@ -15,6 +15,7 @@
 #            - name: a
 #              result:
 #                value: "1"
+#        id: "000"
 #  - name: m2
 #    states:
 #      - name: s2
@@ -29,6 +30,7 @@
 #                value: "2"
 #        result:
 #          name: s2
+#        id: "001"
 # Covers requirements:
 # - [REQ-118] A source transition shall only be considered a matching expansion candidate if its
 #   result state arguments match the trigger state arguments of the referring transition (the
@@ -41,4 +43,4 @@
 #   source transitions exist by result state name but none satisfies REQ-118's argument-matching
 #   rule. Then the generator shall raise an error.
 
-# Throws: State machine `m2`: Anonymous transition has an unresolvable state trigger `s1` — no source transition satisfies the trigger's argument `a` (REQ-118/REQ-164).
+# Throws: State machine `m2`: transition `001` has an unresolvable state trigger `s1` — no source transition satisfies the trigger's argument `a` (REQ-118/REQ-164).

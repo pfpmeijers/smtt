@@ -13,6 +13,7 @@
 #          name: e
 #        result:
 #          name: s1
+#        id: "000"
 #  - name: m2
 #    states:
 #      - name: s2
@@ -24,6 +25,7 @@
 #          name: s1
 #        result:
 #          name: s2
+#        id: "001"
 #  - name: m3
 #    states:
 #      - name: s3
@@ -39,7 +41,7 @@
 
 Feature: m2
 
-  Scenario: [] s2 → s2; when s1; given s3, s1
+  Scenario: [001]
     Given initially s2
     And initially s3
     And initially s1

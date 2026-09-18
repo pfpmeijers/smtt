@@ -23,6 +23,7 @@
 #        result:
 #          name: s
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-148] The implied conditions declared on a state definition shall be used by the feature
 #   generator: when that state is a precondition (`Given`) state of a transition, its implied
@@ -44,7 +45,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s

@@ -12,6 +12,7 @@
 #          name: e1
 #        result:
 #          name: s2
+#        id: "000"
 #      - states:
 #          - name: s2
 #        trigger:
@@ -19,18 +20,19 @@
 #          name: e2
 #        result:
 #          name: s1
+#        id: "001"
 # Covers requirements:
 # - [REQ-128] One blank line shall be emitted between consecutive `Scenario` / `Scenario Outline`
 #   blocks.
 
 Feature: m
 
-  Scenario: [] s1 → s2; when e1
+  Scenario: [000]
     Given initially s1
     When e1
     Then expect s2
 
-  Scenario: [] s2 → s1; when e2
+  Scenario: [001]
     Given initially s2
     When e2
     Then expect s1

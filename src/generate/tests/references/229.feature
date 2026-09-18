@@ -46,12 +46,12 @@
 
 Feature: m
 
-  Scenario: [authored] s1 → s2; when e1
+  Scenario: [authored]
     Given initially s1
     When e1
     Then expect s2
 
-  Scenario: [synthesized] s1 → s2; when e2
+  Scenario: [synthesized]
     Given initially s1
     When e2
     Then expect s2

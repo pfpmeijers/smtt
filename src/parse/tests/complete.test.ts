@@ -1127,4 +1127,34 @@ describe("completeStateMachines — attribute-reference condition values", () =>
         // `foreign` is declared by another machine, so this machine has no value to copy.
         assert.deepEqual(stateMachines[0].dataValueCombinations, [{ a2: "" }])
     })
+
+    it("[TST-251] → [REQ-454]: generates ids for anonymous transitions that avoid every defined id", () => {
+        const transition = (id?: string) => ({
+            ...(id ? { id } : {}),
+            states: [{ name: "s1" }],
+            trigger: { type: "event" as const, name: "e1" },
+            result: { name: "s2" },
+        })
+        const stateMachines: StateMachine[] = [
+            { name: "m1", states: [{ name: "s1" }, { name: "s2" }], transitions: [transition(), transition("000")] },
+            { name: "m2", states: [{ name: "s3" }, { name: "s4" }], transitions: [transition("002"), transition()] },
+        ]
+        completeStateMachines(stateMachines)
+        const ids = stateMachines.flatMap(stateMachine => stateMachine.transitions!.map(entry => entry.id))
+        assert.deepEqual(ids, ["001", "000", "002", "003"])
+    })
+
+    it("[TST-252] → [REQ-454]: keeps author-defined ids and is stable when run again", () => {
+        const stateMachines: StateMachine[] = [{
+            name: "m1",
+            states: [{ name: "s1" }, { name: "s2" }],
+            transitions: [
+                { id: "T01", states: [{ name: "s1" }], trigger: { type: "event", name: "e1" }, result: { name: "s2" } },
+                { states: [{ name: "s2" }], trigger: { type: "event", name: "e2" }, result: { name: "s1" } },
+            ],
+        }]
+        completeStateMachines(stateMachines)
+        completeStateMachines(stateMachines)
+        assert.deepEqual(stateMachines[0].transitions!.map(entry => entry.id), ["T01", "000"])
+    })
 })

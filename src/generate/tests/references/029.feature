@@ -12,6 +12,7 @@
 #        result:
 #          name: s
 #        notes: ""
+#        id: "000"
 #    impossible:
 #      defined:
 #        - states:
@@ -32,7 +33,7 @@
 
 Feature: m
 
-  Scenario: [] s → s; when e1
+  Scenario: [000]
     Given initially s
     When e1
     Then expect s

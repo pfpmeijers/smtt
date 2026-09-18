@@ -18,6 +18,7 @@
 #        result:
 #          name: s
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-059] `$suffix` shall be the word/phrase after the attribute name.
 # - [REQ-060] The `$suffix` shall be taken from AST path
@@ -25,7 +26,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s with "<a>" prefilled → s; when e
+  Scenario Outline: [000]
     Given initially s with "<a>" prefilled
     When e
     Then expect s

@@ -17,9 +17,10 @@
 #            - modifier: incremented
 #              name: count
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-136] A modifier on an argument shall be valid only when a base reference to the same
 #   attribute exists somewhere in the transition. The generator shall raise an error when no base
 #   reference exists.
 
-# Throws: State machine `m`: Anonymous transition: Invalid modifier `incremented` for attribute `count` on result `s`: no base reference found in the transition
+# Throws: State machine `m`: transition `000`: Invalid modifier `incremented` for attribute `count` on result `s`: no base reference found in the transition

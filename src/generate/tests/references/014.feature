@@ -18,13 +18,14 @@
 #          name: e
 #        result:
 #          name: s
+#        id: "000"
 # Covers requirements:
 # - [REQ-099] Arguments shall result in filtering out certain examples in the scenario.
 # - [REQ-100] If all rows are filtered out, the generator shall raise an error — an empty examples
 #   table is not valid.
 
-# Throws: State machine `m`: Empty examples table for anonymous transition.
+# Throws: State machine `m`: Empty examples table for transition `000`.
 1 candidate row(s) available:
 { a=0 }.
 No row satisfied every condition:
-  - `a` > 5 (declared on `m`#?)
+  - `a` > 5 (declared on `m`#000)

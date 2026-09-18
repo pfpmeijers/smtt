@@ -15,6 +15,7 @@
 #            - name: a1
 #        result:
 #          name: s2
+#        id: "000"
 #  - name: m2
 #    states:
 #      - name: s3
@@ -31,6 +32,7 @@
 #          name: s3
 #          arguments:
 #            - name: a2
+#        id: "001"
 # Covers requirements:
 # - [REQ-161] For expanded state triggers, the effective data table shall be the owning state
 #   machine's own example data values table, extended with columns for any attribute it does not
@@ -38,7 +40,7 @@
 
 Feature: m2
 
-  Scenario Outline: [] s3 → s3 "<a2>"; when s2 "<a1>"; given s1
+  Scenario Outline: [001]
     Given initially s3
     And initially s1
     When e "<a1>"

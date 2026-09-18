@@ -9,6 +9,7 @@
 #          name: e
 #        result:
 #          name: s1
+#        id: "000"
 #  - name: m2
 #    states:
 #      - name: s2
@@ -18,6 +19,7 @@
 #          name: s1
 #        result:
 #          name: s2
+#        id: "001"
 # Covers requirements:
 # - [REQ-109] For state triggers, an additional `Then expect $trigger-result-state-name` step shall
 #   be emitted between the `When` step and the final `Then expect $result-state-name` step,
@@ -27,7 +29,7 @@
 
 Feature: m2
 
-  Scenario: [] s2 → s2; when s1; given s1
+  Scenario: [001]
     Given initially s2
     And initially s1
     When e

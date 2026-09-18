@@ -19,6 +19,7 @@
 #          name: e
 #        result:
 #          name: s
+#        id: "000"
 # Covers requirements:
 # - [REQ-095] The generator shall support the text spellings of the equality filters: `is` / `are`
 #   for `=`, and `is not` / `are not` for `<>`. The `as` operator is not one of them — it states
@@ -26,7 +27,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<a>" → s; when e
+  Scenario Outline: [000]
     Given initially s "<a>"
     When e
     Then expect s

@@ -9,6 +9,7 @@
 #          name: e
 #        result:
 #          name: s1
+#        id: "000"
 #  - name: m2
 #    states:
 #      - name: s2
@@ -18,6 +19,7 @@
 #          name: s1
 #        result:
 #          name: s2
+#        id: "001"
 # Covers requirements:
 # - [REQ-102] Triggers shall be of either `event` type or `state` type. A state trigger represents
 #   another state machine entering that state, which then cascades into a transition of the current
@@ -47,7 +49,7 @@
 
 Feature: m2
 
-  Scenario: [] s2 → s2; when s1; given s1
+  Scenario: [001]
     Given initially s2
     And initially s1
     When e

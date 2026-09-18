@@ -23,6 +23,7 @@
 #          arguments:
 #            - name: a
 #            - name: b
+#        id: "000"
 #  - name: m2
 #    states:
 #      - name: s3
@@ -41,6 +42,7 @@
 #                valueIsReference: true
 #        result:
 #          name: s4
+#        id: "001"
 # Covers requirements:
 # - [REQ-428] A reference-valued condition on a state trigger's argument shall impose no constraint
 #   while matching expansion candidates (REQ-118): that matching is structural and has no example
@@ -49,7 +51,7 @@
 
 Feature: m2
 
-  Scenario Outline: [] s3 → s4; when s2 "<a>"; given s1 "<a>", "<b>"
+  Scenario Outline: [001]
     Given initially s3
     And initially s1 "<a>", "<b>"
     When e

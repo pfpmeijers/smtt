@@ -59,6 +59,7 @@
           - qualifier: for
             name: label
       notes: Plain data ref
+      id: "000"
     - states:
         - name: phase two
           arguments:
@@ -76,6 +77,7 @@
           - qualifier: as
             name: new label
       notes: Distinct attribute for a new value
+      id: "001"
     - states:
         - name: phase two
           arguments:
@@ -94,6 +96,7 @@
             modifier: incremented
             name: count
       notes: Eq condition + incremented
+      id: "004"
     - states:
         - name: phase two
           arguments:
@@ -112,6 +115,7 @@
             modifier: decremented
             name: count
       notes: Gt condition + decremented
+      id: "005"
     - states:
         - name: phase two
           arguments:
@@ -126,6 +130,7 @@
       result:
         name: phase three
       notes: Ge condition
+      id: "006"
     - states:
         - name: phase two
           arguments:
@@ -140,6 +145,7 @@
       result:
         name: phase one
       notes: Le condition
+      id: "007"
     - states:
         - name: phase two
           arguments:
@@ -162,6 +168,7 @@
             modifier: next
             name: score
       notes: Ne condition + next modifier
+      id: "008"
     - states:
         - name: phase two
           arguments:
@@ -184,6 +191,7 @@
             modifier: previous
             name: score
       notes: Lt condition + previous modifier
+      id: "009"
     - states:
         - name: phase two
           arguments:
@@ -198,6 +206,7 @@
       result:
         name: phase three
       notes: Range condition
+      id: "010"
     - states:
         - name: phase two
           arguments:
@@ -212,6 +221,7 @@
       result:
         name: phase three
       notes: "Range: exclusive upper bound"
+      id: "011"
     - states:
         - name: phase two
           arguments:
@@ -226,6 +236,7 @@
       result:
         name: phase three
       notes: "Range: exclusive lower bound"
+      id: "012"
     - states:
         - name: phase two
           arguments:
@@ -242,6 +253,7 @@
       result:
         name: phase three
       notes: Set condition
+      id: "013"
     - states:
         - name: phase two
           arguments:
@@ -256,6 +268,7 @@
       result:
         name: phase three
       notes: "Text equality: literal value"
+      id: "014"
     - states:
         - name: phase two
           arguments:
@@ -270,6 +283,7 @@
       result:
         name: phase three
       notes: "Text inequality: literal value"
+      id: "015"
     - states:
         - name: phase two
           arguments:
@@ -284,6 +298,7 @@
       result:
         name: phase three
       notes: Not-in-range condition
+      id: "016"
     - states:
         - name: phase two
           arguments:
@@ -300,6 +315,7 @@
       result:
         name: phase three
       notes: Not-in-set condition
+      id: "017"
     - states:
         - name: phase three
       trigger:
@@ -308,6 +324,7 @@
       result:
         name: phase one
       notes: Simple reset
+      id: "018"
   impossible:
     defined: []
   irrelevant: []
@@ -334,6 +351,7 @@
       result:
         name: active
       notes: started
+      id: "019"
     - states:
         - name: active
       trigger:
@@ -342,6 +360,7 @@
       result:
         name: idling
       notes: stopped
+      id: "020"
   impossible:
     defined: []
   irrelevant: []
@@ -448,6 +467,7 @@
           - name: note
             result:
               value: archived
+      id: "021"
     - states:
         - name: painting listed
           arguments:
@@ -465,6 +485,7 @@
         type: event
       result:
         name: painting offered
+      id: "022"
     - states:
         - name: painting listed
           arguments:
@@ -479,6 +500,7 @@
         type: event
       result:
         name: painting offered
+      id: "023"
     - states:
         - name: painting offered
           arguments:
@@ -493,6 +515,7 @@
         type: event
       result:
         name: painting listed
+      id: "024"
   impossible:
     defined: []
   irrelevant: []
@@ -546,6 +569,7 @@
         type: event
       result:
         name: article published
+      id: "025"
     - states:
         - name: article published
           arguments:
@@ -559,6 +583,7 @@
         type: event
       result:
         name: article drafted
+      id: "026"
   impossible:
     defined: []
   irrelevant: []
@@ -588,6 +613,7 @@
       result:
         name: listed active
       notes: Table row
+      id: "027"
     - id: "002"
       states:
         - name: listed active
@@ -642,6 +668,7 @@
         type: event
       result:
         name: idle
+      id: "028"
   impossible:
     defined: []
   irrelevant: []
@@ -748,6 +775,7 @@
           - qualifier: for
             name: customer id
       notes: Event with argument parsing.
+      id: "029"
     - states:
         - name: reserved stock
           arguments:
@@ -770,6 +798,7 @@
       result:
         name: completed
       notes: Range condition and modifier.
+      id: "030"
     - states:
         - name: reserved stock
           arguments:
@@ -787,6 +816,7 @@
       result:
         name: awaiting payment
       notes: Set-negation condition.
+      id: "031"
     - states:
         - name: reserved stock
       trigger:
@@ -806,6 +836,7 @@
             name: quantity
             suffix: of 1 unit
       notes: Argument suffix text is preserved.
+      id: "032"
   impossible:
     defined:
       - states:
@@ -856,6 +887,7 @@
         type: event
       result:
         name: session active
+      id: "033"
     - states:
         - name: user authenticated
       trigger:
@@ -863,6 +895,7 @@
         type: event
       result:
         name: session active
+      id: "034"
   impossible:
     defined: []
   irrelevant: []

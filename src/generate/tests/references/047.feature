@@ -23,6 +23,7 @@
 #        result:
 #          name: s
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-142] A modifier and a condition may co-exist on the same argument.
 # - [REQ-143] When both are present, the order of operations shall be: derive the modifier column
@@ -31,7 +32,7 @@
 
 Feature: m
 
-  Scenario Outline: [] s "<count>" → s; when e "<incremented count>"
+  Scenario Outline: [000]
     Given initially s "<count>"
     When e "<incremented count>"
     Then expect s

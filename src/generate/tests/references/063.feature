@@ -18,12 +18,13 @@
 #        result:
 #          name: s
 #        notes: ""
+#        id: "000"
 # Covers requirements:
 # - [REQ-050] Each argument shall be appended comma separated to the state name in order.
 
 Feature: m
 
-  Scenario Outline: [] s "<a>", "<b>" → s; when e
+  Scenario Outline: [000]
     Given initially s "<a>", "<b>"
     When e
     Then expect s

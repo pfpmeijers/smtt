@@ -19,6 +19,9 @@
  *  - Augment `dataValueCombinations` so that every condition-referenced value
  *    combination is satisfied by at least one row, including the rows implied by
  *    attribute-reference conditions (REQ-426).
+ *
+ * Once every machine is completed, each transition still lacking an id is given a generated one
+ * that no other transition in the AST carries (REQ-454).
  */
 
 import type { Argument, Condition, Result, StateMachine } from "./sm.ast.d"
@@ -675,6 +678,36 @@ function augmentExampleTable(stateMachine: StateMachine, synthesizedUndefinedRow
 // --- Public API ---
 
 /**
+ * Give every transition without an id a generated one (REQ-454). Ids are zero-padded numbers
+ * starting at `000`, assigned in AST order (machine order, then transition order), skipping any
+ * number whose id an author already wrote anywhere in the AST, so a generated id never collides
+ * with a defined one. Ids compare case-insensitively.
+ *
+ * @param stateMachines All state machines of the AST (mutated in place).
+ */
+export function generateTransitionIds(stateMachines: StateMachine[]): void {
+    const taken = new Set<string>()
+    for (const stateMachine of stateMachines) {
+        for (const transition of stateMachine.transitions ?? []) {
+            if (transition.id) taken.add(transition.id.toLowerCase())
+        }
+    }
+
+    const anonymous = stateMachines.flatMap(stateMachine =>
+        (stateMachine.transitions ?? []).filter(transition => !transition.id))
+    const width = Math.max(3, String(anonymous.length).length)
+    let counter = 0
+    for (const transition of anonymous) {
+        let id = String(counter++).padStart(width, "0")
+        while (taken.has(id.toLowerCase())) {
+            id = String(counter++).padStart(width, "0")
+        }
+        taken.add(id.toLowerCase())
+        transition.id = id
+    }
+}
+
+/**
  * Completes partially-defined state-machine ASTs in place so that the rigid
  * validation pass can succeed without requiring every attribute and every
  * example-value row to be declared explicitly in the source Markdown.
@@ -691,6 +724,7 @@ function augmentExampleTable(stateMachine: StateMachine, synthesizedUndefinedRow
  *  - Augment `dataValueCombinations` so that every condition-referenced value
  *    combination is satisfied by at least one row, including the rows implied by
  *    attribute-reference conditions (REQ-426).
+ *  - Generate a unique id for every transition lacking one (REQ-454), across all machines.
  *
  * @param stateMachines Array of parsed state machines to complete (mutated in place).
  */
@@ -703,4 +737,5 @@ export function completeStateMachines(stateMachines: StateMachine[]): void {
         const synthesizedUndefinedRow = synthesiseUndefinedRows(stateMachine)
         augmentExampleTable(stateMachine, synthesizedUndefinedRow)
     }
+    generateTransitionIds(stateMachines)
 }
