@@ -7,6 +7,7 @@ import { buildTaggedTransitions, collectChainStateMachineNames, findUnresolvable
 import { pinnedLiteral } from "./conditions"
 import { effectiveExampleValues } from "./examples"
 import { buildStateOwnership } from "./ownership"
+import { buildImpliedStatesIndex, impliedStateClosure } from "./implied"
 
 /**
  * JSON Schema validation for the parsed state-machine AST, checked against
@@ -167,6 +168,7 @@ export function validateStateMachines(data: unknown): void {
     validateStateNameUniqueness(stateMachines)
     validateDataValueTableColumns(stateMachines)
     validateStructuralRefs(stateMachines)
+    validateImpliedStates(stateMachines)
     validateModifierBaseReferences(stateMachines)
     validateModifierValuePoolSize(stateMachines)
     validateReferenceOperators(stateMachines)
@@ -454,6 +456,74 @@ export function validateStructuralRefs(stateMachines: StateMachine[]): void {
                 )
             }
         }
+    }
+}
+
+/**
+ * [REQ-457] Validates implied states: each names a state declared in another state machine, none
+ * leads back to the state implying it, and no state — nor any transition naming several — ends up
+ * with two different states of the same machine.
+ *
+ * @param stateMachines Parsed state-machine AST nodes.
+ * @returns Nothing. Validation succeeds by not throwing.
+ * @throws Error When an implied state is undeclared, of the same machine, circular or contradictory.
+ */
+export function validateImpliedStates(stateMachines: StateMachine[]): void {
+    const ownership = buildStateOwnership(stateMachines)
+    const index = buildImpliedStatesIndex(stateMachines)
+
+    for (const stateMachine of stateMachines) {
+        for (const state of stateMachine.states) {
+            const context = `State machine \`${stateMachine.name}\`: State \`${state.name}\``
+            for (const impliedName of state.impliedStates ?? []) {
+                const owner = ownership[impliedName.toLowerCase()]
+                if (!owner) {
+                    throw new Error(`${context} implies state \`${impliedName}\`, which is not declared in any state machine.`)
+                }
+                if (owner === stateMachine.name) {
+                    throw new Error(
+                        `${context} implies state \`${impliedName}\` of its own state machine - implied states must belong to another state machine.`,
+                    )
+                }
+            }
+
+            const closure = impliedStateClosure(state.name, index)
+            if (closure.some((name) => impliedStateClosure(name, index).includes(state.name.toLowerCase()))) {
+                throw new Error(`${context} is implied by one of the states it implies (circular implied states).`)
+            }
+            assertSingleStatePerMachine(closure, ownership, `${context} implies two different states of the same machine`)
+        }
+
+        for (const transition of stateMachine.transitions ?? []) {
+            const names = (transition.states ?? []).flatMap(
+                (stateRef) => [stateRef.name.toLowerCase(), ...impliedStateClosure(stateRef.name, index)],
+            )
+            assertSingleStatePerMachine(
+                names, ownership,
+                `${formatTransitionContext(stateMachine.name, transition)}: Precondition states imply contradicting states`,
+            )
+        }
+    }
+}
+
+/**
+ * Throws when two different states in `stateNames` belong to the same state machine.
+ *
+ * @param stateNames Lower-cased state names that must hold together.
+ * @param ownership State ownership index.
+ * @param message Error message prefix.
+ * @throws Error Naming the machine and both states.
+ */
+function assertSingleStatePerMachine(stateNames: string[], ownership: Record<string, string>, message: string): void {
+    const seen = new Map<string, string>()
+    for (const name of stateNames) {
+        const owner = ownership[name]
+        if (!owner) continue
+        const other = seen.get(owner)
+        if (other !== undefined && other !== name) {
+            throw new Error(`${message}: \`${other}\` and \`${name}\` of state machine \`${owner}\`.`)
+        }
+        seen.set(owner, name)
     }
 }
 

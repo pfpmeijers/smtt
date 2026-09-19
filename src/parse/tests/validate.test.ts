@@ -552,3 +552,53 @@ describe("validateStateMachines business rules", () => {
         assert.doesNotThrow(() => validateStateMachines(stateMachines))
     })
 })
+
+describe("validateStateMachines implied states", () => {
+    function withImplied(...implied: string[]): StateMachine[] {
+        const stateMachines = buildValidStateMachines()
+        stateMachines[0].data = { a1: "", a2: "" }
+        stateMachines[1].data = { a1: "", a2: "" }
+        stateMachines[0].states[0].impliedStates = implied
+        return stateMachines
+    }
+
+    it("[TST-259] → [REQ-457]: accepts a state implying a state of another machine", () => {
+        assert.doesNotThrow(() => validateStateMachines(withImplied("s3")))
+    })
+
+    it("[TST-260] → [REQ-457]: rejects an implied state that is declared nowhere", () => {
+        assert.throws(
+            () => validateStateMachines(withImplied("s9")),
+            /State `s1` implies state `s9`, which is not declared in any state machine/,
+        )
+    })
+
+    it("[TST-261] → [REQ-457]: rejects an implied state of the same machine", () => {
+        assert.throws(
+            () => validateStateMachines(withImplied("s2")),
+            /State `s1` implies state `s2` of its own state machine/,
+        )
+    })
+
+    it("[TST-262] → [REQ-457]: rejects circular implied states", () => {
+        const stateMachines = withImplied("s3")
+        stateMachines[1].states[0].impliedStates = ["s1"]
+        assert.throws(() => validateStateMachines(stateMachines), /circular implied states/)
+    })
+
+    it("[TST-263] → [REQ-457]: rejects a state implying two different states of one machine", () => {
+        assert.throws(
+            () => validateStateMachines(withImplied("s3", "s4")),
+            /implies two different states of the same machine: `s3` and `s4` of state machine `m2`/,
+        )
+    })
+
+    it("[TST-264] → [REQ-457]: rejects a transition whose own states imply contradicting states", () => {
+        const stateMachines = withImplied("s3")
+        stateMachines[0].transitions![0].states = [{ name: "s1" }, { name: "s4" }]
+        assert.throws(
+            () => validateStateMachines(stateMachines),
+            /Precondition states imply contradicting states: `s3` and `s4` of state machine `m2`/,
+        )
+    })
+})

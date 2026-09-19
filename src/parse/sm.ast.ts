@@ -15,11 +15,14 @@ import {
 
 // --- Input sections not converted into output ---
 
+type ImpliedEntry = ImpliedCondition | string
+
 type StatesSection = {
     states: {
         name: string;
         description: string | null;
         impliedConditions?: ImpliedCondition[]
+        impliedStates?: string[]
     }[]
     initialState?: string
 }
@@ -228,6 +231,24 @@ function buildRangeCondition(
 // --- Whitespace cleanup ---
 
 /**
+ * Split the sub-bullets of a state declaration into its implied conditions and its implied states.
+ *
+ * @param entries Parsed sub-bullets: a condition object, or a bare state name.
+ * @returns The `impliedConditions` and `impliedStates` properties, each only when non-empty.
+ */
+function splitImpliedEntries(entries: ImpliedEntry[] | undefined): {
+    impliedConditions?: ImpliedCondition[]
+    impliedStates?: string[]
+} {
+    const impliedConditions = (entries ?? []).filter((entry): entry is ImpliedCondition => typeof entry !== "string")
+    const impliedStates = (entries ?? []).filter((entry): entry is string => typeof entry === "string")
+    return {
+        ...(impliedConditions.length > 0 ? { impliedConditions } : {}),
+        ...(impliedStates.length > 0 ? { impliedStates } : {})
+    }
+}
+
+/**
  * Normalizes whitespace in text by replacing HTML breaks and collapsing spaces.
  *
  * Removes HTML `<br>` tags, collapses multiple whitespace sequences into single
@@ -317,9 +338,12 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             const title = titleNode.toAST() as string
             const stateSection = statesNode.toAST() as StatesSection
             const states = stateSection.states.map(state => {
-                const { impliedConditions, ...rest } = state
-                if (!impliedConditions?.length) return rest as StateDefinition
-                return { ...rest, impliedConditions } as StateDefinition
+                const { impliedConditions, impliedStates, ...rest } = state
+                return {
+                    ...rest,
+                    ...(impliedConditions?.length ? { impliedConditions } : {}),
+                    ...(impliedStates?.length ? { impliedStates } : {})
+                } as StateDefinition
             }) as [StateDefinition, ...StateDefinition[]]
             const dataSection = dataNode.children[0]?.toAST() as DataSection | undefined
             const transitions = transitionsNode.toAST() as TransitionsSection
@@ -380,11 +404,10 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
         },
 
         stateDeclaration_withoutDescription(_li, nameNode, _commentOpt, _nl, impliedConditionsNode) {
-            const impliedConditions = impliedConditionsNode.toAST() as ImpliedCondition[]
             return {
                 name: nameNode.toAST() as string,
                 description: null,
-                ...(impliedConditions && impliedConditions.length > 0 ? { impliedConditions } : {})
+                ...splitImpliedEntries(impliedConditionsNode.toAST() as ImpliedEntry[])
             }
         },
 
@@ -396,11 +419,10 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
         },
 
         stateDeclaration_withDescription(_li, nameNode, descriptionNode, impliedConditionsOpt) {
-            const impliedConditions = impliedConditionsOpt.children[0]?.toAST() as ImpliedCondition[] | undefined
             return {
                 name: nameNode.toAST() as string,
                 description: descriptionNode.toAST() as string | null,
-                ...(impliedConditions && impliedConditions.length > 0 ? { impliedConditions } : {})
+                ...splitImpliedEntries(impliedConditionsOpt.children[0]?.toAST() as ImpliedEntry[] | undefined)
             }
         },
 
@@ -429,8 +451,16 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             return nameNode.toAST() as string
         },
 
-        impliedConditions(_bulletIter, conditionsIter, _commentIter, _eolIter) {
-            return conditionsIter.children.map((node: ohm.NonterminalNode) => node.toAST())
+        impliedConditions(_bulletIter, entriesIter, _commentIter, _eolIter) {
+            return entriesIter.children.map((node: ohm.NonterminalNode) => node.toAST())
+        },
+
+        impliedEntry_condition(conditionNode) {
+            return conditionNode.toAST() as ImpliedCondition
+        },
+
+        impliedEntry_state(nameNode) {
+            return nameNode.toAST() as string
         },
 
         // --- Data ---

@@ -235,6 +235,28 @@ validating.
   address, even though the scenario starts with the user unauthenticated and
   `user email address` undefined.
 
+## Implied states annotation
+
+A state may declare implied states: states of other machines that hold whenever
+it does (see `sm.spec.md`). Which states a transition thereby carries is a
+property of the parsed model, so the parse step records it.
+
+- [REQ-456] Every transition shall carry the states its own explicit
+  precondition states imply, directly or transitively, foundation first: each
+  state follows the states it implies itself, so the list reads in the order
+  the states are established. A state whose
+  owning machine the transition already names, or an earlier implied state
+  already names, is left out: the transition's own state stands for that
+  machine, and REQ-457 rejects the case where the two differ. A transition
+  implying nothing carries no annotation. Each implied state records the
+  explicit state of the transition that implies it, so a consumer can place it
+  right before that state.
+
+  The annotation is derived data, like the expansion annotation (REQ-431). It
+  is computed from the state declarations alone, and only from the transition's
+  explicit states — not from default preconditions, the implied initial state
+  or the result.
+
 ## Transitions report
 
 With `--debug`, the parse step writes `transitions.txt` beside the AST: every

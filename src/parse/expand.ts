@@ -14,7 +14,7 @@ import { resultingColumnName } from "./arguments"
 import { evaluateCondition } from "./conditions"
 import { buildStateOwnership, ownerOfStateName, ownerOfStateRef, type StateOwnershipIndex } from "./ownership"
 import type {
-    Argument, DefaultPrecondition, ExpansionSourceRef, StateMachine, StateRef, Transition, Trigger,
+    Argument, DefaultPrecondition, ExpansionSourceRef, ImpliedState, StateMachine, StateRef, Transition, Trigger,
 } from "./sm.ast.d"
 
 /** Guard against runaway recursion through (near-)cyclic expansion chains. */
@@ -512,4 +512,210 @@ export function annotateExpansions(stateMachines: StateMachine[]): void {
         )
         transition.expansion = chains.map((chain) => ({ sources: chain.map(sourceReference) }))
     }
+}
+
+// --- Default preconditions and implied initial state ---
+
+// --- Implied initial state ---
+
+/**
+ * Effective initial state name of a state machine: its declared `initialState`, falling back
+ * to the first declared state when not set (REQ-133/REQ-134).
+ *
+ * @param stateMachine State machine to inspect.
+ * @returns The initial state name, or `undefined` when the state machine declares no states.
+ */
+function initialStateName(stateMachine: StateMachine): string | undefined {
+    return stateMachine.initialState ?? stateMachine.states[0]?.name
+}
+
+/**
+ * Whether a transition already has a precondition state within its own state machine's state
+ * space — either through its explicit states, or through a default precondition naming a state
+ * owned by that same state machine (REQ-036/REQ-132).
+ *
+ * Default preconditions naming a state of another state machine (or an unmodeled/foreign label) do
+ * not count: they do not populate the state machine's own state space, so they must not suppress the
+ * implied initial state fallback.
+ *
+ * @param transitionStates Explicit states of the transition.
+ * @param defaultPreconditions Default preconditions of the transition's state machine.
+ * @param stateMachine State machine that owns the transition.
+ * @param ownership State ownership index.
+ * @returns Whether an own state machine precondition state is already present.
+ */
+function hasOwnPreconditionState(
+    transitionStates: StateRef[],
+    defaultPreconditions: DefaultPrecondition[],
+    stateMachine: StateMachine,
+    ownership: StateOwnershipIndex,
+): boolean {
+    const isOwnState = (stateName: string) => ownerOfStateName(stateName, ownership) === stateMachine.name
+    return transitionStates.some((stateRef) => isOwnState(stateRef.name))
+        || defaultPreconditions.some((precondition) => isOwnState(precondition.state))
+}
+
+/**
+ * Implied own precondition state of a transition (REQ-132): the state machine's effective initial
+ * state, implied whenever the transition has no precondition state within its own state machine's
+ * state space.
+ *
+ * @param transitionStates Explicit states of the transition.
+ * @param defaultPreconditions Default preconditions of the transition's state machine.
+ * @param stateMachine State machine that owns the transition.
+ * @param ownership State ownership index.
+ * @returns A single-element list with the implied initial state, or an empty list when an own
+ *   precondition state is already present or the state machine declares no states at all.
+ */
+export function impliedInitialStateRefs(
+    transitionStates: StateRef[],
+    defaultPreconditions: DefaultPrecondition[],
+    stateMachine: StateMachine,
+    ownership: StateOwnershipIndex,
+): StateRef[] {
+    if (hasOwnPreconditionState(transitionStates, defaultPreconditions, stateMachine, ownership)) return []
+    const initialState = initialStateName(stateMachine)
+    return initialState ? [{ name: initialState }] : []
+}
+
+// --- Effective given states ---
+
+/**
+ * Convert a default precondition declaration into a state references for a `Given` list.
+ *
+ * @param precondition Default precondition to convert.
+ * @returns The corresponding state references.
+ */
+export function defaultPreconditionToStateRef(precondition: DefaultPrecondition): StateRef {
+    return {
+        name: precondition.state,
+        ...(precondition.arguments ? { arguments: precondition.arguments } : {}),
+    }
+}
+
+/**
+ * Default preconditions whose owning state machine is not already pinned down by one of
+ * `representedStates` (REQ-036): a default precondition only fills in a state machine that
+ * nothing else already speaks for. Applying this consistently wherever default preconditions are
+ * injected prevents a default from contradicting a state already established for the same state
+ * machine by other means (e.g. an explicit state on a state-trigger expansion source).
+ *
+ * @param defaultPreconditions Default preconditions to filter.
+ * @param representedStates States that already pin down their owning state machines.
+ * @param ownership State ownership index.
+ * @returns The default preconditions not already represented.
+ */
+export function unrepresentedDefaultPreconditions(
+    defaultPreconditions: DefaultPrecondition[],
+    representedStates: StateRef[],
+    ownership: StateOwnershipIndex,
+): DefaultPrecondition[] {
+    const representedStateMachines = new Set<string>()
+    for (const stateRef of representedStates) {
+        const owner = ownerOfStateRef(stateRef, ownership)
+        if (owner) representedStateMachines.add(owner)
+    }
+    return defaultPreconditions.filter((precondition) => {
+        const owner = ownerOfStateName(precondition.state, ownership)
+        return !(owner && representedStateMachines.has(owner))
+    })
+}
+
+
+/** A transition's preconditions beyond its own explicit states, split by where they are placed. */
+export interface PreconditionGroups {
+    /**
+     * The leading group (REQ-035): the default preconditions binding the transition (REQ-036), in
+     * declared order. A default whose machine one of the transition's implied states speaks for is
+     * replaced, in its place, by that implied state (REQ-458).
+     */
+    leading: StateRef[]
+    /** The implied states not placed in the leading group: each goes right before its implying state. */
+    implied: ImpliedState[]
+}
+
+/**
+ * Resolve the preconditions a transition carries beyond its own explicit states: its binding
+ * default preconditions, and the states its own states imply.
+ *
+ * A default applies unless the transition speaks for its machine itself — through an explicit
+ * state or the implied initial state (REQ-036) — decided on the states the transition declares,
+ * whatever an expansion path later does with them. Otherwise an implied state of that machine
+ * stands in for the default (REQ-458), taking its place in the leading group.
+ *
+ * @param transition Transition to resolve.
+ * @param defaults Default preconditions of the state machine owning `transition`.
+ * @param stateMachine State machine owning `transition`.
+ * @param ownership State ownership index.
+ * @returns The leading group and the implied states left to place beside their implying states.
+ */
+export function preconditionGroups(
+    transition: Transition,
+    defaults: DefaultPrecondition[],
+    stateMachine: StateMachine,
+    ownership: StateOwnershipIndex,
+): PreconditionGroups {
+    const declaredStates = transition.states ?? []
+    const impliedStates = transition.impliedStates ?? []
+    const represented = new Set<string>()
+    for (const stateRef of [...impliedInitialStateRefs(declaredStates, defaults, stateMachine, ownership), ...declaredStates]) {
+        const owner = ownerOfStateRef(stateRef, ownership)
+        if (owner) represented.add(owner)
+    }
+
+    const leading: StateRef[] = []
+    const placed = new Set<ImpliedState>()
+    const standInOwners = new Set<string>()
+    for (const precondition of defaults) {
+        const owner = ownerOfStateName(precondition.state, ownership)
+        if (owner && (represented.has(owner) || standInOwners.has(owner))) continue
+        const standIn = owner ? impliedStates.find((entry) => ownerOfStateName(entry.name, ownership) === owner) : undefined
+        if (standIn && owner) {
+            placed.add(standIn)
+            standInOwners.add(owner)
+            leading.push({ name: standIn.name })
+        } else {
+            leading.push(defaultPreconditionToStateRef(precondition))
+        }
+    }
+    return { leading, implied: impliedStates.filter((entry) => !placed.has(entry)) }
+}
+
+/**
+ * The preconditions that bind a transition beyond its own explicit states: the default
+ * preconditions and implied states of `preconditionGroups`. Unlike a state an expansion path
+ * injects, a binding precondition is not overridden by the chain that reaches the trigger: an
+ * expansion path starting from a different state of the same machine cannot explain the
+ * transition (REQ-455).
+ *
+ * @param transition Transition to resolve the binding preconditions of.
+ * @param stateMachine State machine owning `transition`.
+ * @param ownership State ownership index.
+ * @returns The binding preconditions as state references. The order is not the scenario's.
+ */
+export function bindingStateRefs(
+    transition: Transition,
+    stateMachine: StateMachine,
+    ownership: StateOwnershipIndex,
+): StateRef[] {
+    const { leading, implied } = preconditionGroups(transition, stateMachine.defaultPreconditions ?? [], stateMachine, ownership)
+    return [...leading, ...implied.map(({ name }) => ({ name }))]
+}
+
+/**
+ * Whether `state` names a different state than another of `others` for the same owning state
+ * machine. Same-name references (regardless of arguments) are not a conflict: a more specific
+ * reference alongside a plainer one is additional detail, not a contradiction.
+ *
+ * @param state State reference to check.
+ * @param others State references to compare against.
+ * @param ownership State ownership index.
+ * @returns Whether `state` conflicts with one of `others`.
+ */
+export function conflictsWithAnyState(state: StateRef, others: StateRef[], ownership: StateOwnershipIndex): boolean {
+    const owner = ownerOfStateRef(state, ownership)
+    if (!owner) return false
+    return others.some((other) =>
+        ownerOfStateRef(other, ownership) === owner && other.name.toLowerCase() !== state.name.toLowerCase(),
+    )
 }

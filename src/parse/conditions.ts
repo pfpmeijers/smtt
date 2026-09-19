@@ -6,7 +6,7 @@
  * machine set, independent of what a consumer does with the answer.
  */
 
-import type { Condition, ImpliedCondition, Result, StateRef, Transition } from "./sm.ast.d"
+import type { Argument, Condition, ImpliedCondition, Result, StateRef, Transition } from "./sm.ast.d"
 import type { ExpansionSourceStep } from "./expand"
 import type { ImpliedConditionsIndex } from "./ownership"
 
@@ -327,4 +327,38 @@ export function impliedResultValue(condition: Condition): Result | undefined {
     if (condition.operator === "undefined") return {}
     const literal = pinnedLiteral(condition)
     return literal === undefined ? undefined : { value: literal }
+}
+
+/**
+ * Whether a result argument says only what its result state's name already says (REQ-442): the
+ * state's implied conditions pin the attribute to one concrete value — absent via `undefined`, or
+ * a literal via `=` — and the argument assigns exactly that value, so its `resulting
+ * $attribute-name` column holds the same cell in every row by construction.
+ *
+ * The pin is read through `impliedResultValue`, the same helper completion uses to synthesise
+ * these arguments (REQ-434), so rendering hides exactly what completion adds and the two cannot
+ * drift apart. An argument assigning anything else — a different literal, or a reference whose
+ * value is not statically known — is left rendered, a contradiction included, which REQ-433
+ * reports rather than hides.
+ *
+ * A modifier argument is never suppressed: it renders a derived column of its own rather than the
+ * `resulting` one, so the implied condition says nothing about the value it shows.
+ *
+ * @param stateRef Result state references the argument belongs to.
+ * @param argument Argument to test.
+ * @param impliedIndex Implied conditions per state name.
+ * @returns Whether the argument is left out of the rendered step.
+ */
+export function isRedundantPinnedResult(
+    stateRef: StateRef,
+    argument: Argument,
+    impliedIndex: ImpliedConditionsIndex,
+): boolean {
+    const result = argument.result
+    if (argument.modifier || !result || result.valueIsReference) return false
+    return (impliedIndex[stateRef.name.toLowerCase()] ?? []).some((implied) => {
+        if (implied.attribute.toLowerCase() !== argument.name.toLowerCase()) return false
+        const pinned = impliedResultValue(implied.condition)
+        return pinned !== undefined && pinned.value === result.value
+    })
 }

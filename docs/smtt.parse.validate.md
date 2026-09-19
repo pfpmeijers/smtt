@@ -273,3 +273,11 @@ ready-made.
   Only the `defined` case is unaffected: REQ-434 assigns no value for it,
   since it pins none, so it remains reachable through an unset or
   precondition-carried attribute exactly as described above.
+
+- [REQ-457] Every implied state of a state definition shall resolve to a state
+  declared in the AST, in a different machine than the implying state. Implied
+  states shall not be circular: no state may be reachable from itself through
+  its implied states. A state shall not imply, directly or transitively, two
+  different states of the same machine, and neither shall the explicit
+  precondition states of one transition together. Such combinations cannot hold
+  at once, so they are reported rather than resolved in favour of one state.

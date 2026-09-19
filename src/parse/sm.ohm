@@ -61,12 +61,18 @@ StateMachine {
   initialStateCaption
     = "Initial state:" hsp?
 
-  // --- Implied conditions ---
+  // --- Implied conditions and states ---
 
-  // One or more sub-bullet conditions that follow a state declaration.
-  // Each bullet carries exactly one attribute-condition pair.
+  // One or more sub-bullets that follow a state declaration. Each bullet carries exactly one
+  // attribute-condition pair, or one bare state name: a state of another machine that holds
+  // whenever this state does. A condition is tried first; a state name has no operator after it,
+  // so nothing that is a condition can be read as a state.
   impliedConditions
-    = (sublistItem conditionalAttributeExpression comment? eol)+
+    = (sublistItem impliedEntry comment? eol)+
+
+  impliedEntry
+    = conditionalAttributeExpression -- condition
+    | identifier                     -- state
 
   // --- Data section (optional) ---
 

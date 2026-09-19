@@ -1,4 +1,4 @@
-import { type StateMachines } from "../../../parse"
+import { annotateImpliedStates, type StateMachines } from "../../../parse"
 import { generateTransitionIds } from "../../../parse/complete"
 import { renderFeatures } from "../../features"
 import { slugifyName } from "./test"
@@ -13,6 +13,8 @@ import { slugifyName } from "./test"
 export function createFeatures(stateMachines: StateMachines): Record<string, string> {
     // Hand-built ASTs skip the parse step's completion, so give anonymous transitions the ids it would (REQ-454).
     generateTransitionIds(stateMachines)
+    // ...and the implied states the parse step records on each transition (REQ-456).
+    annotateImpliedStates(stateMachines)
     const featuresMap = renderFeatures(stateMachines)
 
     const featuresRecord: Record<string, string> = {}

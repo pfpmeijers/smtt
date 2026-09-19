@@ -589,6 +589,87 @@
   irrelevant: []
   initialState: article drafted
   source: smtt/src/parse/tests/state-machines/generated-value-combinations.state-machine.md
+- name: m1
+  overview: A state implying a state of another machine, which itself implies a
+    state of a third machine.
+  states:
+    - name: s1
+      description: Implies a state of m2, and holds a value.
+      impliedConditions:
+        - attribute: a1
+          condition:
+            operator: defined
+      impliedStates:
+        - s3
+    - name: s2
+  data:
+    a1: ""
+  dataValueCombinations:
+    - a1: ""
+  defaultPreconditions: []
+  transitions:
+    - states:
+        - name: s1
+      trigger:
+        name: e1
+        type: event
+      result:
+        name: s2
+      id: "027"
+      impliedStates:
+        - name: s5
+          by: s1
+        - name: s3
+          by: s1
+  impossible:
+    defined: []
+  irrelevant: []
+  source: smtt/src/parse/tests/state-machines/implied-states-m1.state-machine.md
+- name: m2
+  states:
+    - name: s3
+      impliedStates:
+        - s5
+    - name: s4
+  data: {}
+  dataValueCombinations: []
+  defaultPreconditions: []
+  transitions:
+    - states:
+        - name: s3
+      trigger:
+        name: e2
+        type: event
+      result:
+        name: s4
+      id: "028"
+      impliedStates:
+        - name: s5
+          by: s3
+  impossible:
+    defined: []
+  irrelevant: []
+  source: smtt/src/parse/tests/state-machines/implied-states-m2.state-machine.md
+- name: m3
+  states:
+    - name: s5
+    - name: s6
+  data: {}
+  dataValueCombinations: []
+  defaultPreconditions: []
+  transitions:
+    - states:
+        - name: s5
+      trigger:
+        name: e3
+        type: event
+      result:
+        name: s6
+      id: "029"
+  impossible:
+    defined: []
+  irrelevant: []
+  source: smtt/src/parse/tests/state-machines/implied-states-m3.state-machine.md
 - name: list form transitions
   overview: "Exercises the bulleted list-form alternative for transition rules:
     mixed with the table form in the same Rules subsection, an inline id
@@ -613,7 +694,7 @@
       result:
         name: listed active
       notes: Table row
-      id: "027"
+      id: "030"
     - id: "002"
       states:
         - name: listed active
@@ -668,7 +749,7 @@
         type: event
       result:
         name: idle
-      id: "028"
+      id: "031"
   impossible:
     defined: []
   irrelevant: []
@@ -775,7 +856,7 @@
           - qualifier: for
             name: customer id
       notes: Event with argument parsing.
-      id: "029"
+      id: "032"
     - states:
         - name: reserved stock
           arguments:
@@ -798,7 +879,7 @@
       result:
         name: completed
       notes: Range condition and modifier.
-      id: "030"
+      id: "033"
     - states:
         - name: reserved stock
           arguments:
@@ -816,7 +897,7 @@
       result:
         name: awaiting payment
       notes: Set-negation condition.
-      id: "031"
+      id: "034"
     - states:
         - name: reserved stock
       trigger:
@@ -836,7 +917,7 @@
             name: quantity
             suffix: of 1 unit
       notes: Argument suffix text is preserved.
-      id: "032"
+      id: "035"
   impossible:
     defined:
       - states:
@@ -887,7 +968,7 @@
         type: event
       result:
         name: session active
-      id: "033"
+      id: "036"
     - states:
         - name: user authenticated
       trigger:
@@ -895,7 +976,7 @@
         type: event
       result:
         name: session active
-      id: "034"
+      id: "037"
   impossible:
     defined: []
   irrelevant: []

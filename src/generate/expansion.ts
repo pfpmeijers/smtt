@@ -3,14 +3,18 @@ import type {
     Transition, Trigger,
 } from "../parse"
 import {
+    bindingStateRefs,
     buildTaggedTransitions,
+    conflictsWithAnyState,
     findExpansionSources,
     findResultNameMatches,
     hasUnresolvableStateTrigger,
     MAX_EXPANSION_DEPTH,
     ownerOfStateName,
     ownerOfStateRef,
+    preconditionGroups,
     resolvableExpansionSources,
+    withImpliedStates,
     type ExpansionSourceStep,
     type TaggedTransition,
 } from "../parse"
@@ -25,7 +29,7 @@ export {
     resolvableExpansionSources,
 }
 export type { ExpansionSourceStep, TaggedTransition }
-import { defaultPreconditionToStateRef, impliedInitialStateRefs, unrepresentedDefaultPreconditions } from "./givens"
+import { impliedInitialStateRefs } from "./givens"
 import { stateRefText, triggerText } from "./text"
 
 /**
@@ -82,10 +86,12 @@ export interface ExpansionPath {
 function sourceGivenStates(source: TaggedTransition, ownership: StateOwnershipIndex): StateRef[] {
     const sourceStates = source.transition.states ?? []
     const sourceDefaultPreconditions = source.stateMachine.defaultPreconditions ?? []
-    const effectiveDefaultPreconditions = unrepresentedDefaultPreconditions(sourceDefaultPreconditions, sourceStates, ownership)
+    const { leading, implied } = preconditionGroups(
+        source.transition, sourceDefaultPreconditions, source.stateMachine, ownership,
+    )
     return [
-        ...effectiveDefaultPreconditions.map(defaultPreconditionToStateRef),
-        ...sourceStates,
+        ...leading,
+        ...withImpliedStates(sourceStates, implied),
         ...impliedInitialStateRefs(sourceStates, sourceDefaultPreconditions, source.stateMachine, ownership),
     ]
 }
@@ -246,7 +252,7 @@ export function expandStateTrigger(
 
     const nextStack = new Set(expansionStack)
     if (currentTransition) nextStack.add(currentTransition)
-    return sources.flatMap((source) => {
+    const paths = sources.flatMap((source) => {
         const sourceStep: ExpansionSourceStep = {
             stateMachineName: source.stateMachineName,
             transition: source.transition,
@@ -280,6 +286,32 @@ export function expandStateTrigger(
             sourceChain: [...path.sourceChain, sourceStep],
         }))
     })
+    return depth === 0 ? withoutPathsContradictingBinding(paths, currentTransition, ownership, taggedTransitions) : paths
+}
+
+/**
+ * Drop the paths whose injected states contradict the top-level transition's binding
+ * preconditions (REQ-455/REQ-458): its default preconditions and the states its own states imply.
+ * A default is shorthand for stating that precondition on the transition, so a chain that starts
+ * from a different state of the same machine cannot explain it.
+ *
+ * @param paths Resolved paths of the top-level transition's state trigger.
+ * @param transition The top-level transition, or `null` when there is none.
+ * @param ownership State ownership index.
+ * @param taggedTransitions All transitions of all state machines.
+ * @returns The paths compatible with the transition's binding preconditions.
+ */
+function withoutPathsContradictingBinding(
+    paths: ExpansionPath[],
+    transition: Transition | null,
+    ownership: StateOwnershipIndex,
+    taggedTransitions: TaggedTransition[],
+): ExpansionPath[] {
+    const owner = taggedTransitions.find((tagged) => tagged.transition === transition)
+    if (!transition || !owner) return paths
+    const binding = bindingStateRefs(transition, owner.stateMachine, ownership)
+    if (binding.length === 0) return paths
+    return paths.filter((path) => !path.injectedGivenStates.some((injected) => conflictsWithAnyState(injected, binding, ownership)))
 }
 
 // --- Chain analysis ---

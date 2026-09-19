@@ -15,9 +15,12 @@ import {
     collectChainFilterConditions,
     collectImpliedFilterConditionsForGivens,
     describeFilterCondition,
+    isRedundantPinnedResult,
 } from "./conditions"
 import {
     bindResult,
+    bindingStateRefs,
+    preconditionGroups,
     buildTaggedTransitions,
     chainArgumentBindings,
     findExpansionSources,
@@ -37,6 +40,7 @@ import {
     type ExampleRow,
 } from "./examples"
 import { collectDistinguishedValues, groupEquivalentRows, type DistinguishedValues } from "./equivalence"
+import { withImpliedStates } from "./implied"
 import {
     buildImpliedConditionsIndex,
     buildStateOwnership,
@@ -463,7 +467,7 @@ function renderExamplesLines(
     const pad = " ".repeat(indent)
     const columns = collectPathExampleColumns(rootStateMachine.name, rootStateMachine.defaultPreconditions ?? [], root, sourceChain)
         .filter((column) => renderedNames.has(column.name))
-    if (columns.length === 0) return [`${pad}Examples: (none — plain Scenario)`]
+    if (columns.length === 0) return [`${pad}  Examples: (none — plain Scenario)`]
 
     const contributingStateMachines = new Set([
         rootStateMachine.name, ...sourceChain.map((step) => step.stateMachineName),
@@ -539,7 +543,7 @@ function renderResolvedLeaf(
 
     const renderedNames = renderedPlaceholderNames(
         [rootStateMachine.defaultPreconditions ?? [], ...sourceChain.map((step) => step.defaultPreconditions)].flat(),
-        mergedGivens, leafTrigger, results,
+        mergedGivens, leafTrigger, results, context.impliedIndex,
     )
     lines.push(...renderExamplesLines(root, rootStateMachine, sourceChain, mergedGivens, context, indent, renderedNames))
     return lines
@@ -554,6 +558,8 @@ function renderResolvedLeaf(
  * @param givens The scenario's precondition states.
  * @param trigger The scenario's `When` trigger.
  * @param results The scenario's results, in step order.
+ * @param impliedIndex Implied conditions per state name: a result argument the generated step leaves
+ *   out (REQ-442) renders no placeholder either.
  * @returns The rendered placeholder names.
  */
 function renderedPlaceholderNames(
@@ -561,6 +567,7 @@ function renderedPlaceholderNames(
     givens: StateRef[],
     trigger: Trigger,
     results: StateRef[],
+    impliedIndex: ImpliedConditionsIndex,
 ): Set<string> {
     const names = (args: Argument[] | undefined, isResult: boolean): string[] =>
         (args ?? []).map((argument) => attributePlaceholderName(argument, isResult))
@@ -568,7 +575,9 @@ function renderedPlaceholderNames(
         ...defaultPreconditions.flatMap((precondition) => names(precondition.arguments, false)),
         ...givens.flatMap((stateRef) => names(stateRef.arguments, false)),
         ...names(trigger.arguments, false),
-        ...results.flatMap((result) => names(result.arguments, true)),
+        ...results.flatMap((result) => names(
+            (result.arguments ?? []).filter((argument) => !isRedundantPinnedResult(result, argument, impliedIndex)), true,
+        )),
     ])
 }
 
@@ -631,7 +640,10 @@ function renderMachineGroup(
         const candidateLeafCounter = isRootLevel ? { count: 0 } : leafCounter
         const candidateRootStateMachine = taggedTransitions.find((tagged) => tagged.transition === candidateRoot)!.stateMachine
 
-        const tagged = tagPreconditions(candidate.states ?? [], accumulated, ownership)
+        // A root's binding preconditions (defaults and implied states) are part of its context from the start, so an
+        // expansion source contradicting one is a conflict (REQ-455).
+        const context = isRootLevel ? bindingStateRefs(candidate, candidateRootStateMachine, ownership) : accumulated
+        const tagged = tagPreconditions(candidate.states ?? [], context, ownership)
         const hasConflict = tagged.some((precond) => precond.tag === "conflict")
 
         const canRecurse = !hasConflict
@@ -655,13 +667,18 @@ function renderMachineGroup(
                 candidateRoot, candidateRootStateMachine, [], givens, exampleContext, bulletIndent,
                 renderedPlaceholderNames(
                     candidateRootStateMachine.defaultPreconditions ?? [], givens, candidate.trigger, [candidate.result],
+                    exampleContext.impliedIndex,
                 ),
             ))
         }
 
         if (hasConflict) continue
 
-        const mergedGivens = mergeGivens(accumulated, candidate.states ?? [], ownership)
+        // The root's context orders defaults first; its implied states are placed with its own states.
+        const groups = isRootLevel
+            ? preconditionGroups(candidate, candidateRootStateMachine.defaultPreconditions ?? [], candidateRootStateMachine, ownership)
+            : { leading: accumulated, implied: candidate.impliedStates ?? [] }
+        const mergedGivens = mergeGivens(groups.leading, withImpliedStates(candidate.states ?? [], groups.implied), ownership)
         const candidateStateMachine = taggedTransitions.find((tagged) => tagged.transition === candidate)!.stateMachine
         const nextSourceChain: ExpansionSourceStep[] = depth === 0 ? [] : [...sourceChain, {
             stateMachineName, transition: candidate, defaultPreconditions: candidateStateMachine.defaultPreconditions ?? [],

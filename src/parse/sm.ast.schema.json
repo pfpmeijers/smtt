@@ -137,12 +137,35 @@
             "$ref": "#/definitions/ImpliedCondition"
           }
         },
+        "impliedStates": {
+          "type": "array",
+          "description": "Names of states of other state machines that hold whenever this state does, declared as indented sub-bullets holding a bare state name. Resolved transitively, and binding: a transition naming this state as a precondition also has these states as preconditions.",
+          "items": {
+            "type": "string"
+          }
+        },
         "sourceLine": {
           "type": ["integer", "null"],
           "description": "The 1-based line number within the source file defining this state."
         }
       },
       "required": ["name"],
+      "additionalProperties": false
+    },
+    "ImpliedState": {
+      "type": "object",
+      "description": "A precondition state carried by a transition because one of the states it names implies it, directly or through other implied states.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The plain text name of the implied state."
+        },
+        "by": {
+          "type": "string",
+          "description": "The name of the transition's own precondition state whose implied states include this one. The implied state is placed right before that state in the scenario's preconditions."
+        }
+      },
+      "required": ["name", "by"],
       "additionalProperties": false
     },
     "ImpliedCondition": {
@@ -187,6 +210,13 @@
         "notes": {
           "type": "string",
           "description": "Additional context or side effects for the transition. Optional."
+        },
+        "impliedStates": {
+          "type": "array",
+          "description": "Precondition states this transition carries beyond its own `states`: the states implied, transitively, by the states it names, each recorded with the state of the transition that implies it. Derived data, recorded by the parse step. A state of a machine the transition already names is not repeated. Absent when nothing is implied.",
+          "items": {
+            "$ref": "#/definitions/ImpliedState"
+          }
         },
         "expansion": {
           "type": "array",

@@ -19,8 +19,8 @@ Each state machine file must follow this general structure:
 1.  **Title (H1)**: The name of the state machine.
 2.  **Overview (Optional)**: A brief description of the state machine's
     purpose.
-3.  **States (H2)**: A bulleted list of possible states, and implied data
-    conditions.
+3.  **States (H2)**: A bulleted list of possible states, with their implied
+    data conditions and implied states.
 4.  **Initial State**: The state in which the state machine starts.
 5.  **Data (H2, Optional)**: Data associated with the state machine, with
     optional subsections — either one of:
@@ -115,6 +115,56 @@ Examples:
 - `Painting sold`
   - `sale price` > 0
 ```
+
+### Implied states
+
+Some states imply that a state of *another* state machine holds. Declare these
+as indented sub-bullets under the state entry, next to any implied conditions.
+
+- **Format**: Place one implied state per sub-bullet (indented `-`), holding
+  only the state's name between backticks. A sub-bullet with an operator after
+  the backticked name is an [implied condition](#implied-conditions) instead.
+- **Another machine**: The implied state must be declared in a different state
+  machine than the state implying it.
+- **Transitive**: An implied state's own implied states hold too. A state
+  implying `User authenticated`, which implies `User session present`, thereby
+  implies both.
+- **Binding**: A transition naming the state as a precondition has its implied
+  states as preconditions as well. Each implied state is placed right before
+  the state implying it, foundation first: each follows the states it implies
+  itself. States the transition names without implying anything keep their
+  place. A scenario reaching the transition's trigger
+  through a state that contradicts one of them cannot explain the transition
+  and is left out.
+- **Overrides defaults**: An implied state stands for its machine, so the
+  [default precondition](#default-preconditions) of that machine is not added
+  for a transition naming the implying state, and takes that default's place at
+  the front of the transition's preconditions. This gives per-state control over
+  what a default would supply for every transition.
+- **Explicit wins**: When the transition names a state of the implied state's
+  machine itself, that state stands for the machine and the implied one is not
+  added. Naming a *different* state of that machine than the one implied is a
+  contradiction, and an error.
+- **Errors**: An implied state is an error when it is declared nowhere, belongs
+  to the same machine, leads back to the state implying it, or names — together
+  with another implied state — two different states of one machine.
+
+Example:
+
+```markdown
+## States
+
+- `Unnamed user profile available`: User authenticated, no user name known.
+  - `User authenticated`
+  - `profile email address` defined
+  - `profile user name` undefined
+- `User profile unavailable`
+```
+
+With `User authenticated` declared in another machine as implying
+`User session present`, a transition whose `States` names
+`Unnamed user profile available` also has `User session present` and
+`User authenticated` as preconditions, ahead of the profile state itself.
 
 ### Initial state
 
@@ -272,7 +322,12 @@ Declare default precondition states per dependent state machine.
   about the precondition, in same way as for other descriptions.
 - **Behavior**: Consider the listed default state (with its arguments, if any)
   as prepended to every transition rule that does not explicitly mention a
-  state belonging to this same state machine.
+  state belonging to this same state machine. It is shorthand for writing that
+  state on every such rule, so it is binding: a scenario reaching the rule
+  through a different state of the same machine cannot explain the rule and is
+  left out. To vary it for one rule, name that machine's state on the rule; to
+  vary it for every rule naming a given state, declare an
+  [implied state](#implied-states) on that state.
 - **Controlling order**: Declare multiple default preconditions in their 
   intended order.
 - **Empty block**: Write `None` below `### Default preconditions` when there are

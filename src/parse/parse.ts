@@ -17,6 +17,7 @@ import { createSemantics, saveStateMachines } from "./sm.ast"
 import type { StateMachine, Trigger } from "./sm.ast.d"
 import { completeStateMachines } from "./complete"
 import { annotateExpansions } from "./expand"
+import { annotateImpliedStates } from "./implied"
 import { writeTransitionsReport } from "./transitions"
 import { validateStateMachines } from "./validate"
 
@@ -166,6 +167,7 @@ export function parse(inputDir: string, astFile?: string, options: ParseOptions 
     // FIXME: Expect a validate-minimal-AST here.
     completeStateMachines(stateMachines)
     validateStateMachines(stateMachines)
+    annotateImpliedStates(stateMachines)
     annotateExpansions(stateMachines)
     if (astFile) {
         const astDir = path.dirname(astFile)

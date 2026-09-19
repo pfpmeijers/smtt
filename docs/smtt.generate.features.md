@@ -91,9 +91,9 @@ The scenario steps shall be generated from the transition information:
     order: the state machine's default preconditions first (in their declared
     array order), then the implied initial state (REQ-132) — a synthetic 
     fallback used only when no state else already represents the owning 
-    state machine, then the transition's own explicit states (in their declared 
-    array order), then any states injected by state-trigger expansion 
-    (REQ-114/REQ-115).
+    state machine, then the transition's own explicit states (in their declared
+    array order), each preceded by the states it implies (REQ-458), then any
+    states injected by state-trigger expansion (REQ-114/REQ-115).
   
   - [REQ-036] A default precondition state shall only be used when the
     transition does not already mention a state from the same owning
@@ -106,6 +106,26 @@ The scenario steps shall be generated from the transition information:
     at the front with the other defaults — letting a single transition
     force a custom precondition order for itself.
   
+  - [REQ-455] A default precondition that binds a transition — one no state of
+    the transition itself speaks for (REQ-036) — is shorthand for writing that
+    state on the transition, so it holds for the whole scenario. An expansion
+    path whose injected states contradict it (a different state of the same
+    owning state machine) shall not explain the transition: that path is
+    dropped, and a transition left with no path generates no scenario. The
+    default is never dropped in favour of the path.
+
+  - [REQ-458] The states a transition's own explicit states imply (REQ-456)
+    shall each sit right before the explicit state implying them in the `Given`
+    steps, foundation first, so the steps read in the order the states are
+    established. Explicit states without implied states keep their place. They bind like a default precondition (REQ-455): an
+    expansion path contradicting one is dropped. Being declared per state, an
+    implied state substitutes for the default precondition of its own machine
+    (REQ-036) for the transitions naming the implying state, and then takes
+    that default's place among the default preconditions, at the front of the
+    `Given` steps, instead of sitting beside the implying state. A source
+    transition of an expansion path contributes its own implied states the
+    same way.
+
   - [REQ-150] The owning state machine of a state name shall be resolved with
     the parse step's ownership lookup (REQ-409, `smtt.parse.validate.md`).
   

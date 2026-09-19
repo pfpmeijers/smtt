@@ -93,9 +93,13 @@ export interface StateDefinition {
    */
   description?: string | null;
   /**
-   * Data value conditions implied by this state, declared as indented sub-bullets in the state definition.
+   * Data value conditions implied by this state.
    */
   impliedConditions?: ImpliedCondition[];
+  /**
+   * Names of states of other state machines that hold whenever this state does, declared as indented sub-bullets holding a bare state name. Resolved transitively, and binding: a transition naming this state as a precondition also has these states as preconditions.
+   */
+  impliedStates?: string[];
   /**
    * The 1-based line number within the source file defining this state.
    */
@@ -251,6 +255,10 @@ export interface Transition {
    */
   notes?: string;
   /**
+   * Precondition states this transition carries beyond its own `states`: the states implied, transitively, by the states it names, each recorded with the state of the transition that implies it. Derived data, recorded by the parse step. A state of a machine the transition already names is not repeated. Absent when nothing is implied.
+   */
+  impliedStates?: ImpliedState[];
+  /**
    * Resolved explanations of a state trigger: one entry per chain of source transitions leading from an event trigger to this transition's own trigger. Derived data, recorded by the parse step so a consumer need not repeat the resolution; an AST written by hand may omit it, and a consumer then resolves the trigger itself. Absent on an event-triggered transition. An empty array means the resolution ran and found no source, as opposed to not having run.
    */
   expansion?: ExpansionPath[];
@@ -318,6 +326,19 @@ export interface StateRef1 {
    * Optional data attributes associated with this state reference.
    */
   arguments?: Argument[];
+}
+/**
+ * A precondition state carried by a transition because one of the states it names implies it, directly or through other implied states.
+ */
+export interface ImpliedState {
+  /**
+   * The plain text name of the implied state.
+   */
+  name: string;
+  /**
+   * The name of the transition's own precondition state whose implied states include this one. The implied state is placed right before that state in the scenario's preconditions.
+   */
+  by: string;
 }
 /**
  * One chain of source transitions explaining a state trigger: the transition that produced the triggering state, the transition that triggered that one, and so on down to the transition carrying the event trigger that starts the chain.
