@@ -236,6 +236,11 @@ export function triggerArgumentBindings(trigger: Trigger, source: Transition): A
     for (const argument of trigger.arguments ?? []) {
         if (!argument.modifier && setByResult.has(argument.name)) {
             bindings.set(argument.name, resultingColumnName(argument.name))
+            // `attr` as `alias`: the alias names the same post-event value.
+            const { condition } = argument
+            if (condition?.operator === "as" && condition.valueIsReference && typeof condition.value === "string") {
+                bindings.set(condition.value, resultingColumnName(argument.name))
+            }
         }
     }
     return bindings

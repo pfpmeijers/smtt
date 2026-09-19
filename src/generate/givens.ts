@@ -257,8 +257,11 @@ export function buildEffectiveGivens(
     // default precondition (REQ-036) — an expansion-injected state must not, since defaults belong
     // in the first group regardless of expansion (REQ-115); a later duplicate contributed by
     // expansion is instead dropped by de-duplication below (REQ-116), leaving the default in place.
+    // A default that names a different state of a machine already pinned down by the expansion path
+    // is dropped, like an own state would be (REQ-114): it would contradict the chain's starting state.
     const injectedDefaults = unrepresentedDefaultPreconditions(defaultPreconditions, ownStates, ownership)
         .map(defaultPreconditionToStateRef)
+        .filter((stateRef) => !conflictsWithInjectedState(stateRef, injectedStates, ownership))
 
     return dedupeStateRefs([...injectedDefaults, ...ownStates, ...injectedStates], transition.id)
 }
