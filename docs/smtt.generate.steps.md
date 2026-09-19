@@ -65,7 +65,7 @@
   ```
 
 - [REQ-214] When the step text contains arguments, the pattern shall include 
-  `{string}` placeholders and the callback shall receive matching parameter 
+  `{optionalString}` placeholders and the callback shall receive matching parameter 
   names.
 
 - [REQ-215] Parameter names shall be derived from the example column names, 
@@ -222,7 +222,7 @@ When('subsite selected', async ({ page }) => {
 
 // - main: 021
 // - subsite: 039
-Then('expect subsite page with {string}', async ({ page }, subject) => {
+Then('expect subsite page with {optionalString}', async ({ page }, subject) => {
   await fixtures.expectSubsitePage({ page, subject })
 })
 ```

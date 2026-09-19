@@ -97,7 +97,7 @@ test("[TST-226] → [REQ-229/231]: every rendered variant of an event used by tw
     const steps = createSteps(stateMachines)
     const shared = steps["shared.steps.js"]
     assertContains(shared, "// - m1: 001\nWhen('e1', async ({ page }) => {")
-    assertContains(shared, "// - m2: 002\nWhen('e1 using {string}', async ({ page }, a1) => {")
+    assertContains(shared, "// - m2: 002\nWhen('e1 using {optionalString}', async ({ page }, a1) => {")
     assertNotContains(steps["m1.steps.js"], "When('e1'")
     assertNotContains(steps["m2.steps.js"], "When('e1 using")
 
@@ -131,7 +131,7 @@ test("[TST-227] → [REQ-230]: variants of an event used by only one state machi
     const steps = createSteps(stateMachines)
     assert.ok(!("shared.steps.js" in steps), "shared.steps.js must not be generated when nothing is shared")
     assertContains(steps["m1.steps.js"], "When('e1'")
-    assertContains(steps["m1.steps.js"], "When('e1 using {string}'")
+    assertContains(steps["m1.steps.js"], "When('e1 using {optionalString}'")
 })
 
 test("[TST-105] → [REQ-318/319/320]: When fixture shared by two state machines is written once to shared.fixtures.js", () => {

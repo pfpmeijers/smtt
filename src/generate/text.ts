@@ -120,13 +120,14 @@ export function toCamelCase(text: string): string {
 }
 
 /**
- * Replace quoted placeholders in step text with Cucumber `{string}` markers.
+ * Replace quoted placeholders in step text with Cucumber `{optionalString}` markers (a custom
+ * parameter type that passes an empty quoted value `""` to the step as `undefined`).
  *
  * @param text Step text containing quoted placeholders.
  * @returns Step text with Cucumber placeholders.
  */
 export function toOutlinePattern(text: string): string {
-    return text.replace(STEP_PLACEHOLDER_RE, "{string}")
+    return text.replace(STEP_PLACEHOLDER_RE, "{optionalString}")
 }
 
 /**

@@ -147,3 +147,6 @@
     E.g. And initially cart non-empty with "<painting count>" # Restricted to: painting count = 1
 
 - Put the note based comments in the scenario directly after the scenario label line.
+
+- Store numeric attributes as real numbers instead of strings in the AST and use null for JSON storage of undefined.
+    Then also use number in the gherkin steps.

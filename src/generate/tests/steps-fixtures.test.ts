@@ -52,7 +52,7 @@ test("[TST-088] → [REQ-214/215/216/217/218/219/227]: parameterized steps carry
     const steps = createSteps(stateMachines)["m.steps.js"]
     assertContains(steps, "Given('initially sa bc', async ({ page }) => {")
     assertContains(steps, "await fixtures.setSaBc({ page })")
-    assertContains(steps, "When('e {string}', async ({ page }, aaBc) => {")
+    assertContains(steps, "When('e {optionalString}', async ({ page }, aaBc) => {")
     assertContains(steps, "await fixtures.makeE({ page, aaBc })")
     assertContains(steps, "Then('expect sa bc', async ({ page }) => {")
     assertContains(steps, "await fixtures.expectSaBc({ page })")
@@ -76,7 +76,7 @@ test("[TST-232] → [REQ-215/314]: parameter names drop the leading `resulting` 
     }]
 
     const steps = createSteps(stateMachines)["m.steps.js"]
-    assertContains(steps, "Then('expect s {string}', async ({ page }, a) => {")
+    assertContains(steps, "Then('expect s {optionalString}', async ({ page }, a) => {")
     assertContains(steps, "await fixtures.expectS({ page, a })")
 
     const fixtures = createFixtures(stateMachines)
@@ -96,7 +96,7 @@ test("[TST-245] → [REQ-444/445]: parameter names drop the modifier prefix of a
     }]
 
     const steps = createSteps(stateMachines)["m.steps.js"]
-    assertContains(steps, "When('e {string}', async ({ page }, a) => {")
+    assertContains(steps, "When('e {optionalString}', async ({ page }, a) => {")
     assertContains(steps, "await fixtures.makeE({ page, a })")
 
     const fixtures = createFixtures(stateMachines)
@@ -141,7 +141,7 @@ test("[TST-090] → [REQ-214/215/216/217/313]: parameterized steps and fixtures 
     }]
 
     const steps = createSteps(stateMachines)["m.steps.js"]
-    assertContains(steps, "When('e {string}, {string}', async ({ page }, aaBc, adEf) => {")
+    assertContains(steps, "When('e {optionalString}, {optionalString}', async ({ page }, aaBc, adEf) => {")
     assertContains(steps, "await fixtures.makeE({ page, aaBc, adEf })")
 
     const fixtures = createFixtures(stateMachines)

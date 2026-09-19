@@ -11,7 +11,7 @@ Given('initially m1 active', async ({ page }) => {
 })
 
 // - m1: 002
-Given('initially m1 active with {string}', async ({ page }, a1) => {
+Given('initially m1 active with {optionalString}', async ({ page }, a1) => {
   await fixtures.setM1Active({ page, a1 })
 })
 
@@ -25,7 +25,7 @@ Given('initially m1 inactive', async ({ page }) => {
 
 // - m1: 001, 002
 // - m3: 019
-When('e1 with {string}', async ({ page }, a1) => {
+When('e1 with {optionalString}', async ({ page }, a1) => {
   await fixtures.makeE1({ page, a1 })
 })
 
@@ -40,7 +40,7 @@ When('e2', async ({ page }) => {
 
 // - m1: 001, 002
 // - m3: 019
-Then('expect m1 active with {string}', async ({ page }, a1) => {
+Then('expect m1 active with {optionalString}', async ({ page }, a1) => {
   await fixtures.expectM1Active({ page, a1 })
 })
 
