@@ -487,7 +487,7 @@ function renderExamplesLines(
     const rows = filterRows(context.stateMachines, rootStateMachine.name, boundValues, boundValues, filters)
     if (rows.length === 0) {
         return [
-            `${pad}Examples: EMPTY — no row satisfied every condition:`,
+            `${pad}  Examples: EMPTY — no row satisfied every condition:`,
             ...conditions.map((condition) => `${pad}  - ${describeFilterCondition(condition)}`),
         ]
     }

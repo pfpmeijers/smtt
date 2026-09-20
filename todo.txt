@@ -150,3 +150,17 @@
 
 - Store numeric attributes as real numbers instead of strings in the AST and use null for JSON storage of undefined.
     Then also use number in the gherkin steps.
+
+- Change States to Preconditions (and Result to Postconditions)
+
+- Semantics on "as" versus "=" and fact that "not as" can be used but is recognized as suffix instead of "<>" -
+  the latter working correctly - is not very clear in the context of state / event triggers. See how that can be fixed.
+  At least make it very sharp in the manual.
+      The difference between as and =
+      - = filters. It keeps only the rows of the example table where the two attributes already hold the same value. It works here because painting assignee email address and sign in email address are both declared in
+        the painting-status file with the same values (user1@…, user2@…), so equal rows exist.
+      - as binds. It gives the attribute the other attribute's value, so it needs no matching row. This matters when the two attributes are declared in different state machines with values that don't line up. Then =
+        finds no equal rows and the transition silently gets no scenarios, while as still works.
+
+    document the rule in sm.spec.md: "as when you want to give a value, is when you want to test one".
+    So for the latter it is assumed the attribute values are defined. For the "as" operation that is not needed.
