@@ -65,7 +65,7 @@ const DETAIL_INDENT = 4
 
 /**
  * Render a value condition as debug text, mirroring the source markdown's own condition syntax
- * (`` `attribute` undefined ``, `` `attribute` = value ``, `` `attribute` as "value" ``, etc.), so a
+ * (`` `attribute` undefined ``, `` `attribute` = value ``, `` `attribute` as `other` ``, etc.), so a
  * filtered argument's condition is visible in the debug report instead of being silently dropped. A
  * reference value (REQ-427) renders backticked, exactly like the attribute name it points at,
  * distinguishing it from a quoted literal the same way the source markdown does.
@@ -92,8 +92,6 @@ function debugConditionText(condition: Condition): string {
             const values = Array.isArray(condition.value) ? condition.value : [condition.value ?? ""]
             return `${condition.operator} (${values.map((value) => `"${value}"`).join(", ")})`
         }
-        case "as":
-            return `as "${condition.value}"`
         default:
             return `${condition.operator} ${condition.value}`
     }

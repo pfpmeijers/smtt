@@ -108,7 +108,7 @@ Examples:
 - `Cart empty`: The cart contains no paintings.
   - `item count` = 0
 - `Reservation form filled`: All required input is present.
-  - `email address` as "info@domain.com"
+  - `email address` is "info@domain.com"
   - `policies` are "accepted"
 - `Reservation form unfilled`
   - `email address` undefined
@@ -509,8 +509,9 @@ the **Data** section as state or trigger arguments.
 
 - **Format**: A reference to an attribute name as suffix to the state or event text.
 - **Backticks**: Put the attribute references between backticks.
-- **Qualifier**: Use preposition words like `as`, `for`, etc., preceding the attribute
-  reference for human-friendly reading — they carry no formal meaning.
+- **Qualifier**: Use preposition words like `as`, `for`, `according to`, etc.,
+  preceding the attribute reference for human-friendly reading — they carry no
+  formal meaning.
 - **Multiple arguments**: Specify multiple arguments if relevant, separated by `and`.
   Don't use `,` as this is reserved to split states.
 
@@ -604,7 +605,8 @@ A **value condition** constrains the argument to a specific subset of its
 possible values. Write the condition expression after the attribute name.
 Value conditions apply to `States` cell and `Trigger` cell arguments (and to
 state implied conditions and default preconditions); a `Result` cell argument
-instead uses [result values](#result-values), a separate `set to` syntax.
+instead uses [result values](#result-values), a separate `set to` (or, with a
+literal, `is`) syntax.
 
 A condition value may also be an
 [attribute reference](#attribute-reference-values) instead of a literal — the
@@ -650,14 +652,17 @@ See [Sameness](#sameness) below.
 
 ##### Sameness
 
-`` `attribute` as <value> `` does not test anything — it states that the
-attribute **is** that value. The attribute takes it, whether it is a literal or
-an [attribute reference](#attribute-reference-values):
+`` `attribute` as `other attr` `` does not test anything — it states that the
+attribute **is** the other attribute's value. The attribute takes it from the
+[attribute reference](#attribute-reference-values):
 
 | Syntax                              | Meaning                                            |
 |-------------------------------------|----------------------------------------------------|
-| `` `attribute` as "value" ``        | The attribute holds `"value"`                      |
 | `` `attribute` as `other attr` ``   | The attribute holds whatever `other attr` holds    |
+
+`as` only takes an attribute reference. A literal (`` `attribute` as "value" ``)
+is a parse error: a fixed value leaves nothing to bind, so write
+`` `attribute` is "value" `` (or `=`) instead.
 
 The distinction from `is` matters as soon as two state machines are involved.
 `` `a` is `b` `` asks for a row in which `a` and `b` happen to hold the same
@@ -733,6 +738,12 @@ reference, or `undefined`.
 Values follow the same [Values](#values) rules as a value condition — numbers
 plain, text quoted, empty quoted strings not allowed.
 
+- **`is` / `are` for a literal** — With a literal value or `undefined`, write
+  `is` (or `are`) instead of `set to`: `` `card status` is "in cart" `` reads
+  as the resulting state and means exactly `` `card status` set to "in cart" ``.
+  An attribute reference still takes `set to`, and `is not` is never an
+  assignment; either is reported as a condition in disguise.
+
 Example:
 
 - `` `Cart empty`, so `item count` set to 0`` — postcondition: the cart is
@@ -758,9 +769,9 @@ own value, rather than being fixed.
   attribute is compared against: both values are read from the same example
   combination, so the condition relates two attributes rather than pinning one
   to a literal.
-- **Operators** — A reference is only supported on `as` (sameness) and on the
-  scalar comparison operators: `=`, `<>`, `<`, `>`, `<=`, `>=`, `is`, `are`,
-  `is not`, `are not`. The set (`in (…)`), range (`in [low, high]`) and
+- **Operators** — A reference is only supported on `as` (sameness, which takes
+  nothing else) and on the scalar comparison operators: `=`, `<>`, `<`, `>`,
+  `<=`, `>=`, `is`, `are`, `is not`, `are not`. The set (`in (…)`), range (`in [low, high]`) and
   presence (`defined` / `undefined`) forms compare against fixed values and
   reject a reference.
 

@@ -125,6 +125,7 @@ export function analyze(
     const {
         astFile,
         infer = false,
+        outputDir,
         outputFile,
         maxStates = 100000,
         externalOnly = false,
@@ -169,22 +170,24 @@ export function analyze(
             impossibilityMode = "defined-only"
         }
 
-        const dirName = path.basename(sourceDir)
-        parseJsonPath = path.join(sourceDir, `${dirName}.json`)
+        const artifactDir = outputDir ? path.resolve(outputDir) : sourceDir
+        fs.mkdirSync(artifactDir, { recursive: true })
+        parseJsonPath = path.join(artifactDir, `${path.basename(artifactDir)}.json`)
         fs.writeFileSync(parseJsonPath, JSON.stringify(result, null, 2), "utf8")
         console.log(`Written: \`${parseJsonPath}\``)
     }
 
-    const dirName = path.basename(sourceDir)
     const report = analyzeStateMachines(result, {
         maxStates,
         externalOnly,
         impossibilityMode,
         astFile,
     })
+    const reportDir = outputDir ? path.resolve(outputDir) : sourceDir
     const mdOutputPath = outputFile
         ? path.resolve(outputFile)
-        : path.join(sourceDir, `${dirName}.analysis.md`)
+        : path.join(reportDir, `${path.basename(reportDir)}.analysis.md`)
+    fs.mkdirSync(path.dirname(mdOutputPath), { recursive: true })
 
     fs.writeFileSync(mdOutputPath, buildMarkdownReport(report, sourceDir), "utf8")
     console.log(`Written: \`${mdOutputPath}\``)

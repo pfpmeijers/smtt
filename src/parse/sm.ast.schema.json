@@ -390,7 +390,7 @@
     },
     "Condition": {
       "type": "object",
-      "description": "A constraint on the data attribute's value (e.g., '=', '>', 'in range', 'undefined'), or — with the 'as' operator — a statement of sameness that gives the attribute the value it names rather than filtering on it. The value it compares against is a literal, unless `valueIsReference` marks it as the name of another data attribute.",
+      "description": "A constraint on the data attribute's value (e.g., '=', '>', 'in range', 'undefined'), or — with the 'as' operator — a statement of sameness that gives the attribute the referenced attribute's value rather than filtering on it. The value it compares against is a literal, unless `valueIsReference` marks it as the name of another data attribute; an 'as' always carries a reference.",
       "properties": {
         "operator": {
           "type": "string",
@@ -427,10 +427,18 @@
         },
         "valueIsReference": {
           "type": "boolean",
-          "description": "When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal. With the `as` operator this states sameness: the attribute takes the referenced attribute's value. With a filtering operator it compares the attribute against the value the referenced attribute holds. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only valid on a scalar operator (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`): the set, range and unary operators compare against fixed literals, which a name standing for another attribute's value cannot provide."
+          "description": "When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal. With the `as` operator this states sameness: the attribute takes the referenced attribute's value; `as` requires it, since a literal needs no binding. With a filtering operator it compares the attribute against the value the referenced attribute holds. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only valid on a scalar operator (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`): the set, range and unary operators compare against fixed literals, which a name standing for another attribute's value cannot provide."
         }
       },
       "required": ["operator"],
+      "if": {
+        "properties": { "operator": { "const": "as" } },
+        "required": ["operator"]
+      },
+      "then": {
+        "properties": { "valueIsReference": { "const": true } },
+        "required": ["value", "valueIsReference"]
+      },
       "additionalProperties": false
     },
     "Result": {

@@ -101,7 +101,7 @@ export function triggerText(stateMachineName: string, trigger: Trigger): string 
 const STEP_PLACEHOLDER_RE = /"<([^>]+)>"/g
 const STEP_PREFIX_RE = /^(?:initially|expect)\s+/i
 const TRAILING_CONNECTORS_RE =
-    /\s+(?:about|on|as|for|from|into|of|so|to|under|with|using|at|by|over|within|outside|between|against|per|via|around|during|through)\s*$/i
+    /\s+(?:according\s+to|about|on|as|for|from|into|of|so|to|under|with|using|at|by|over|within|outside|between|against|per|via|around|during|through)\s*$/i
 
 const RESULTING_PREFIX_RE = /^resulting\s+/i
 

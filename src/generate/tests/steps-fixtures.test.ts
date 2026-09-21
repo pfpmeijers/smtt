@@ -290,3 +290,21 @@ test("[TST-099] → [REQ-315/316/317]: fixture file only emits stubs for its own
     assert.strictEqual(first["m1.fixtures.js"], second["m1.fixtures.js"], "fixture output must be deterministic")
 })
 
+
+test("[TST-275] → [REQ-218]: a trailing multi-word qualifier such as `according to` is dropped from the fixture name", () => {
+    const stateMachines: StateMachines = [{
+        name: "m",
+        states: [{ name: "s" }],
+        dataValueCombinations: [{ a: "A" }],
+        transitions: [{
+            states: [{ name: "s", arguments: [{ qualifier: "according to", name: "a" }] }],
+            trigger: { type: "event", name: "e", arguments: [{ qualifier: "according to", name: "a" }] },
+            result: { name: "s", arguments: [{ qualifier: "according to", name: "a" }] },
+        }],
+    }]
+
+    const steps = createSteps(stateMachines)["m.steps.js"]
+    assertContains(steps, "await fixtures.setS({ page, a })")
+    assertContains(steps, "await fixtures.makeE({ page, a })")
+    assert.ok(!steps.includes("According"))
+})

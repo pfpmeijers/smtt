@@ -114,6 +114,12 @@ unaffected by completion.
   schema, since `Result` (unlike `Condition`) carries no `operator` field to
   choose a non-equality comparison with.
 
+  Remarks:
+  - With a literal value or `undefined`, `is`/`are` is accepted as a
+    synonym for `set to` (`` `attribute` is "value" ``), since a fixed value
+    reads naturally as a statement of the resulting state. An attribute
+    reference still requires `set to`; `is not` is never an assignment.
+
 - [REQ-443] A transition result argument's suffix shall not read as a
   condition. A comparison written in a result position — `` `policies` as
   "approved" `` — matches no result rule (REQ-415 leaves a result only
@@ -137,6 +143,20 @@ unaffected by completion.
     when it holds for every occurrence of that state (REQ-433).
   - Every violation is reported together, since a model that adopted the
     spelling tends to repeat it across many transitions.
+
+- [REQ-459] A transition trigger argument's suffix shall not read as a
+  condition. A trigger argument accepts conditions, so a supported comparison
+  never reaches its suffix; one that does uses an operator the grammar does not
+  know — `` `new series` not as `series` `` — and silently becomes decoration,
+  as in REQ-443: the example rows range over the values the author meant to
+  exclude, and the generated step carries the stray phrase.
+
+  Remarks:
+  - Condition-shaped is defined as in REQ-443. `not as` and a bare `not`
+    followed by a value count too, since neither is an operator.
+  - The author's way out: a supported operator, e.g. `is not` or `<>` for
+    inequality, which also takes an attribute reference.
+  - Every violation is reported together, as in REQ-443.
 
 - [REQ-416] State-triggers shall not resolve via a cyclic definition.
 
@@ -244,7 +264,7 @@ ready-made.
 
   - the target declares `defined` and the transition leaves the attribute
     undefined, or declares `undefined` and the transition leaves it set;
-  - the target declares `` = `` or `as` a literal and the transition leaves a
+  - the target declares `` = `` a literal and the transition leaves a
     different literal, or leaves the attribute undefined.
 
   An attribute whose post-transition value nothing determines — no result
@@ -253,9 +273,7 @@ ready-made.
   so nothing follows. Ordering, set and range declarations are likewise not
   reported, since whether they hold depends on the row.
 
-  A sameness (`as`) to a literal is a pin like `=`: for a fixed value,
-  "is the same as" and "equals" say the same thing, so it is owed and checked
-  exactly as `=` is. A sameness to another attribute is not owed: it binds
+  A sameness (`as`), which always names another attribute, is not owed: it binds
   per row rather than demands (REQ-432 in `smtt.generate.features.md`), so the
   generator satisfies it by construction.
 

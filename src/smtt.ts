@@ -2,18 +2,21 @@
  * Unified CLI dispatcher for state-machine test tooling (smtt).
  *
  * Usage:
- *   tsx smtt.ts parse [--input-dir <dir>] [--ast-file <file>] [--strict]
- *   tsx smtt.ts infer [--input-dir <dir>] [--ast-file <file>] [--strict]
- *   tsx smtt.ts analyze [--input-dir <dir>] [--output-file <file>] [--max-states <n>] [--strict]
+ *   tsx smtt.ts parse [--input-dir <dir>] [--ast-file <file>] [--output-dir <dir>] [--strict]
+ *   tsx smtt.ts infer [--input-dir <dir>] [--ast-file <file>] [--output-dir <dir>] [--strict]
+ *   tsx smtt.ts analyze [--input-dir <dir>] [--output-dir <dir>] [--output-file <file>] [--max-states <n>] [--strict]
  *   tsx smtt.ts generate [--input-dir <dir>] [--ast-file <file>] [--output-dir <dir>]
  *   tsx smtt.ts renumber [--input-dir <dir>]
  *
  * Relative paths are resolved from `process.cwd()`.
  * When explicit flags are omitted, paths fall back to the constants in `common/dirs.ts`.
+ * Generated artifacts never default into `--input-dir`: the AST JSON, transitions report and
+ * analysis report go to `<output-dir>/state-machines/`, next to `features/`, `steps/` and `fixtures/`.
  *
  * Subcommands:
  *   `parse`:     Parse `*.state-machine.md` files recursively from `--input-dir`
- *                and emit AST JSON to `--ast-file`.
+ *                and emit AST JSON to `--ast-file`
+ *                (default `<output-dir>/state-machines/state-machines.json`).
  *   `infer`:     Run `parse` first, then infer impossibilities and write them
  *                into `impossible.inferred` in the same JSON file (primarily
  *                used by analysis/reporting workflows).
@@ -47,6 +50,12 @@ function flagValue(subArgs: string[], flag: string): string | null {
     return index >= 0 ? subArgs[index + 1] : null
 }
 
+/** Resolves `--output-dir` against `process.cwd()`, defaulting to `process.cwd()` itself. */
+function resolveOutputDir(subArgs: string[]): string {
+    const outputDirArg = flagValue(subArgs, "--output-dir")
+    return outputDirArg ? path.resolve(outputDirArg) : process.cwd()
+}
+
 /**
  * Resolves all canonical paths used by subcommands from CLI flags, with `process.cwd()` as
  * the base for relative paths.
@@ -54,9 +63,9 @@ function flagValue(subArgs: string[], flag: string): string | null {
  * - `inputDir`:  Directory searched recursively for `*.state-machine.md` files.
  *                Defaults to `<cwd>/state-machines/`.
  * - `astFile`:   AST JSON output written by `parse` and consumed by `infer`/`generate`.
- *                Defaults to `<inputDir>/state-machines.json`.
- * - `outputDir`: Base directory under which `features/`, `steps/`, and `fixtures/` are created.
- *                Defaults to `process.cwd()`.
+ *                Defaults to `<outputDir>/state-machines/state-machines.json`.
+ * - `outputDir`: Base directory under which `state-machines/`, `features/`, `steps/`, and
+ *                `fixtures/` are created. Defaults to `process.cwd()`.
  *
  * Exits with an error when `inputDir` does not exist.
  */
@@ -73,13 +82,12 @@ function resolveCliPaths(subArgs: string[], commandName: string): { inputDir: st
     }
 
     const astFileArg = flagValue(subArgs, "--ast-file")
-    const outputDirArg = flagValue(subArgs, "--output-dir")
-    const outputDir = outputDirArg ? path.resolve(outputDirArg) : process.cwd()
+    const outputDir = resolveOutputDir(subArgs)
 
-    // The AST file defaults to `<output-dir>/state-machines.json`.
+    // The AST file defaults to `<output-dir>/state-machines/state-machines.json`.
     const astFile = astFileArg
         ? path.resolve(astFileArg)
-        : path.join(outputDir, `${STATE_MACHINES_DIR}.json`)
+        : path.join(outputDir, STATE_MACHINES_DIR, `${STATE_MACHINES_DIR}.json`)
 
     return { inputDir, astFile, outputDir }
 }
@@ -124,11 +132,15 @@ function analyzeCli(subArgs: string[]): void {
             console.error(`Error: AST JSON file not found: \`${astFile}\``)
             process.exit(1)
         }
+        // Not read by `analyze()` when `astFile` is set; the AST replaces markdown parsing.
         inputDir = path.dirname(astFile)
     } else {
         const paths = resolveCliPaths(subArgs, "analyze")
         inputDir = paths.inputDir
     }
+
+    // Generated artifacts (AST JSON when parsing, default report) go to `<output-dir>/state-machines/`.
+    const artifactDir = path.join(resolveOutputDir(subArgs), STATE_MACHINES_DIR)
 
     const outputFileArg = flagValue(subArgs, "--output-file")
     const outputFile = outputFileArg ? path.resolve(outputFileArg) : undefined
@@ -141,6 +153,7 @@ function analyzeCli(subArgs: string[]): void {
     analyze(inputDir, {
         astFile,
         infer,
+        outputDir: artifactDir,
         outputFile,
         maxStates,
         externalOnly: subArgs.includes("--triggers=external-only"),
@@ -175,7 +188,7 @@ function printUsage(): void {
 }
 
 function printParseHelp(): void {
-    console.log("Usage: tsx smtt.ts parse [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--strict]")
+    console.log("Usage: tsx smtt.ts parse [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--output-dir OUTPUT_DIR] [--strict]")
     console.log("")
     console.log("Parses all `*.state-machine.md` files recursively from `--input-dir`")
     console.log("and writes an AST JSON file.")
@@ -183,15 +196,17 @@ function printParseHelp(): void {
     console.log("Options:")
     console.log("  --input-dir INPUT_DIR    Directory searched recursively for `*.state-machine.md` files.")
     console.log("                           Default: `$CWD/state-machines/`.")
+    console.log("  --output-dir OUTPUT_DIR  Base directory for the default AST file location.")
+    console.log("                           Default: current directory.")
     console.log("  --ast-file AST_FILE      Write AST JSON to this file instead of the default.")
-    console.log("                           Default: `INPUT_DIR/state-machines.json`.")
+    console.log("                           Default: `OUTPUT_DIR/state-machines/state-machines.json`.")
     console.log("                           Relative paths are resolved from the current directory.")
     console.log("  --strict                 Exit with code 1 when any warnings were produced.")
     console.log("                           Warnings are always written to stderr regardless.")
 }
 
 function printInferHelp(): void {
-    console.log("Usage: tsx smtt.ts infer [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--strict]")
+    console.log("Usage: tsx smtt.ts infer [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--output-dir OUTPUT_DIR] [--strict]")
     console.log("")
     console.log("Runs `parse` first, then infers impossible trigger/state combinations")
     console.log("using the closed-world assumption and writes them into `impossible.inferred`")
@@ -202,15 +217,17 @@ function printInferHelp(): void {
     console.log("Options:")
     console.log("  --input-dir INPUT_DIR    Directory searched recursively for `*.state-machine.md` files.")
     console.log("                           Default: `$CWD/state-machines/`.")
+    console.log("  --output-dir OUTPUT_DIR  Base directory for the default AST file location.")
+    console.log("                           Default: current directory.")
     console.log("  --ast-file AST_FILE      Path for the AST JSON file used as both parse output and infer input/output.")
-    console.log("                           Default: `INPUT_DIR/state-machines.json`.")
+    console.log("                           Default: `OUTPUT_DIR/state-machines/state-machines.json`.")
     console.log("                           Relative paths are resolved from the current directory.")
     console.log("  --strict                 Exit with code 1 when any warnings were produced.")
     console.log("                           Warnings are always written to stderr regardless.")
 }
 
 function printAnalyzeHelp(): void {
-    console.log("Usage: tsx smtt.ts analyze [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--infer] [--output-file OUTPUT_FILE] [--max-states MAX_STATES] [--triggers=external-only] [--strict]")
+    console.log("Usage: tsx smtt.ts analyze [--input-dir INPUT_DIR] [--ast-file AST_FILE] [--infer] [--output-dir OUTPUT_DIR] [--output-file OUTPUT_FILE] [--max-states MAX_STATES] [--triggers=external-only] [--strict]")
     console.log("")
     console.log("Runs state-space analysis and writes a markdown report.")
     console.log("Impossibilities can be inferred dynamically with `--infer` or loaded from")
@@ -219,12 +236,15 @@ function printAnalyzeHelp(): void {
     console.log("Options:")
     console.log("  --input-dir INPUT_DIR        Directory searched recursively for `*.state-machine.md` files.")
     console.log("                               Default: `$CWD/state-machines/`.")
+    console.log("  --output-dir OUTPUT_DIR      Base directory for generated artifacts. When parsing markdown, the AST JSON")
+    console.log("                               is written to `OUTPUT_DIR/state-machines/state-machines.json`.")
+    console.log("                               Default: current directory.")
     console.log("  --ast-file AST_FILE          Read state machines from AST JSON instead of parsing markdown.")
     console.log("                               Mutually exclusive with `--infer`.")
+    console.log("  --output-file OUTPUT_FILE    Output markdown report path.")
+    console.log("                               Default: `OUTPUT_DIR/state-machines/state-machines.analysis.md`.")
     console.log("  --infer                      Infer impossible trigger/state combinations during analysis.")
     console.log("                               Mutually exclusive with `--ast-file`.")
-    console.log("  --output-file OUTPUT_FILE    Output markdown report path.")
-    console.log("                               Default: `INPUT_DIR/INPUT_DIR_NAME.analysis.md`.")
     console.log("  --max-states MAX_STATES      Maximum global states explored by state-space exploration.")
     console.log("                               Default: `100000`.")
     console.log("  --triggers=external-only     Analyze only externally-driven triggers.")
@@ -244,9 +264,10 @@ function printGenerateHelp(): void {
     console.log("  --input-dir INPUT_DIR     Directory searched recursively for `*.state-machine.md` files.")
     console.log("                            Default: `$CWD/state-machines/`.")
     console.log("  --ast-file AST_FILE       Intermediate AST JSON file written by `parse` and read by `generate`.")
-    console.log("                            Default: `OUTPUT_DIR/state-machines.json`.")
+    console.log("                            Default: `OUTPUT_DIR/state-machines/state-machines.json`.")
     console.log("                            Relative paths are resolved from the current directory.")
-    console.log("  --output-dir OUTPUT_DIR   Base directory for `features/`, `steps/`, and `fixtures/` output.")
+    console.log("  --output-dir OUTPUT_DIR   Base directory for `state-machines/` (AST), `features/`, `steps/`,")
+    console.log("                            and `fixtures/` output.")
     console.log("                            Default: current directory.")
 }
 

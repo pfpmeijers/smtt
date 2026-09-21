@@ -179,20 +179,24 @@ test("[TST-010] → [REQ-086/087/092]: Not-in-range condition excludes matching 
     assertMatchesReference(stateMachines, feature)
 })
 
-test("[TST-011] → [REQ-086/087/432]: As binds the attribute to its literal value", () => {
+test("[TST-011] → [REQ-086/087/432]: As binds the attribute to the referenced attribute's value", () => {
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s"}],
-        dataValueCombinations: [{a: "a1"}, {a: "a2"}],
+        dataValueCombinations: [{a: "a1", b: "b1"}, {a: "a2", b: "b2"}],
         transitions: [{
-            states: [{name: "s", arguments: [{name: "a", condition: {operator: "as", value: "a1"}}]}],
+            states: [{name: "s", arguments: [
+                {name: "a", condition: {operator: "as", value: "b", valueIsReference: true}},
+            ]}],
             trigger: {type: "event", name: "e"},
             result: {name: "s"},
         }],
     }]
     validateStateMachines(stateMachines)
     const feature = createFeatures(stateMachines)["m"]
-    assertContains(feature, "| a1 |")
+    // `a` takes its own row's `b`, never the value the table declared for it.
+    assertContains(feature, "| b1 |")
+    assertNotContains(feature, "| a1 |")
     assertNotContains(feature, "| a2 |")
     assertMatchesReference(stateMachines, feature)
 })

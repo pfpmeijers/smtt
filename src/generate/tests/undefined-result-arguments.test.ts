@@ -200,25 +200,3 @@ test("[TST-237] → [REQ-442]: A result literal contradicting its result state's
     assertContains(feature, 'Then expect s2 with "<resulting n>"')
     assertMatchesReference(stateMachines, feature)
 })
-
-test("[TST-243] → [REQ-442]: Result argument assigning its result state's `as` literal is not rendered", () => {
-    const stateMachines: StateMachines = validated([{
-        name: "m",
-        states: [
-            {name: "s1"},
-            // A sameness to a fixed value pins it like `=` does.
-            {name: "s2", impliedConditions: [{attribute: "a1", condition: {operator: "as", value: "v1"}}]},
-        ],
-        dataValueCombinations: [{a1: "v1"}, {a1: "v2"}],
-        transitions: [{
-            states: [{name: "s1"}],
-            trigger: {type: "event", name: "e"},
-            result: {name: "s2", arguments: [{name: "a1", result: {value: "v1"}}]},
-            notes: "",
-        }],
-    }])
-    const feature = createFeatures(stateMachines)["m"]
-    assertContains(feature, "    Then expect s2\n")
-    assertNotContains(feature, "resulting a1")
-    assertMatchesReference(stateMachines, feature)
-})

@@ -164,3 +164,18 @@
 
     document the rule in sm.spec.md: "as when you want to give a value, is when you want to test one".
     So for the latter it is assumed the attribute values are defined. For the "as" operation that is not needed.
+
+
+- BUG: Trailing space after a state definition name without a further description fails during parsing instead of being
+  ignored. So: "- `State name` " fails.
+
+- FEATURE: Option to define values for multiple attributes.
+  E.g. '- `selected series`, `new selected series`: "all_paintings", "standalone", "Kleintjes", "Jaargetijden"'
+
+- FEATURE: Use numbered list for states. 1st being the initial.
+
+- REFACTOR: Avoid the need of shared.fixture/helper. Generate the fixtures when not present in a sm file
+    where it is used. And then a manual more to another sm is maintined.
+    Thus let the fixture generation search for existing impl in -all- fixtures files before adding a placeholder.
+    Rationale: Now shared gets a sort of misc collection while most often there is a most logical sm that can
+    be chosen by the author.

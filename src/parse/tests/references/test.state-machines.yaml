@@ -260,7 +260,7 @@
             - qualifier: with
               name: label
               condition:
-                operator: as
+                operator: =
                 value: alpha
       trigger:
         name: default confirmed

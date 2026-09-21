@@ -174,6 +174,7 @@ export function validateStateMachines(data: unknown): void {
     validateReferenceOperators(stateMachines)
     validateReferenceTargets(stateMachines)
     validateResultArgumentSuffixes(stateMachines)
+    validateTriggerArgumentSuffixes(stateMachines)
 
     // [REQ-406/REQ-411] Business-rule checks performed after schema validation
     // succeeds, since they rely on `data` actually conforming to the
@@ -757,13 +758,14 @@ export function validateReferenceTargets(stateMachines: StateMachine[]): void {
 const VALUE_LITERAL = String.raw`(?:"[^"]*"|\`[^\`]*\`|-?\d+(?:\.\d+)?)`
 
 /**
- * A result argument suffix that is really a condition in disguise (REQ-443): a comparison operator
- * followed by a value, or a bare presence check. Anchored at both ends, so descriptive prose that
- * merely starts with an operator word — `as shown`, `in cart` — is not mistaken for one.
+ * An argument suffix that is really a condition in disguise (REQ-443, REQ-459): a comparison operator
+ * followed by a value, or a bare presence check. `not as` and `not` are no operators at all, so they
+ * always end up here, never in a condition. Anchored at both ends, so descriptive prose that merely
+ * starts with an operator word — `as shown`, `in cart` — is not mistaken for one.
  */
 const CONDITION_SHAPED_SUFFIX = new RegExp(
     "^(?:" +
-    String.raw`(?:as|is not|are not|is|are)\s+${VALUE_LITERAL}` +
+    String.raw`(?:not as|as not|is not|are not|not|as|is|are)\s+${VALUE_LITERAL}` +
     String.raw`|(?:>=|<=|<>|=|>|<)\s*${VALUE_LITERAL}` +
     String.raw`|(?:is\s+)?undefined|defined` +
     ")$",
@@ -805,8 +807,45 @@ export function validateResultArgumentSuffixes(stateMachines: StateMachine[]): v
         `A transition result states an assignment, not a comparison, so the following ` +
         `condition(s) parse as descriptive suffix text and constrain nothing:\n` +
         `${violations.join("\n")}\n` +
-        `Write \`set to <value>\` to assign the value, or move the comparison to an implied ` +
+        `Write \`set to <value>\` (or \`is <literal>\`) to assign the value, or move the comparison to an implied ` +
         `condition on the target state (REQ-443).`,
+    )
+}
+
+/**
+ * [REQ-459] Raises an error when a transition trigger's argument carries a condition-shaped suffix.
+ *
+ * A trigger argument accepts conditions, so a valid one never reaches the suffix. What does is a
+ * comparison the grammar does not know — `` `new series` not as `series` `` — which then silently
+ * degrades to decoration: the example rows range over every value, including the ones the author
+ * meant to exclude, and the generated step text carries the stray phrase.
+ *
+ * Every violation is reported at once, as for result suffixes (REQ-443).
+ *
+ * @param stateMachines Parsed state-machine AST nodes.
+ * @returns Nothing. Validation succeeds by not throwing.
+ * @throws Error When any trigger argument's suffix reads as a condition.
+ */
+export function validateTriggerArgumentSuffixes(stateMachines: StateMachine[]): void {
+    const violations: string[] = []
+    for (const stateMachine of stateMachines) {
+        for (const transition of stateMachine.transitions ?? []) {
+            for (const argument of transition.trigger.arguments ?? []) {
+                const suffix = argument.suffix?.trim()
+                if (!suffix || !CONDITION_SHAPED_SUFFIX.test(suffix)) continue
+                violations.push(
+                    `  - ${formatTransitionContext(stateMachine.name, transition)}: trigger argument ` +
+                    `\`${argument.name}\` carries \`${suffix}\`, in trigger \`${transition.trigger.name}\``,
+                )
+            }
+        }
+    }
+    if (violations.length === 0) return
+    throw new Error(
+        `A trigger condition must use a supported operator, so the following comparison(s) parse as ` +
+        `descriptive suffix text and constrain nothing:\n` +
+        `${violations.join("\n")}\n` +
+        `Use a supported condition operator, e.g. \`is not <value>\` or \`<> <value>\` for inequality (REQ-459).`,
     )
 }
 
@@ -898,13 +937,14 @@ function presenceOfCondition(condition: Condition): PostValue {
             return { kind: "undefined" }
         case "defined":
             return { kind: "defined" }
-        // A literal pin fixes the value; a reference-valued `=` or `as` still leaves it present,
+        // A literal pin fixes the value; a reference-valued `=` or an `as` still leaves it present,
         // since the row is dropped when the referenced value is missing.
-        case "=":
-        case "as": {
+        case "=": {
             const literal = pinnedLiteral(condition)
             return literal === undefined ? { kind: "defined" } : { kind: "literal", value: literal }
         }
+        case "as":
+            return { kind: "defined" }
         default:
             return { kind: "unknown" }
     }
@@ -993,8 +1033,7 @@ function violates(value: PostValue, condition: Condition): boolean {
             return value.kind === "undefined"
         case "undefined":
             return value.kind !== "undefined"
-        case "=":
-        case "as": {
+        case "=": {
             const literal = pinnedLiteral(condition)
             if (literal === undefined) return false
             if (value.kind === "undefined") return true
@@ -1017,7 +1056,7 @@ function violates(value: PostValue, condition: Condition): boolean {
  *
  * Only statically decidable cases are reported: an attribute whose post-transition value nothing
  * determines is left alone, as is a sameness (`as`) to another attribute, which binds per row
- * rather than demands. A sameness to a literal pins one value and is checked like `=`.
+ * rather than demands.
  *
  * On the complete AST, a target's literal `=` or `undefined` implied condition is rarely the
  * source of a reported violation any more: completion (REQ-434) already gives a transition that
@@ -1045,8 +1084,8 @@ export function validateResultSatisfiesTargetState(stateMachines: StateMachine[]
             const target = transition.result
             for (const implied of impliedIndex[target.name.toLowerCase()] ?? []) {
                 // A sameness to another attribute is satisfied per row by construction, never owed
-                // by the transition; a sameness to a literal is a pin like `=` and is checked.
-                if (implied.condition.operator === "as" && implied.condition.valueIsReference) continue
+                // by the transition.
+                if (implied.condition.operator === "as") continue
 
                 const attribute = implied.attribute.toLowerCase()
                 const assigned = assignedPostValue(transition, attribute)

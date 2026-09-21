@@ -215,6 +215,8 @@ export interface AnalysisReport {
 export interface AnalyzeOptions {
     astFile?: string
     infer?: boolean
+    /** Directory for generated artifacts (parse JSON, default report). Defaults to the source directory. */
+    outputDir?: string
     outputFile?: string
     maxStates?: number
     externalOnly?: boolean
