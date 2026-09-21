@@ -17,7 +17,7 @@
 #            - qualifier: with
 #              name: a
 #              condition:
-#                operator: as
+#                operator: =
 #                value: "1"
 #        result:
 #          name: s2

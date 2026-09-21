@@ -787,12 +787,16 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
             } satisfies ImpliedCondition
         },
 
+        conditionalAttributeExpression_sameness(attributeNode, _compareNode, referenceNode) {
+            return {
+                attribute: attributeNode.toAST() as string,
+                condition: { operator: "as", value: referenceNode.toAST() as string, valueIsReference: true }
+            } satisfies ImpliedCondition
+        },
+
         conditionalAttributeExpression_textComparison(attributeNode, compareNode, valueNode) {
             let operator = compareNode.sourceString.trim()
             switch (operator) {
-                case "as":
-                    operator = "as"
-                    break
                 case "is":
                 case "are":
                     operator = "="
@@ -830,10 +834,6 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
 
         rangeOperator_notIn(_kw) {
             return "not in range"
-        },
-
-        textCompare_sameness(_op) {
-            return "as"
         },
 
         textCompare_is(_op) {

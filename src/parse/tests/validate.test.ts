@@ -241,7 +241,7 @@ describe("validateStateMachines business rules", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].states[0].impliedConditions = [
             { attribute: "a1", condition: { operator: "=", value: "v1" } },
-            { attribute: "a1", condition: { operator: "as", value: "v3" } },
+            { attribute: "a1", condition: { operator: "=", value: "v3" } },
             { attribute: "a1", condition: { operator: "undefined" } },
         ]
         stateMachines[0].transitions = [
@@ -273,7 +273,7 @@ describe("validateStateMachines business rules", () => {
             {
                 id: "002",
                 states: [{ name: "s3" }],
-                trigger: { type: "state", name: "s2", arguments: [{ name: "a1", condition: { operator: "as", value: "v2" } }] },
+                trigger: { type: "state", name: "s2", arguments: [{ name: "a1", condition: { operator: "=", value: "v2" } }] },
                 result: { name: "s4" },
             },
         ]
@@ -300,7 +300,7 @@ describe("validateStateMachines business rules", () => {
             {
                 id: "002",
                 states: [{ name: "s3" }],
-                trigger: { type: "state", name: "s2", arguments: [{ name: "a1", condition: { operator: "as", value: "v1" } }] },
+                trigger: { type: "state", name: "s2", arguments: [{ name: "a1", condition: { operator: "=", value: "v1" } }] },
                 result: { name: "s4" },
             },
         ]
@@ -498,31 +498,17 @@ describe("validateStateMachines business rules", () => {
         })
     })
 
-    it("[TST-238] → [REQ-433]: rejects a carried-over value contradicting the target state's `as` literal", () => {
+    it("[TST-238] → [REQ-433]: rejects a carried-over value contradicting the target state's `=` literal", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].states = [
-            { name: "s1", impliedConditions: [{ attribute: "a1", condition: { operator: "as", value: "v1" } }] },
-            { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "as", value: "v2" } }] },
+            { name: "s1", impliedConditions: [{ attribute: "a1", condition: { operator: "=", value: "v1" } }] },
+            { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "=", value: "v2" } }] },
         ]
         stateMachines[0].transitions![0].states = [{ name: "s1" }]
 
         assert.throws(
             () => validateStateMachines(stateMachines),
-            /results in `s2`, which declares `a1` as "v2", but the transition does not set it and sets it to "v1" \(carried over from `s1`\).*\(REQ-433\)/s,
-        )
-    })
-
-    it("[TST-239] → [REQ-433]: rejects a result contradicting the target state's `as` literal", () => {
-        const stateMachines = cloneStateMachines(buildValidStateMachines())
-        stateMachines[0].states = [
-            { name: "s1" },
-            { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "as", value: "v2" } }] },
-        ]
-        stateMachines[0].transitions![0].result.arguments = [{ name: "a1", result: { value: "v3" } }]
-
-        assert.throws(
-            () => validateStateMachines(stateMachines),
-            /declares `a1` as "v2", but the transition's own result sets it to "v3".*\(REQ-433\)/s,
+            /results in `s2`, which declares `a1` = "v2", but the transition does not set it and sets it to "v1" \(carried over from `s1`\).*\(REQ-433\)/s,
         )
     })
 
@@ -540,16 +526,25 @@ describe("validateStateMachines business rules", () => {
         )
     })
 
-    it("[TST-240] → [REQ-433]: accepts a result assigning the target state's `as` literal", () => {
+    it("[TST-240] → [REQ-433]: accepts a result assigning the target state's `=` literal", () => {
         const stateMachines = cloneStateMachines(buildValidStateMachines())
         stateMachines[0].states = [
-            { name: "s1", impliedConditions: [{ attribute: "a1", condition: { operator: "as", value: "v1" } }] },
-            { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "as", value: "v2" } }] },
+            { name: "s1", impliedConditions: [{ attribute: "a1", condition: { operator: "=", value: "v1" } }] },
+            { name: "s2", impliedConditions: [{ attribute: "a1", condition: { operator: "=", value: "v2" } }] },
         ]
         stateMachines[0].transitions![0].states = [{ name: "s1" }]
         stateMachines[0].transitions![0].result.arguments = [{ name: "a1", result: { value: "v2" } }]
 
         assert.doesNotThrow(() => validateStateMachines(stateMachines))
+    })
+
+    it("[TST-271] → [REQ-432]: rejects an `as` condition that carries a literal instead of a reference", () => {
+        const stateMachines = cloneStateMachines(buildValidStateMachines())
+        stateMachines[0].states[0].impliedConditions = [
+            { attribute: "a1", condition: { operator: "as", value: "v1" } },
+        ]
+
+        assert.throws(() => validateStateMachines(stateMachines), /valueIsReference/)
     })
 })
 

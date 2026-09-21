@@ -81,10 +81,10 @@ earlier author-written value assigns — is never replaced.
 
 - [REQ-434] The complete AST shall assign, on a transition's own result, every
   attribute that the transition's target state pins to a concrete value via a
-  literal `=`, a literal `as`, or an `undefined` implied condition, unless the
+  literal `=` or an `undefined` implied condition, unless the
   transition's result already carries an argument for that attribute (a
   literal, a reference, or an explicit `set to undefined`). The synthesized
-  argument sets the attribute to the target state's literal for `=` and `as`,
+  argument sets the attribute to the target state's literal for `=`,
   or to undefined (no `value`, as `set to undefined` itself parses) for
   `undefined`.
 
@@ -94,9 +94,8 @@ earlier author-written value assigns — is never replaced.
   author who leaves such an attribute unset in the result is stating the
   obvious, not omitting information the model needs. `undefined` is included
   precisely because it is as much an equality as `=` is — it pins the
-  attribute to the single value "absent" — and a literal `as` because, for a
-  fixed value, sameness and equality coincide. An `as` naming another
-  attribute pins no literal (its value follows the referenced attribute per
+  attribute to the single value "absent". An `as`, which always names another
+  attribute, pins no literal (its value follows the referenced attribute per
   row) and is left alone, as is `defined`, which pins no single
   value (any defined value satisfies it) and so has nothing for this step to
   assign; a target declaring `defined` remains a REQ-433 validation check

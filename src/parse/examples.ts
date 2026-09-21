@@ -264,8 +264,8 @@ export function derivedModifierValue(
 // --- Sameness bindings ---
 
 /**
- * A sameness binding: the attribute takes `value` — a literal, or, when `valueIsReference`, the
- * value the named attribute holds in the same row. Written `` `attr` as … `` (REQ-432).
+ * A sameness binding: the attribute takes the value the `reference` attribute holds in the same
+ * row. Written `` `attr` as `reference` `` (REQ-432).
  *
  * A binding is not a filter. It states what the attribute's value *is*, so it is satisfied by
  * construction rather than searched for among pre-existing rows — which is what lets two state
@@ -273,8 +273,7 @@ export function derivedModifierValue(
  */
 export interface Binding {
     attribute: string
-    value: string
-    valueIsReference: boolean
+    reference: string
 }
 
 /**
@@ -296,11 +295,7 @@ export function partitionConditions(
     for (const entry of conditions) {
         const { condition } = entry
         if (condition.operator === "as" && !entry.modifier && typeof condition.value === "string") {
-            bindings.push({
-                attribute: entry.sourceName,
-                value: condition.value,
-                valueIsReference: condition.valueIsReference === true,
-            })
+            bindings.push({ attribute: entry.sourceName, reference: condition.value })
             continue
         }
         filters.push(entry)
@@ -309,8 +304,8 @@ export function partitionConditions(
 }
 
 /**
- * Apply sameness bindings to every row (REQ-432): each bound attribute takes its literal, or the
- * value its referenced attribute holds in that same row.
+ * Apply sameness bindings to every row (REQ-432): each bound attribute takes the value its
+ * referenced attribute holds in that same row.
  *
  * Bindings are applied before filtering, so a filter on a bound attribute tests the value the
  * binding gave it rather than whatever the table happened to hold.
@@ -335,7 +330,7 @@ export function applyBindings(rows: ExampleRow[], bindings: Binding[]): ExampleR
         for (let pass = 0; pass <= bindings.length && !unresolvable; pass++) {
             let changed = false
             for (const binding of bindings) {
-                const value = binding.valueIsReference ? boundRow[binding.value] : binding.value
+                const value = boundRow[binding.reference]
                 if (value === undefined || value === "") {
                     unresolvable = true
                     break

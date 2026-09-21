@@ -164,3 +164,7 @@
 
     document the rule in sm.spec.md: "as when you want to give a value, is when you want to test one".
     So for the latter it is assumed the attribute values are defined. For the "as" operation that is not needed.
+
+
+- BUG: Trailing space after a state definition name without a further description fails during parsing instead of being
+  ignored. So: "- `State name` " fails.

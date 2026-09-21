@@ -300,17 +300,17 @@ StateMachine {
   // Argument expressions reference a backticked `identifier` directly.
   argumentExpression
     = conditionalAttributeExpression -- conditional
-    | identifier                     -- bare
+    | identifier ~literalSameness    -- bare
 
   // A condition: an attribute identifier followed by an operator and value(s).
   // The attribute is a generic token; whether the operator/value are valid
   // for the attribute is checked post-parse. A range or set condition only
   // ever takes literal values (a reference is never one of several values);
   // a scalar comparison takes an `attributeValue`, which may be a literal or
-  // a reference to another attribute, e.g. `` `attr1` as `attr2` ``, compared
+  // a reference to another attribute, e.g. `` `attr1` = `attr2` ``, compared
   // per example row against that attribute's own value. Shared with
   // `resultAttributeExpression` below, since a result's value/reference is the
-  // same shape.
+  // same shape. A sameness (`as`) only ever takes a reference.
   // A range keeps its bracket characters, since they carry each bound's inclusivity. `(` is also
   // the set delimiter and both forms share the `in` operator, so the brackets are what tells them
   // apart: a range needs at least one square bracket, leaving the symmetric `( … )` to the set
@@ -320,6 +320,7 @@ StateMachine {
     | identifier rangeOperator literal<"("> value literal<","> value literal<"]"> -- rangeLeftOpen
     | identifier setCompare literal<"("> value (comma value)* literal<")">        -- set
     | identifier numericOperator attributeValue                                  -- numericComparison
+    | identifier samenessCompare identifier                                      -- sameness
     | identifier textCompare attributeValue                                      -- textComparison
     | identifier undefinedCompare                                                -- undefined
     | identifier definedCompare                                                  -- defined
@@ -348,14 +349,23 @@ StateMachine {
   rangeClose
     = literal<"]"> | literal<")">
 
-  // `as` states sameness — the attribute *takes* the value or the referenced attribute's value —
-  // so it binds rather than filters. `is`/`are` and `is not`/`are not` are the text spellings of
-  // the `=` and `<>` filters. The negative spellings are tried first: `is` would otherwise match
-  // the head of `is not` and strand the `not`.
+  // `as` states sameness — the attribute *takes* the referenced attribute's value — so it binds
+  // rather than filters. It only ever names another attribute: a literal needs no binding, and is
+  // written with `is` or `=` instead (see `literalSameness`).
+  samenessCompare
+    = literal<"as">
+
+  // `is`/`are` and `is not`/`are not` are the text spellings of the `=` and `<>` filters. The
+  // negative spellings are tried first: `is` would otherwise match the head of `is not` and strand
+  // the `not`.
   textCompare
-    = literal<"as">                                          -- sameness
-    | literal<"is not"> | literal<"are not">                 -- isNot
+    = literal<"is not"> | literal<"are not">                 -- isNot
     | literal<"is"> | literal<"are">                          -- is
+
+  // `as` followed by a literal. Not a condition: guarding the bare argument forms against it keeps
+  // the phrase from being absorbed into a free-text suffix, so it fails to parse instead.
+  literalSameness
+    = samenessCompare value
 
   setCompare
     = literal<"in">     -- in

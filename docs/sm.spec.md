@@ -108,7 +108,7 @@ Examples:
 - `Cart empty`: The cart contains no paintings.
   - `item count` = 0
 - `Reservation form filled`: All required input is present.
-  - `email address` as "info@domain.com"
+  - `email address` is "info@domain.com"
   - `policies` are "accepted"
 - `Reservation form unfilled`
   - `email address` undefined
@@ -650,14 +650,17 @@ See [Sameness](#sameness) below.
 
 ##### Sameness
 
-`` `attribute` as <value> `` does not test anything — it states that the
-attribute **is** that value. The attribute takes it, whether it is a literal or
-an [attribute reference](#attribute-reference-values):
+`` `attribute` as `other attr` `` does not test anything — it states that the
+attribute **is** the other attribute's value. The attribute takes it from the
+[attribute reference](#attribute-reference-values):
 
 | Syntax                              | Meaning                                            |
 |-------------------------------------|----------------------------------------------------|
-| `` `attribute` as "value" ``        | The attribute holds `"value"`                      |
 | `` `attribute` as `other attr` ``   | The attribute holds whatever `other attr` holds    |
+
+`as` only takes an attribute reference. A literal (`` `attribute` as "value" ``)
+is a parse error: a fixed value leaves nothing to bind, so write
+`` `attribute` is "value" `` (or `=`) instead.
 
 The distinction from `is` matters as soon as two state machines are involved.
 `` `a` is `b` `` asks for a row in which `a` and `b` happen to hold the same
@@ -758,9 +761,9 @@ own value, rather than being fixed.
   attribute is compared against: both values are read from the same example
   combination, so the condition relates two attributes rather than pinning one
   to a literal.
-- **Operators** — A reference is only supported on `as` (sameness) and on the
-  scalar comparison operators: `=`, `<>`, `<`, `>`, `<=`, `>=`, `is`, `are`,
-  `is not`, `are not`. The set (`in (…)`), range (`in [low, high]`) and
+- **Operators** — A reference is only supported on `as` (sameness, which takes
+  nothing else) and on the scalar comparison operators: `=`, `<>`, `<`, `>`,
+  `<=`, `>=`, `is`, `are`, `is not`, `are not`. The set (`in (…)`), range (`in [low, high]`) and
   presence (`defined` / `undefined`) forms compare against fixed values and
   reject a reference.
 

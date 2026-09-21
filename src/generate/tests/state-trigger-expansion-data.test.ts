@@ -46,7 +46,7 @@ test("[TST-070] → [REQ-162]: Conditions across an expansion chain merge as a c
                     type: "event",
                     name: "e",
                     // Source-transition condition; must combine with the top-level transition.
-                    arguments: [{qualifier: "with", name: "a", condition: {operator: "as", value: "1"}}],
+                    arguments: [{qualifier: "with", name: "a", condition: {operator: "=", value: "1"}}],
                 },
                 result: {name: "s2", arguments: [{qualifier: "as", name: "a"}]},
                 notes: "",

@@ -171,8 +171,6 @@ export function describeFilterCondition(filter: FilterCondition): string {
                 const values = Array.isArray(filter.condition.value) ? filter.condition.value : [filter.condition.value ?? ""]
                 return `${attr} ${filter.condition.operator} (${values.join(", ")})`
             }
-            case "as":
-                return `${attr} as \`${filter.condition.value}\``
             default:
                 return `${attr} ${filter.condition.operator} ${filter.condition.value}`
         }
@@ -296,16 +294,15 @@ export function collectImpliedFilterConditionsForGivens(
 // --- Implied pins ---
 
 /**
- * The single literal a condition pins its attribute to, when it pins one: a plain `=` literal, or
- * an `as` literal. For a fixed value, sameness and equality say the same thing — the attribute
- * holds exactly that literal — so both are one pin. An `as` naming another attribute is not: it
- * links two values per row rather than fixing one.
+ * The single literal a condition pins its attribute to, when it pins one: a plain `=` literal. A
+ * sameness (`as`) always names another attribute, so it links two values per row rather than
+ * fixing one.
  *
  * @param condition Condition to read.
  * @returns The pinned literal, or `undefined` when the condition pins none.
  */
 export function pinnedLiteral(condition: Condition): string | undefined {
-    if (condition.operator !== "=" && condition.operator !== "as") return undefined
+    if (condition.operator !== "=") return undefined
     if (condition.valueIsReference || typeof condition.value !== "string") return undefined
     return condition.value
 }
@@ -317,11 +314,11 @@ export function pinnedLiteral(condition: Condition): string | undefined {
  * (REQ-442), which hides an argument already carrying it — so the two cannot drift apart.
  *
  * @param condition Implied condition to read.
- * @returns `{ value: <literal> }` for a literal pin (`=` or `as`, see `pinnedLiteral`), `{}` (no
+ * @returns `{ value: <literal> }` for a literal pin (`=`, see `pinnedLiteral`), `{}` (no
  *   `value`, matching how the grammar represents `set to undefined`) for `undefined`, or
  *   `undefined` when the condition pins no concrete value at all — a `defined` declaration (any
- *   value satisfies it, so none can be chosen), a reference-valued `=` or `as` (the value lives in
- *   another attribute, not a literal), or any other operator.
+ *   value satisfies it, so none can be chosen), a reference-valued `=` or an `as` (the value lives
+ *   in another attribute, not a literal), or any other operator.
  */
 export function impliedResultValue(condition: Condition): Result | undefined {
     if (condition.operator === "undefined") return {}

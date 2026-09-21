@@ -898,13 +898,14 @@ function presenceOfCondition(condition: Condition): PostValue {
             return { kind: "undefined" }
         case "defined":
             return { kind: "defined" }
-        // A literal pin fixes the value; a reference-valued `=` or `as` still leaves it present,
+        // A literal pin fixes the value; a reference-valued `=` or an `as` still leaves it present,
         // since the row is dropped when the referenced value is missing.
-        case "=":
-        case "as": {
+        case "=": {
             const literal = pinnedLiteral(condition)
             return literal === undefined ? { kind: "defined" } : { kind: "literal", value: literal }
         }
+        case "as":
+            return { kind: "defined" }
         default:
             return { kind: "unknown" }
     }
@@ -993,8 +994,7 @@ function violates(value: PostValue, condition: Condition): boolean {
             return value.kind === "undefined"
         case "undefined":
             return value.kind !== "undefined"
-        case "=":
-        case "as": {
+        case "=": {
             const literal = pinnedLiteral(condition)
             if (literal === undefined) return false
             if (value.kind === "undefined") return true
@@ -1017,7 +1017,7 @@ function violates(value: PostValue, condition: Condition): boolean {
  *
  * Only statically decidable cases are reported: an attribute whose post-transition value nothing
  * determines is left alone, as is a sameness (`as`) to another attribute, which binds per row
- * rather than demands. A sameness to a literal pins one value and is checked like `=`.
+ * rather than demands.
  *
  * On the complete AST, a target's literal `=` or `undefined` implied condition is rarely the
  * source of a reported violation any more: completion (REQ-434) already gives a transition that
@@ -1045,8 +1045,8 @@ export function validateResultSatisfiesTargetState(stateMachines: StateMachine[]
             const target = transition.result
             for (const implied of impliedIndex[target.name.toLowerCase()] ?? []) {
                 // A sameness to another attribute is satisfied per row by construction, never owed
-                // by the transition; a sameness to a literal is a pin like `=` and is checked.
-                if (implied.condition.operator === "as" && implied.condition.valueIsReference) continue
+                // by the transition.
+                if (implied.condition.operator === "as") continue
 
                 const attribute = implied.attribute.toLowerCase()
                 const assigned = assignedPostValue(transition, attribute)

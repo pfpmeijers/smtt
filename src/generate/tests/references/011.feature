@@ -1,11 +1,13 @@
-# Results from: conditions-filtering.test.ts, TST-011: As binds the attribute to its literal value
+# Results from: conditions-filtering.test.ts, TST-011: As binds the attribute to the referenced attribute's value
 # State machines:
 #  - name: m
 #    states:
 #      - name: s
 #    dataValueCombinations:
 #      - a: a1
+#        b: b1
 #      - a: a2
+#        b: b2
 #    transitions:
 #      - states:
 #          - name: s
@@ -13,7 +15,8 @@
 #              - name: a
 #                condition:
 #                  operator: as
-#                  value: a1
+#                  value: b
+#                  valueIsReference: true
 #        trigger:
 #          type: event
 #          name: e
@@ -28,10 +31,10 @@
 #   orthogonal to expansion candidate matching (REQ-118): expansion determines which source
 #   transitions apply; the condition then filters the data rows.
 # - [REQ-432] The `as` operator shall state sameness rather than filter: the attribute *takes* the
-#   value named — a literal, or, for an attribute reference (REQ-427), the value the referenced
-#   attribute holds in the same row. Every such binding shall be applied to all rows before any
-#   filter is evaluated, so a filter on a bound attribute tests the value the binding gave it rather
-#   than whatever the declared table held.
+#   value the referenced attribute (REQ-427) holds in the same row. `as` only takes an attribute
+#   reference; a literal needs no binding and is written with `=` instead. Every such binding shall
+#   be applied to all rows before any filter is evaluated, so a filter on a bound attribute tests
+#   the value the binding gave it rather than whatever the declared table held.
 
 Feature: m
 
@@ -41,4 +44,4 @@ Feature: m
     Then expect s
     Examples:
       | a  |
-      | a1 |
+      | b1 |
