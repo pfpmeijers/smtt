@@ -99,7 +99,7 @@ test("[TST-074] → [REQ-029/113]: State trigger with multiple expansion paths",
             id: "001",
                         trigger: {type: "state", name: "s1"},
             result: {name: "s2"},
-            notes: "Chained",
+            description: "Chained",
         }],
     }
     ]

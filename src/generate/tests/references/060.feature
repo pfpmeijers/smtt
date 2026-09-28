@@ -21,10 +21,10 @@
 #                value: A
 #        result:
 #          name: s2
-#        notes: Item Added With <a>
+#        description: Item Added With <a>
 # Covers requirements:
-# - [REQ-452] The `$description` shall be taken from AST path `[i].transitions[j].notes`, verbatim:
-#   it is not lower cased and its placeholders are not rewritten.
+# - [REQ-452] The `$description` shall be taken from AST path `[i].transitions[j].description`,
+#   verbatim: it is not lower cased and its placeholders are not rewritten.
 
 Feature: m
 
@@ -32,7 +32,6 @@ Feature: m
     Given initially s1
     When e with "<a>"
     Then expect s2
-    # Notes: Item Added With <a>
     Examples:
       | a |
       | A |

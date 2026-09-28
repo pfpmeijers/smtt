@@ -1,7 +1,7 @@
 Feature: m3
   Workflow machine. Tracks a labelled process through its lifecycle. Requires `M1 active` and coordinates with `M2`.
 
-  Scenario Outline: [012] Starting the workflow assigns label and score
+  Scenario Outline: [012]
     Given initially m1 active
     And initially m2 partial
     And initially m3 pending with "<a4>"
@@ -24,7 +24,7 @@ Feature: m3
     When e7
     Then expect m3 open
 
-  Scenario Outline: [015] Completion requires full M2; score set to max
+  Scenario Outline: [015]
     Given initially m1 active
     And initially m3 open
     And initially m2 full
@@ -35,7 +35,7 @@ Feature: m3
       | resulting a4 |
       | 20           |
 
-  Scenario Outline: [016] Abort from open with empty counter
+  Scenario Outline: [016]
     Given initially m1 active
     And initially m3 open
     And initially m2 empty
@@ -46,7 +46,7 @@ Feature: m3
       | resulting a4 |
       | 0            |
 
-  Scenario Outline: [017] Abort while paused
+  Scenario Outline: [017]
     Given initially m1 active
     And initially m3 paused
     When e9
@@ -56,7 +56,7 @@ Feature: m3
       | resulting a4 |
       | 0            |
 
-  Scenario: [018] Auto-paused when M1 deactivates
+  Scenario: [018]
     Given initially m1 active
     And initially m3 open
     When e2
@@ -64,7 +64,7 @@ Feature: m3
     And expect m3 paused
     # Notes: Auto-paused when M1 deactivates
 
-  Scenario Outline: [019] Auto-resumed when M1 reactivates
+  Scenario Outline: [019]
     Given initially m1 inactive
     And initially m3 paused
     When e1 with "<a1>"

@@ -19,7 +19,7 @@ Feature: m2
       | a2 | incremented a2 |
       | 1  | 2              |
 
-  Scenario Outline: [006] Ceiling reached
+  Scenario Outline: [006]
     Given initially m1 active
     And initially m2 partial with "<a2>"
     When e3
@@ -57,7 +57,7 @@ Feature: m2
       | a2 | decremented a2 |
       | 3  | 2              |
 
-  Scenario: [010] Counter cleared when M1 deactivates
+  Scenario: [010]
     Given initially m1 active
     And initially m2 partial
     When e2
@@ -65,7 +65,7 @@ Feature: m2
     And expect m2 empty
     # Notes: Counter cleared when M1 deactivates
 
-  Scenario: [011] Counter cleared when M1 deactivates
+  Scenario: [011]
     Given initially m1 active
     And initially m2 full
     When e2

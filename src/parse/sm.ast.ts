@@ -103,16 +103,16 @@ type TransitionRow = {
     states: StateRef[]
     trigger: Trigger
     result: StateRef
+    description?: string
     notes?: string
 }
 
 /**
  * The four States/Trigger/Result/Notes sub-blocks of a list-form transition entry, shared by the
  * `withDescription` and `withoutDescription` cases of `transitionListEntry` — everything but the
- * id, which each case reads (and, for `withDescription`, folds a description into `notes`) on its
- * own.
+ * id and description, which each case reads on its own.
  */
-type TransitionListBody = Omit<TransitionRow, "id">
+type TransitionListBody = Omit<TransitionRow, "id" | "description">
 
 type TransitionsSection = {
     transitions: TransitionRow[]
@@ -645,16 +645,16 @@ export function createSemantics(grammar: ohm.Grammar): ohm.Semantics {
 
         // --- Transition rules (list form) ---
 
-        // A description following the id's `:` folds into the transition's `notes`, ahead of any
-        // text from an explicit `- Notes:` sub-block.
+        // A description following the id's `:` is kept apart from any text of an explicit
+        // `- Notes:` sub-block.
         transitionListEntry_withDescription(_li, idNode, descriptionNode, bodyNode) {
             const id = idNode.sourceString.trim()
             const description = descriptionNode.toAST() as string | null
             const body = bodyNode.toAST() as TransitionListBody
-            const notes = [description, body.notes].filter((text): text is string => Boolean(text)).join(" ")
             return {
                 id, states: body.states, trigger: body.trigger, result: body.result,
-                ...(notes ? { notes } : {})
+                ...(description ? { description } : {}),
+                ...(body.notes ? { notes: body.notes } : {})
             }
         },
 

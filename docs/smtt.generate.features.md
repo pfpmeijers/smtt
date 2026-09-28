@@ -53,16 +53,16 @@ The scenario label shall be composed of the following parts:
   - Rationale: the transition id and description identify a scenario by what
     the author wrote, rather than by a mechanical composition of its
     precondition, trigger and result states, which the steps already spell out.
-  - Remarks: a description written after the id of a list-form transition
-    (`- <id>: <description>`) is folded into the transition's notes by the
-    parse step, ahead of any explicit notes; a table row has notes only. The
-    notes therefore are the transition description, and no separate
-    description field exists in the AST.
+  - Remarks: the description is the text written after the id of a list-form
+    transition (`- <id>: <description>`); a table row has none. It is a field
+    of its own in the AST, apart from the transition's notes. The notes never
+    make up the label: they are rendered as a comment instead (REQ-045).
   - [REQ-452] The `$description` shall be taken from AST path
-    `[i].transitions[j].notes`, verbatim: it is not lower cased and its
+    `[i].transitions[j].description`, verbatim: it is not lower cased and its
     placeholders are not rewritten.
   - [REQ-453] The ` $description` part shall be omitted when the transition has
-    no notes, leaving the label as `[$id]`.
+    no description, leaving the label as `[$id]`, even when the transition has
+    notes.
 
 - [REQ-159] The scenario label shall be truncated to a maximum of 200
   characters. The transition ID (`[$id]`) ensures uniqueness regardless of
@@ -169,7 +169,7 @@ Scenario: [REQ-003] Cart hold is time-limited and will expire automatically
   And initially item available
   When item added to cart
   Then expect item in cart
-  # Notes: Cart hold is time-limited and will expire automatically
+  # Notes: Hold time is longer for an authenticated user
 ```
 
 - [REQ-045] `# Notes:` shall be appended after the final `Then` step

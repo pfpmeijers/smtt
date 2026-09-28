@@ -27,7 +27,7 @@
 #          name: s1
 #        result:
 #          name: s2
-#        notes: Chained
+#        description: Chained
 # Covers requirements:
 # - [REQ-029] For state trigger based transitions with multiple expansion paths, a path suffix shall
 #   be appended to the id, while the description stays the same across paths.
@@ -43,7 +43,6 @@ Feature: m2
     When e1
     Then expect s1
     And expect s2
-    # Notes: Chained
 
   Scenario: [001.2] Chained
     Given initially s2
@@ -51,4 +50,3 @@ Feature: m2
     When e2
     Then expect s1
     And expect s2
-    # Notes: Chained

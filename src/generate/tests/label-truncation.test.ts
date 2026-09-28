@@ -12,7 +12,7 @@ test("[TST-031] → [REQ-159]: Scenario label truncated to 200 chars with an ell
             trigger: {type: "event", name: "e"},
             result: {name: "s"},
             // A very long description forces the label past 200 chars.
-            notes: "d".repeat(300),
+            description: "d".repeat(300),
         }],
     }]
     validateStateMachines(stateMachines)

@@ -133,9 +133,9 @@ as indented sub-bullets under the state entry, next to any implied conditions.
   states as preconditions as well. Each implied state is placed right before
   the state implying it, foundation first: each follows the states it implies
   itself. States the transition names without implying anything keep their
-  place. A scenario reaching the transition's trigger
-  through a state that contradicts one of them cannot explain the transition
-  and is left out.
+  place. They hold whenever the transition fires, also when its trigger is
+  caused by another machine's transition: a cause passing through a state that
+  contradicts one of them does not lead to this transition.
 - **Overrides defaults**: An implied state stands for its machine, so the
   [default precondition](#default-preconditions) of that machine is not added
   for a transition naming the implying state, and takes that default's place at
@@ -195,8 +195,8 @@ Define data attributes associated with the state machine.
 - **Optional**: The `## Data` attribute list is optional. Any attribute
   referenced in a transition argument, state implied condition, or default
   precondition argument is automatically inferred from usage. Explicit
-  declarations are only needed to attach a description or to control the
-  ordering of attributes in the generated output.
+  declarations are only needed to attach a description or to fix the
+  ordering of the attributes.
 - **None**: Write `None` when the state machine has no data entities, or omit
   the `## Data` section entirely. Both have the same effect.
 
@@ -323,9 +323,10 @@ Declare default precondition states per dependent state machine.
 - **Behavior**: Consider the listed default state (with its arguments, if any)
   as prepended to every transition rule that does not explicitly mention a
   state belonging to this same state machine. It is shorthand for writing that
-  state on every such rule, so it is binding: a scenario reaching the rule
-  through a different state of the same machine cannot explain the rule and is
-  left out. To vary it for one rule, name that machine's state on the rule; to
+  state on every such rule, so it is binding: it holds whenever the rule
+  fires, also when its trigger is caused by another machine's transition, and a
+  cause passing through a different state of the same machine does not lead to
+  this rule. To vary it for one rule, name that machine's state on the rule; to
   vary it for every rule naming a given state, declare an
   [implied state](#implied-states) on that state.
 - **Controlling order**: Declare multiple default preconditions in their 
@@ -421,9 +422,9 @@ merged into one combined list of transitions.
   Write it as plain text, not backticked.
 - **Description** (optional): Write `: some text` directly after the id,
   in the same format used for a [state description](#states) or a
-  [default precondition description](#default-preconditions). It is folded
-  into the transition's `Notes`, ahead of any text from an explicit `Notes:`
-  sub-bullet.
+  [default precondition description](#default-preconditions). It is kept
+  apart from the transition's `Notes`: the description states what the transition
+  does, while notes add context to it.
 - **States**: List one state reference per sub-bullet, in place of the
   table's `,`-separated cell. Each bullet uses the same [state
   reference](#multiple-states-in-the-state-column) syntax as a table cell —
@@ -669,8 +670,9 @@ The distinction from `is` matters as soon as two state machines are involved.
 text, so such a row has to exist. `` `a` as `b` `` needs no such row: `a` is
 *given* `b`'s value. Two machines can therefore relate their attributes without
 either having to declare a literal that coincides with the other's — which no
-author can reliably arrange, since which machine's values apply depends on an
-expansion the author does not write.
+author can reliably arrange, since which machine's values apply depends on how
+the machines are chained through state triggers, which no single machine's
+author controls.
 
 Use `as` to say two things are the same thing, and `is` / `=` to test a value.
 
@@ -793,7 +795,7 @@ Example:
 ```
 
 After `Painting sold`, `sale price` takes on whatever value `list price`
-currently holds for that scenario — a dynamic postcondition, rather than one
+holds at that moment — a dynamic postcondition, rather than one
 fixed literal value.
 
 ##### Implied attribute and values
@@ -804,7 +806,7 @@ attribute, so it needs no declaration of its own:
 - The attribute is added to the data attributes of the state machine, exactly
   as any other attribute reference in a transition does.
 - With `as`, its value simply *is* the referenced attribute's, resolved per
-  scenario. Nothing has to be declared or pre-arranged.
+  value combination. Nothing has to be declared or pre-arranged.
 - With `=`, a row in which both attributes hold the same value must exist for
   the comparison to ever hold, so one is implied from the referenced
   attribute's own declared values.
@@ -815,13 +817,13 @@ give the attribute its own example values when using those.
 
 Note the asymmetry when the referenced attribute belongs to **another** state
 machine. A machine must be specifiable stand-alone, so another machine's table
-is never drawn on for a plain precondition (only along an expansion chain).
-With `=` that means declaring example values for the constrained attribute in
+is never drawn on for a plain precondition (only when a transition is reached
+through another machine's state trigger). With `=` that means declaring example values for the constrained attribute in
 this machine — and since the other machine's values are not consulted, the two
 cannot be made to coincide deliberately. With `as` there is nothing to
-coincide: the value is taken from whichever attribute is authoritative in the
-scenario being generated, so the same rule reads correctly whether the machine
-is generated on its own or reached through another machine's transition.
+coincide: the value is taken from whichever attribute is authoritative at that moment,
+so the same rule reads correctly whether the machine is considered on its own or
+reached through another machine's transition.
 
 Example:
 
@@ -846,10 +848,6 @@ Example:
 `bid` is neither declared under `## Data` nor given example values, yet the
 transition covers the combinations where `bid` equals `list price`: `bid` 10
 with `list price` 10, and `bid` 20 with `list price` 20.
-
-Note that the referenced attribute only appears as a column of the generated
-example values when the transition also mentions it as an argument — as
-`` with `list price` `` does above.
 
 ### Impossible state-trigger combinations
 
@@ -946,7 +944,7 @@ a large set of transition rules under labels that help the reader.
 - **No semantics**: A free-form heading names nothing and groups nothing as far
   as the model is concerned. Expect it to be discarded before any semantic
   interpretation, exactly as a [developer comment](#developer-comments) is —
-  adding, renaming, moving or removing one never changes the generated output.
+  adding, renaming, moving or removing one never changes the state machine.
 - **Placement**: Place a free-form heading wherever a blank line is allowed —
   before or after any section, between list items, between transition blocks.
   The one exception is between a state declaration and its
@@ -978,7 +976,7 @@ Example:
 ## Developer comments
 
 Comments record tasks and known issues directly inside a state machine
-file, without affecting parsing or code generation.
+file, without affecting the state machine's meaning.
 
 - **Format**: Start a line with `//` followed by any text.
 - **Placement**: Place a comment between any two structural

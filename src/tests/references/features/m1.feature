@@ -9,7 +9,7 @@ Feature: m1
       | a1 |
       | V1 |
 
-  Scenario Outline: [002] Re-activation under another identifier
+  Scenario Outline: [002]
     Given initially m1 active with "<a1>"
     When e1 with "<new a1>"
     Then expect m1 active with "<new a1>"

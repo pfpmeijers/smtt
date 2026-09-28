@@ -20,7 +20,7 @@
 
 Feature: m
 
-  Scenario: [000] ...
+  Scenario: [000]
     Given initially s
     When e
     Then expect s

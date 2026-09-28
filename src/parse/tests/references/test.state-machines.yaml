@@ -728,7 +728,7 @@
         type: event
       result:
         name: listed idle
-      notes: Reset back to idle.
+      description: Reset back to idle.
   impossible:
     defined: []
   irrelevant: []

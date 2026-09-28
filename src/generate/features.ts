@@ -188,8 +188,8 @@ function resolveExpansionPaths(context: RenderContext, transition: Transition): 
 
 /**
  * Compose the scenario label (REQ-009 up to REQ-012, REQ-451 up to REQ-453). The label consists of
- * the transition id and the transition description (its notes), and is truncated to
- * `MAX_LABEL_LENGTH` (REQ-159).
+ * the transition id and the transition description, and is truncated to `MAX_LABEL_LENGTH`
+ * (REQ-159). The transition notes are never part of the label: they render as a comment (REQ-045).
  *
  * @param transition Transition being rendered.
  * @param keyword Scenario keyword, either `Scenario` or `Scenario Outline`.
@@ -197,7 +197,7 @@ function resolveExpansionPaths(context: RenderContext, transition: Transition): 
  * @returns The rendered scenario label.
  */
 function buildScenarioLabel(transition: Transition, keyword: string, idSuffix: string): string {
-    const description = transition.notes ? ` ${transition.notes}` : ""
+    const description = transition.description ? ` ${transition.description}` : ""
     const label = `  ${keyword}: [${transition.id ?? ""}${idSuffix}]${description}`
     return label.length > MAX_LABEL_LENGTH ? `${label.slice(0, MAX_LABEL_LENGTH - 3)}...` : label
 }

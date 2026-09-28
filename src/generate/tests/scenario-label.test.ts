@@ -11,7 +11,8 @@ test("[TST-059] → [REQ-009/010/011/012/451/452]: Scenario label is the transit
             states: [{name: "s1"}],
             trigger: {type: "event", name: "e"},
             result: {name: "s2"},
-            notes: "Cart hold expires",
+            description: "Cart hold expires",
+            notes: "Hold time depends on authentication",
         }],
     }, {
         name: "m0",
@@ -20,6 +21,7 @@ test("[TST-059] → [REQ-009/010/011/012/451/452]: Scenario label is the transit
     validateStateMachines(stateMachines)
     const feature = createFeatures(stateMachines)["m"]
     assertContains(feature, "Scenario: [001] Cart hold expires\n")
+    assertContains(feature, "    # Notes: Hold time depends on authentication\n")
     assertNotContains(feature, "→")
     assertNotContains(feature, "; when")
     assertMatchesReference(stateMachines, feature)
@@ -36,7 +38,7 @@ test("[TST-060] → [REQ-452]: Scenario label description keeps its casing and p
             trigger: {type: "event", name: "e",
                 arguments: [{qualifier: "with", name: "a", condition: {operator: "=", value: "A"}}]},
             result: {name: "s2"},
-            notes: "Item Added With <a>",
+            description: "Item Added With <a>",
         }],
     }]
     validateStateMachines(stateMachines)
@@ -45,7 +47,7 @@ test("[TST-060] → [REQ-452]: Scenario label description keeps its casing and p
     assertMatchesReference(stateMachines, feature)
 })
 
-test("[TST-061] → [REQ-453]: Scenario label omits the description when the transition has no notes", () => {
+test("[TST-061] → [REQ-453]: Scenario label omits the description when the transition has none, even with notes", () => {
     const stateMachines: StateMachines = [{
         name: "m",
         states: [{name: "s1"}, {name: "s2"}],
@@ -54,10 +56,12 @@ test("[TST-061] → [REQ-453]: Scenario label omits the description when the tra
             states: [{name: "s1"}],
             trigger: {type: "event", name: "e"},
             result: {name: "s2"},
+            notes: "Not a label",
         }],
     }]
     validateStateMachines(stateMachines)
     const feature = createFeatures(stateMachines)["m"]
     assertContains(feature, "  Scenario: [001]\n")
+    assertContains(feature, "    # Notes: Not a label\n")
     assertMatchesReference(stateMachines, feature)
 })

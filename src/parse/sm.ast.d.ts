@@ -23,11 +23,11 @@ export type Trigger2 = StateTrigger | EventTrigger;
 export type StateMachines = StateMachine[];
 
 /**
- * The full representation of a parsed *.state-machine.md file.
+ * A single state machine.
  */
 export interface StateMachine {
   /**
-   * The title of the state machine (from the H1 heading).
+   * The name of the state machine.
    */
   name: string;
   /**
@@ -35,7 +35,7 @@ export interface StateMachine {
    */
   overview?: string | null;
   /**
-   * The path to the source markdown file, relative to the project root's parent directory.
+   * The path to the source file, relative to the project root's parent directory.
    */
   source?: string | null;
   /**
@@ -55,23 +55,23 @@ export interface StateMachine {
     [k: string]: string;
   };
   /**
-   * The values each attribute may take, as declared in the `### Values` subsection. Keyed by attribute name. Present only when the source declares these lists instead of a `### Value combinations` table, in which case the complete step derives the rows as the full cartesian product of these values; a source that spells its rows out in a table carries no `dataValues` at all.
+   * The values each attribute may take, keyed by attribute name. Present only when the combinations are not given explicitly, in which case the complete step derives `dataValueCombinations` as the full cartesian product of these values; when the combinations are given explicitly, `dataValues` is absent.
    */
   dataValues?: {
     [k: string]: string[];
   };
   /**
-   * Examples of data combinations, either synthesized from inline examples or explicitly defined in a combination table. By schema convention, an empty string value encodes an undefined/absent value for that attribute.
+   * Examples of data combinations, either given explicitly or synthesized from the values the conditions and results reference. By schema convention, an empty string value encodes an undefined/absent value for that attribute.
    */
   dataValueCombinations?: {
     [k: string]: string;
   }[];
   /**
-   * Default precondition states declared in the Transitions section under 'Default preconditions:'. Each entry is a state name whose owning machine is resolved by matching the name against the states of all parsed machines. The state applies as an implicit leading precondition to every transition that does not already mention a state from the same machine.
+   * Default precondition states. Each entry is a state name whose owning machine is resolved by matching the name against the states of all parsed machines. The state applies as an implicit leading precondition to every transition that does not already mention a state from the same machine.
    */
   defaultPreconditions?: DefaultPrecondition[];
   /**
-   * Optional transition table defining how the machine moves between states based on triggers. When omitted, this is equivalent to an empty array.
+   * Optional list of transitions defining how the machine moves between states based on triggers. When omitted, this is equivalent to an empty array.
    */
   transitions?: Transition[];
   impossible?: ImpossibleSection;
@@ -85,7 +85,7 @@ export interface StateMachine {
  */
 export interface StateDefinition {
   /**
-   * The plain text name of the state, with emphasis markup removed.
+   * The plain text name of the state.
    */
   name: string;
   /**
@@ -93,11 +93,11 @@ export interface StateDefinition {
    */
   description?: string | null;
   /**
-   * Data value conditions implied by this state, declared as indented sub-bullets in the state definition.
+   * Data value conditions implied by this state.
    */
   impliedConditions?: ImpliedCondition[];
   /**
-   * Names of states of other state machines that hold whenever this state does, declared as indented sub-bullets holding a bare state name. Resolved transitively, and binding: a transition naming this state as a precondition also has these states as preconditions.
+   * Names of states of other state machines that hold whenever this state does. Resolved transitively, and binding: a transition naming this state as a precondition also has these states as preconditions.
    */
   impliedStates?: string[];
   /**
@@ -106,7 +106,7 @@ export interface StateDefinition {
   sourceLine?: number | null;
 }
 /**
- * A data value condition implied by being in a particular state (from an implied-condition sub-bullet).
+ * A data value condition implied by being in a particular state.
  */
 export interface ImpliedCondition {
   /**
@@ -141,12 +141,12 @@ export interface Condition {
    */
   value?: string | string[];
   /**
-   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal. With the `as` operator this states sameness: the attribute takes the referenced attribute's value; `as` requires it, since a literal needs no binding. With a filtering operator it compares the attribute against the value the referenced attribute holds. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only valid on a scalar operator (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`): the set, range and unary operators compare against fixed literals, which a name standing for another attribute's value cannot provide.
+   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal. With the `as` operator this states sameness: the attribute takes the referenced attribute's value; `as` requires it, since a literal needs no binding. With a filtering operator it compares the attribute against the value the referenced attribute holds. Only valid on a scalar operator (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`): the set, range and unary operators compare against fixed literals, which a name standing for another attribute's value cannot provide.
    */
   valueIsReference?: boolean;
 }
 /**
- * A single default precondition state entry, used in the 'Default preconditions:' block of a Transitions section.
+ * A single default precondition state entry.
  */
 export interface DefaultPrecondition {
   /**
@@ -154,7 +154,7 @@ export interface DefaultPrecondition {
    */
   state: string;
   /**
-   * Optional data attributes associated with this default precondition state. Inherited from the markdown `Default preconditions:` block when the entry carries inline backtick arguments.
+   * Optional data attributes associated with this default precondition state.
    */
   arguments?: Argument[];
   /**
@@ -163,11 +163,11 @@ export interface DefaultPrecondition {
   description?: string;
 }
 /**
- * A data attribute reference, mapped from backticks in the text, with optional qualifiers, modifiers, a condition, or a result. The `qualifier` property and the `modifier` property are mutually exclusive: an argument uses either `qualifier` alone (simple form) or `modifier` with optional `preQualifier`/`postQualifier` (modified form), never both. The `condition` property and the `result` property are likewise mutually exclusive: a state or trigger argument uses `condition` (a precondition or trigger-constraint filter); a transition result argument uses `result` (the postcondition value or reference it sets) instead.
+ * A data attribute reference with optional qualifiers, modifiers, a condition, or a result. The `qualifier` property and the `modifier` property are mutually exclusive: an argument uses either `qualifier` alone (simple form) or `modifier` with optional `preQualifier`/`postQualifier` (modified form), never both. The `condition` property and the `result` property are likewise mutually exclusive: a state or trigger argument uses `condition` (a precondition or trigger-constraint filter); a transition result argument uses `result` (the postcondition value or reference it sets) instead.
  */
 export interface Argument {
   /**
-   * A qualifying preposition (e.g. 'for', 'as') placed before the backtick reference when no modifier is present. Mutually exclusive with `modifier`.
+   * A qualifying preposition (e.g. 'for', 'as') placed before the attribute name when no modifier is present. Mutually exclusive with `modifier`.
    */
   qualifier?: string;
   /**
@@ -189,7 +189,7 @@ export interface Argument {
   condition?: Condition1;
   result?: Result;
   /**
-   * Plain words following the backtick argument span (after any post-qualifier), used for human-readable sentence continuations such as 'prefilled' or 'only'.
+   * Plain words following the attribute name (after any post-qualifier), used for human-readable sentence continuations such as 'prefilled' or 'only'.
    */
   suffix?: string;
 }
@@ -219,12 +219,12 @@ export interface Condition1 {
    */
   value?: string | string[];
   /**
-   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal. With the `as` operator this states sameness: the attribute takes the referenced attribute's value; `as` requires it, since a literal needs no binding. With a filtering operator it compares the attribute against the value the referenced attribute holds. Set directly by the grammar: a backticked condition value is a reference, a quoted or numeric one is a literal. Only valid on a scalar operator (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`): the set, range and unary operators compare against fixed literals, which a name standing for another attribute's value cannot provide.
+   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal. With the `as` operator this states sameness: the attribute takes the referenced attribute's value; `as` requires it, since a literal needs no binding. With a filtering operator it compares the attribute against the value the referenced attribute holds. Only valid on a scalar operator (`=`, `<>`, `<`, `>`, `<=`, `>=`, `as`): the set, range and unary operators compare against fixed literals, which a name standing for another attribute's value cannot provide.
    */
   valueIsReference?: boolean;
 }
 /**
- * The postcondition value or attribute reference a transition result argument sets on the resulting state's attribute, written `attribute set to value` (or `set to undefined`) in the Result column. Used only on a transition's `result` arguments; a state or trigger argument uses `condition` instead.
+ * The postcondition value or attribute reference a transition result argument sets on the resulting state's attribute. Used only on a transition's `result` arguments; a state or trigger argument uses `condition` instead.
  */
 export interface Result {
   /**
@@ -232,7 +232,7 @@ export interface Result {
    */
   value?: string;
   /**
-   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal: the attribute takes the value that the same `dataValueCombinations` row holds for the named attribute. Set directly by the grammar: a backticked result value is a reference, a quoted or numeric one is a literal. A condition value may be a reference too, as its own `valueIsReference` describes.
+   * When true, `value` names another data attribute (declared in any state machine in the AST) instead of holding a literal: the attribute takes the value that the same `dataValueCombinations` row holds for the named attribute. A condition value may be a reference too, as its own `valueIsReference` describes.
    */
   valueIsReference?: boolean;
 }
@@ -250,6 +250,10 @@ export interface Transition {
   states?: StateRef[];
   trigger: Trigger;
   result: StateRef1;
+  /**
+   * Short description of the transition, identifying what it does. Optional. Distinct from `notes`.
+   */
+  description?: string;
   /**
    * Additional context or side effects for the transition. Optional.
    */
@@ -380,7 +384,7 @@ export interface ImpossibleSection {
   inferred?: ImpossibleTrigger[];
 }
 /**
- * A row declaring an impossible state-trigger combination.
+ * A declared impossible state-trigger combination.
  */
 export interface ImpossibleTrigger {
   /**
@@ -390,7 +394,7 @@ export interface ImpossibleTrigger {
   trigger: Trigger1;
 }
 /**
- * A row declaring an irrelevant state-trigger combination.
+ * A declared irrelevant state-trigger combination.
  */
 export interface IrrelevantTrigger {
   /**

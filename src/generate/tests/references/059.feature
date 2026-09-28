@@ -15,7 +15,8 @@
 #          name: e
 #        result:
 #          name: s2
-#        notes: Cart hold expires
+#        description: Cart hold expires
+#        notes: Hold time depends on authentication
 #  - name: m0
 #    states:
 #      - name: s3
@@ -26,8 +27,8 @@
 # - [REQ-011] The label shall include `[$id]`, the transition id.
 # - [REQ-012] The `$id` shall be taken from AST path `[i].transitions[j].id`.
 # - [REQ-451] The label shall include ` $description`, the transition description, following the id.
-# - [REQ-452] The `$description` shall be taken from AST path `[i].transitions[j].notes`, verbatim:
-#   it is not lower cased and its placeholders are not rewritten.
+# - [REQ-452] The `$description` shall be taken from AST path `[i].transitions[j].description`,
+#   verbatim: it is not lower cased and its placeholders are not rewritten.
 
 Feature: m
 
@@ -36,4 +37,4 @@ Feature: m
     And initially s1
     When e
     Then expect s2
-    # Notes: Cart hold expires
+    # Notes: Hold time depends on authentication
