@@ -437,11 +437,12 @@ StateMachine {
 
   // --- Identifiers ---
 
-  // Every identifier is a backticked token containing alphanumeric characters
-  // only. No semantic meaning is attached here; classification (state vs
-  // attribute, text vs numeric, value-to-attribute alignment) happens in a
-  // post-parse step.
-  // FIXME: This remark about classification might not be correct. Not implemented or not needed ?
+  // Every identifier is a backticked token; any character except a backtick
+  // or newline is allowed, so names may contain spaces. Its role (state,
+  // attribute, trigger) follows from the rule it appears in. Only triggers are
+  // classified post-parse (state vs event, `classifyTriggers` in `parse.ts`).
+  // Attributes are untyped: operators decide text vs numeric comparison per
+  // condition (`conditions.ts`).
   identifier
     = "`" identifierChar+ "`"
 

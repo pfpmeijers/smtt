@@ -2,10 +2,10 @@
  * State machine parser.
  *
  * Compiles `sm.ohm` and converts a `.state-machine.md`
- * source into a `StateMachine` AST. Identifiers are read generically as
- * backticked tokens; semantic classification (state vs event triggers, text vs
- * numeric attributes, value-to-attribute alignment, cross-machine resolution)
- * is performed in a later post-parse step.
+ * source into a `StateMachine` AST. An identifier's role (state, attribute,
+ * trigger) follows from the grammar rule it appears in. After all machines are
+ * parsed, triggers are classified as state or event triggers across machines
+ * (`classifyTriggers`), then the AST is completed, validated and annotated.
  */
 
 import * as fs from "fs"
