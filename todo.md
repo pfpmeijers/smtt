@@ -179,3 +179,29 @@
     Thus let the fixture generation search for existing impl in -all- fixtures files before adding a placeholder.
     Rationale: Now shared gets a sort of misc collection while most often there is a most logical sm that can
     be chosen by the author.
+
+- Strict mode for `parse`
+  `tests/smtt/src/smtt.ts:98`: `TODO: Implement strict mode (exit with code 1 when warnings are produced).`
+
+  - Add a `--strict` flag, parsed alongside `--input-dir` etc. in `resolveCliPaths` or the sub-args.
+  - Have `parse()` return (or expose via a collector) the warnings it emits, instead of only logging them. Add a `warnings` field to the result or to `ParseOptions`. `ParseOptions` is currently empty, so this is a natural place for it.
+  - In `parseCli`: if `strict && warnings.length > 0`, `process.exit(1)`. `inferCli`/`generateCli` call `parseCli`, so they inherit the flag.
+  - Document it in the usage string and the SMTT docs, and add `TST-` cases.
+
+- Validate a minimal AST before completion
+  `tests/smtt/src/parse/parse.ts:167`: `FIXME: Expect a validate-minimal-AST here.`
+
+  `completeStateMachines` currently runs on an unvalidated AST, so malformed input can crash completion with an unhelpful error.
+
+  - Add `validateMinimalStateMachines(stateMachines)`. It checks only what `completeStateMachines` depends on: states exist, the initial state is declared, referenced states/triggers resolve, and so on. It reports errors with their source location.
+  - Call it between `classifyTriggers` and `completeStateMachines`. Leave the full `validateStateMachines` where it is.
+  - Add tests that feed malformed input and assert a clear validation error instead of an exception from completion.
+
+- Auto-generate implied unauthenticated transitions
+  `tests/state-machines/user-profile.state-machine.md:90`: transitions 082/083 are already implied by the implied-authentication-state declaration.
+
+  - In SMTT, `annotateImpliedStates` (`tests/smtt/src/parse/parse.ts:170`) already knows the implied-state relation. Extend it, or add a sibling step `generateImpliedTransitions`, that synthesizes "`<implied state>` lost → `<fallback>` state" transitions when they aren't written explicitly.
+  - Add a spec section in `smtt/docs/sm.spec.md` and new `REQ-`/`TST-` IDs.
+  - After that, delete 082/083 from the state-machine file. Then check that the generated Gherkin output doesn't change, apart from source-reference IDs.
+  - This is a feature, not a cleanup. Plan it as its own task.
+
